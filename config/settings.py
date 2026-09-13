@@ -6,27 +6,25 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # Telegram Bot
-    BOT_TOKEN: str = Field(default="mock_token_for_dev")
-    ADMIN_TELEGRAM_ID: int = Field(default=0)
-    BOT_NAME: str = Field(default="TravelPayBot")
-    WEBHOOK_SECRET: str = Field(default="travelpay_webhook_secret")
-    VERCEL_URL: Optional[str] = Field(default=None)
+    BOT_TOKEN: str = "mock_token_for_dev"
+    ADMIN_TELEGRAM_ID: int = 0
+    BOT_NAME: str = "TravelPayBot"
+    WEBHOOK_SECRET: str = "travelpay_webhook_secret"
+    VERCEL_URL: Optional[str] = None
 
     # Supabase
-    SUPABASE_URL: str = Field(default="http://localhost:54321")
-    SUPABASE_KEY: str = Field(default="mock_service_key")
+    SUPABASE_URL: str = "http://localhost:54321"
+    SUPABASE_KEY: str = "mock_service_key"
 
     # Telethon
-    TELEGRAM_API_ID: Optional[int] = Field(default=None)
-    TELEGRAM_API_HASH: Optional[str] = Field(default=None)
-    TELETHON_SESSION_STRING: Optional[str] = Field(default=None)
+    TELEGRAM_API_ID: Optional[int] = None
+    TELEGRAM_API_HASH: Optional[str] = None
+    TELETHON_SESSION_STRING: Optional[str] = None
 
     # Scrapers
-    RSHB_UNIONPAY_URL: str = Field(
-        default="https://www.rshb.ru/natural/cards/tariffs/unionpay"
-    )
+    RSHB_UNIONPAY_URL: str = "https://www.rshb.ru/natural/cards/tariffs/unionpay"
 
     # Stars Pricing
-    STARS_PRICE_90_DAYS: int = Field(default=150)
+    STARS_PRICE_90_DAYS: int = 150
 
 settings = Settings()

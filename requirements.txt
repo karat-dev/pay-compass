@@ -1,5 +1,4 @@
 aiogram>=3.4.1
-supabase>=2.3.4
 postgrest>=0.16.0
 httpx>=0.27.0
 pydantic>=2.6.4
@@ -8,7 +7,5 @@ fastapi>=0.110.0
 pytest>=8.0.0
 pytest-asyncio>=0.23.5
 python-dotenv>=1.0.1
-# Scrapers dependencies (optional on serverless, installed for cron jobs)
 feedparser>=6.0.11
-telethon>=1.34.0
 beautifulsoup4>=4.12.3
