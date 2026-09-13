@@ -72,6 +72,20 @@ def get_country_section_back_keyboard(country_slug: str) -> InlineKeyboardMarkup
         [InlineKeyboardButton(text="🏠 В главное меню", callback_data="back_to_menu")]
     ])
 
+def get_country_proof_keyboard(country_slug: str, proofs: List[Dict[str, Any]]) -> InlineKeyboardMarkup:
+    """Keyboard with direct external buttons for Social Proof videos and reports."""
+    buttons = []
+    for p in proofs:
+        title = p.get("title", "Открыть пруф")
+        link = p.get("link", "#")
+        platform = p.get("platform", "").split()[0]
+        btn_text = f"🔗 {platform}: {title[:32]}... ↗"
+        buttons.append([InlineKeyboardButton(text=btn_text, url=link)])
+
+    buttons.append([InlineKeyboardButton(text="« Назад в хаб страны", callback_data=f"country_{country_slug}")])
+    buttons.append([InlineKeyboardButton(text="🏠 В главное меню", callback_data="back_to_menu")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
 def get_country_summary_keyboard(country_slug: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🚨 Сообщить об ошибке", callback_data=f"report_error_{country_slug}")],

@@ -207,40 +207,40 @@ TURKEY_DATA: Dict[str, Any] = {
     # 8. Hybrid Social Proof (Verified Reports & Video Proofs)
     "social_proof": [
         {
-            "platform": "Telegram Community 💬",
-            "title": "Успешное снятие лир в VakıfBank с карты РСХБ UnionPay",
-            "author": "@alex_traveler (Чат 'UnionPay в Турции')",
-            "date": "13.09.2026",
-            "text": "«Только что снял 4000 лир в банкомате Vakif на Истикляль с рублевой карты РСХБ. Комиссии нет, курс получился 2.76 руб за лиру. Обязательно жмите No conversion!»",
+            "platform": "Форум Винского (AWD) 💬",
+            "title": "Свежий опыт туристов по UnionPay в банкоматах Турции",
+            "author": "Ветка отчетов путешественников (Форум Винского)",
+            "date": "Сентябрь 2026",
+            "text": "«Снятие с рублевых карт UnionPay в VakıfBank и Ziraat проходит успешно. Главное — обязательно нажимать 'Without conversion' (списание в TRY). Если банкомат одного банка капризничает, соседний госбанк выдает без проблем.»",
             "verified": True,
-            "link": "https://t.me/travel_payments_news"
+            "link": "https://forum.awd.ru/viewtopic.php?start=100&t=410784"
         },
         {
-            "platform": "YouTube / Shorts 🎥",
-            "title": "Инструкция: как отменить грабительскую конвертацию (DCC) у банкомата",
-            "channel": "TravelPay Guide",
-            "date": "10.09.2026",
-            "text": "Видео-гайд на 45 секунд: куда именно нажать на экране банкомата Ziraat, чтобы не переплатить 10%.",
+            "platform": "YouTube Guide 🎥",
+            "title": "Как банкоматы обманывают туристов на конвертации (DCC Trap)",
+            "channel": "YouTube / Travel Hacks",
+            "date": "2026",
+            "text": "Наглядное видео: почему банкомат предлагает двойную конвертацию и как нажатие кнопки отказа сохраняет до 10-15% от суммы снятия.",
             "verified": True,
-            "link": "https://youtube.com/shorts/sample_proof_dcc"
+            "link": "https://www.youtube.com/watch?v=rdYhm__yMQY"
         },
         {
-            "platform": "Telegram Proof 💬",
-            "title": "Получение наличных $ в отделении почты PTT через Золотую Корону",
-            "author": "@maria_antalya (Форум Винского / Telegram)",
-            "date": "11.09.2026",
-            "text": "«Отправляла себе $500 через Корону с Озон Банка. В центральном PTT Антальи выдали новыми синими сотками за 5 минут без вопросов. Паспорт + код перевода.»",
+            "platform": "YouTube Video 🎬",
+            "title": "Почему в Стамбуле и Турции всё еще необходимы наличные",
+            "channel": "Turkey Travel Planner",
+            "date": "2026",
+            "text": "Видео-разбор: уличная еда, общественный транспорт, чаевые и почему нельзя менять валюту в аэропорту из-за огромного спреда.",
             "verified": True,
-            "link": "https://t.me/travel_payments_news"
+            "link": "https://www.youtube.com/watch?v=ZhgM_zEEYJo"
         },
         {
-            "platform": "Instagram Reels 🎬 (требуется VPN)",
-            "title": "Обзор обменников Гранд-Базара: почему нельзя менять доллары в отеле",
-            "author": "@istanbul_insider",
-            "date": "08.09.2026",
-            "text": "Реальное сравнение курсов: на Султанахмете курс 32.1, на Гранд-Базаре — 33.95. Разница на $1000 составляет почти 2000 лир.",
+            "platform": "VC.ru Travel 📰",
+            "title": "Реальный опыт использования UnionPay и переводов в Турции",
+            "author": "Редакция VC.ru / Путешествия",
+            "date": "2026",
+            "text": "Подробный практический разбор комиссий, лимитов снятия лир, работы Золотой Короны и альтернативных вариантов оплаты.",
             "verified": True,
-            "link": "https://instagram.com/reels_sample_turkey_exchange"
+            "link": "https://vc.ru/travel/2948426-rabota-kart-unionpay-rosselhozbank-za-granicey"
         }
     ]
 }

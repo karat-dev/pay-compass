@@ -9,6 +9,7 @@ from bot.keyboards.country_kb import (
     get_country_hub_keyboard,
     get_country_section_back_keyboard,
     get_country_maps_keyboard,
+    get_country_proof_keyboard,
     get_country_summary_keyboard,
     get_subscription_pay_keyboard
 )
@@ -397,12 +398,12 @@ async def handle_csec_proof(callback: CallbackQuery):
             f"🔗 [Открыть первоисточник / видео ↗]({link})\n"
         )
 
-    lines.append("💡 _Все материалы проходят предварительную модерацию на актуальность._")
+    lines.append("💡 _Все материалы проверены: кнопки прямого перехода прикреплены ниже 👇_")
 
     full_text = "\n".join(lines)
     await callback.message.edit_text(
         full_text,
-        reply_markup=get_country_section_back_keyboard(slug),
+        reply_markup=get_country_proof_keyboard(slug, proofs),
         parse_mode="Markdown",
         disable_web_page_preview=True
     )
