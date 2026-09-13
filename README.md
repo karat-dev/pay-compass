@@ -81,9 +81,13 @@ python3 -m pytest -v tests/
 ```
 
 5. Запустите бота:
-```bash
-python3 main.py
-```
+   - **Для локального запуска (Polling)**:
+     ```bash
+     python3 main.py
+     ```
+   - **Для деплоя на Vercel (Serverless Webhook)**:
+     Подключите репозиторий в Vercel Dashboard, пропишите переменные окружения и один раз откройте в браузере:
+     `https://<ваш-проект>.vercel.app/api/set_webhook` для автоматической привязки вебхука к Telegram.
 
 6. Запустите сбор данных (по расписанию Cron):
 ```bash

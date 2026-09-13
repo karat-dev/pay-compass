@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     BOT_TOKEN: str = Field(default="mock_token_for_dev")
     ADMIN_TELEGRAM_ID: int = Field(default=0)
     BOT_NAME: str = Field(default="TravelPayBot")
+    WEBHOOK_SECRET: str = Field(default="travelpay_webhook_secret")
+    VERCEL_URL: Optional[str] = Field(default=None)
 
     # Supabase
     SUPABASE_URL: str = Field(default="http://localhost:54321")
