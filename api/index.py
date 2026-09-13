@@ -16,8 +16,10 @@ class handler(BaseHTTPRequestHandler):
             from config.settings import settings
             token_valid = bool(settings.BOT_TOKEN and ":" in settings.BOT_TOKEN)
 
-            # Check if this is set_webhook request
-            if "set_webhook" in self.path:
+            # Check incoming request path or forwarded URI
+            request_uri = self.headers.get("x-matched-path") or self.headers.get("x-vercel-matched-path") or self.path
+
+            if "set_webhook" in self.path or "set_webhook" in request_uri:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 result = loop.run_until_complete(self._set_webhook(settings))
@@ -67,7 +69,7 @@ class handler(BaseHTTPRequestHandler):
         host = self.headers.get("x-forwarded-host") or self.headers.get("host")
         if host:
             host = f"https://{host}"
-        webhook_url = f"{host.rstrip('/')}/api/index"
+        webhook_url = f"{host.rstrip('/')}/"
         success = await bot.set_webhook(
             url=webhook_url,
             secret_token=settings.WEBHOOK_SECRET,
