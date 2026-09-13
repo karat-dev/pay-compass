@@ -8,6 +8,7 @@ from bot.keyboards.country_kb import (
     get_countries_keyboard,
     get_country_hub_keyboard,
     get_country_section_back_keyboard,
+    get_country_maps_keyboard,
     get_country_summary_keyboard,
     get_subscription_pay_keyboard
 )
@@ -150,13 +151,14 @@ async def handle_csec_cash(callback: CallbackQuery):
         return
 
     c_info = expert_data.get("currency_info", {})
+    source_url = c_info.get("source_url", "https://cbr.ru/crosscut/lawacts/file/5923")
     text = (
         f"💵 **НАЛИЧНЫЕ И ОБМЕН ВАЛЮТЫ: {expert_data['name']}**\n\n"
         f"🏛 **Местная валюта:** {c_info.get('official_currency')}\n\n"
         f"🇷🇺 **Наличные рубли:**\n{c_info.get('cash_rubles')}\n\n"
         f"{c_info.get('usd_eur_rules')}\n\n"
         f"{c_info.get('best_exchangers')}\n\n"
-        "🔍 _Верификация: Аналитический отдел TravelPay & ЦБ РФ | Проверено: 13.09.2026_"
+        f"🔍 _Источник:_ [Указ ЦБ РФ о вывозе наличных]({source_url}) | _Проверено: 13.09.2026_"
     )
     await callback.message.edit_text(
         text,
@@ -188,11 +190,13 @@ async def handle_csec_cards(callback: CallbackQuery):
     ]
 
     for b in up_banks:
+        map_link = f" | [На карте Google Maps ↗]({b['map_url']})" if b.get("map_url") else ""
+        fee_info = b.get("fee", "0%")
         lines.append(
             f"\n• **{b['bank']}** — {b['status']}\n"
-            f"  💸 Комиссия: {b['fee']}\n"
+            f"  💸 Комиссия: {fee_info}\n"
             f"  ℹ️ {b['tips']}\n"
-            f"  🔍 _Источник:_ [Официальный сайт]({b['source']}) | _Дата:_ {b['verified_at']}"
+            f"  🔍 _Источник:_ [Тарифы банка]({b['source']}){map_link} | _Дата:_ {b['verified_at']}"
         )
 
     lines.append("\n⚠️ _Карты Visa и Mastercard, выпущенные банками РФ, за рубежом НЕ работают нигде._")
@@ -218,15 +222,113 @@ async def handle_csec_transfers(callback: CallbackQuery):
         return
 
     transfers = expert_data.get("transfers_and_digital", {})
+    source_url = transfers.get("source_url", "https://koronapay.com")
     text = (
         f"📲 **ПЕРЕВОДЫ И ЦИФРОВЫЕ СЕРВИСЫ: {expert_data['name']}**\n\n"
         f"{transfers.get('koronapay')}\n\n"
         f"{transfers.get('ininal_letim')}\n\n"
-        "🔍 _Источник: Тарифы Золотой Короны & Ininal | Проверено: 12.09.2026_"
+        f"🔍 _Источник:_ [Тарифы Золотой Короны]({source_url}) | _Проверено: 13.09.2026_"
     )
     await callback.message.edit_text(
         text,
         reply_markup=get_country_section_back_keyboard(slug),
+        parse_mode="Markdown",
+        disable_web_page_preview=True
+    )
+
+
+@menu_router.callback_query(F.data.startswith("csec_qr_"))
+async def handle_csec_qr(callback: CallbackQuery):
+    await callback.answer()
+    slug = callback.data.replace("csec_qr_", "")
+    await UserRepository.log_event(callback.from_user.id, "view_section_qr", {"slug": slug})
+    expert_data = CountryRepository.get_expert_data(slug)
+
+    if not expert_data:
+        await callback.message.answer("Данные раздела обновляются...")
+        return
+
+    qr = expert_data.get("qr_payments", {})
+    lines = [
+        f"{qr.get('headline', '📱 Оплата по QR-кодам')}\n",
+        f"{qr.get('description', '')}\n",
+        "🏦 **Поддерживаемые российские банки:**"
+    ]
+
+    for b in qr.get("supported_banks", []):
+        lines.append(
+            f"\n• **{b['bank']}**:\n"
+            f"  📲 _Как платить:_ {b['how']}\n"
+            f"  💰 _Лимиты и комиссии:_ {b['limits']}\n"
+            f"  🏪 _Где принимают:_ {b['places']}\n"
+            f"  🔍 _Источник:_ [Официальное подтверждение]({b['source_url']})"
+        )
+
+    lines.append(f"\n{qr.get('important_tips', '')}")
+    lines.append("\n⚠️ _Обязательно включите мобильный интернет или подключитесь к Wi-Fi для подтверждения пуша в приложении банка._")
+
+    full_text = "\n".join(lines)
+    await callback.message.edit_text(
+        full_text,
+        reply_markup=get_country_section_back_keyboard(slug),
+        parse_mode="Markdown",
+        disable_web_page_preview=True
+    )
+
+
+@menu_router.callback_query(F.data.startswith("csec_lifehacks_"))
+async def handle_csec_lifehacks(callback: CallbackQuery):
+    await callback.answer()
+    slug = callback.data.replace("csec_lifehacks_", "")
+    await UserRepository.log_event(callback.from_user.id, "view_section_lifehacks", {"slug": slug})
+    expert_data = CountryRepository.get_expert_data(slug)
+
+    if not expert_data:
+        await callback.message.answer("Данные раздела обновляются...")
+        return
+
+    lh = expert_data.get("lifehacks", {})
+    lines = [
+        f"💡 **ЛАЙФХАКИ, ЧАЕВЫЕ И ПРАВИЛА: {expert_data['name']}**\n",
+        lh.get("tipping", ""),
+        "\n" + lh.get("bargaining", ""),
+        "\n" + lh.get("nfc_apple_pay", ""),
+        "\n" + lh.get("customs_rules", ""),
+        "\n" + lh.get("crypto_rules", "")
+    ]
+
+    full_text = "\n".join(lines)
+    await callback.message.edit_text(
+        full_text,
+        reply_markup=get_country_section_back_keyboard(slug),
+        parse_mode="Markdown",
+        disable_web_page_preview=True
+    )
+
+
+@menu_router.callback_query(F.data.startswith("csec_maps_"))
+async def handle_csec_maps(callback: CallbackQuery):
+    await callback.answer()
+    slug = callback.data.replace("csec_maps_", "")
+    await UserRepository.log_event(callback.from_user.id, "view_section_maps", {"slug": slug})
+    expert_data = CountryRepository.get_expert_data(slug)
+
+    if not expert_data:
+        await callback.message.answer("Данные раздела обновляются...")
+        return
+
+    maps = expert_data.get("maps", {})
+    text = (
+        f"🗺 **КАРТЫ БАНКОМАТОВ И ОБМЕННИКОВ: {expert_data['name']}**\n\n"
+        "Мы собрали для вас прямые ссылки на Google Maps с уже настроенными поисковыми фильтрами:\n\n"
+        "• **Банкоматы без комиссии (VakıfBank, Ziraat, Halkbank)** — сразу показывают ближайшие рабочие точки рядом с вашим текущим местоположением.\n"
+        "• **Обменники Гранд-Базара (Kapalıçarşı)** — точки с минимальным спредом и лучшим курсом обмена валюты в Стамбуле.\n"
+        "• **Отделения почты PTT** — официальные точки получения наличных по Золотой Короне.\n\n"
+        "👇 _Нажмите на нужную кнопку ниже, чтобы открыть маршрут в приложении карт:_"
+    )
+    await callback.message.edit_text(
+        text,
+        reply_markup=get_country_maps_keyboard(slug, maps),
         parse_mode="Markdown",
         disable_web_page_preview=True
     )
@@ -251,7 +353,7 @@ async def handle_csec_scams(callback: CallbackQuery):
             f"🚨 **{s['title']}**\n"
             f"• **Как выглядит схема:** {s['desc']}\n"
             f"• 🛡 **Как защититься:** {s['protection']}\n"
-            f"• 🔍 _{s['source']}_\n"
+            f"• 🔍 _Источник:_ [Официальное предупреждение]({s['source']})\n"
         )
 
     full_text = "\n".join(lines)

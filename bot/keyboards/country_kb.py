@@ -26,11 +26,16 @@ def get_country_hub_keyboard(country_slug: str) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="💳 Карты и банкоматы", callback_data=f"csec_cards_{country_slug}")
         ],
         [
-            InlineKeyboardButton(text="📲 Золотая Корона / Переводы", callback_data=f"csec_transfers_{country_slug}"),
-            InlineKeyboardButton(text="⚠️ Скам и ловушка DCC", callback_data=f"csec_scams_{country_slug}")
+            InlineKeyboardButton(text="📱 Оплата по QR (Karekod)", callback_data=f"csec_qr_{country_slug}"),
+            InlineKeyboardButton(text="📲 Золотая Корона", callback_data=f"csec_transfers_{country_slug}")
         ],
         [
-            InlineKeyboardButton(text="🎬 Реальный опыт (Social Proof)", callback_data=f"csec_proof_{country_slug}")
+            InlineKeyboardButton(text="💡 Лайфхаки, чаевые и лимиты", callback_data=f"csec_lifehacks_{country_slug}"),
+            InlineKeyboardButton(text="🗺 Карты банкоматов и обменников", callback_data=f"csec_maps_{country_slug}")
+        ],
+        [
+            InlineKeyboardButton(text="⚠️ Скам и ловушка DCC", callback_data=f"csec_scams_{country_slug}"),
+            InlineKeyboardButton(text="🎬 Опыт туристов (Social Proof)", callback_data=f"csec_proof_{country_slug}")
         ],
         [
             InlineKeyboardButton(text="🚨 Сообщить об ошибке", callback_data=f"report_error_{country_slug}"),
@@ -41,6 +46,24 @@ def get_country_hub_keyboard(country_slug: str) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="🏠 Главное меню", callback_data="back_to_menu")
         ]
     ])
+
+def get_country_maps_keyboard(country_slug: str, maps_data: Dict[str, str]) -> InlineKeyboardMarkup:
+    """Keyboard with direct external Google Maps links with applied filters."""
+    buttons = []
+    if maps_data.get("vakifbank_atms"):
+        buttons.append([InlineKeyboardButton(text="📍 Банкоматы VakıfBank на Google Maps ↗", url=maps_data["vakifbank_atms"])])
+    if maps_data.get("ziraat_atms"):
+        buttons.append([InlineKeyboardButton(text="📍 Банкоматы Ziraat Bankası на Google Maps ↗", url=maps_data["ziraat_atms"])])
+    if maps_data.get("halkbank_atms"):
+        buttons.append([InlineKeyboardButton(text="📍 Банкоматы Halkbank на Google Maps ↗", url=maps_data["halkbank_atms"])])
+    if maps_data.get("grand_bazaar_exchange"):
+        buttons.append([InlineKeyboardButton(text="📍 Обменники Гранд-Базара (лучший курс) ↗", url=maps_data["grand_bazaar_exchange"])])
+    if maps_data.get("ptt_post_offices"):
+        buttons.append([InlineKeyboardButton(text="📍 Отделения почты PTT (выдача Короны) ↗", url=maps_data["ptt_post_offices"])])
+    
+    buttons.append([InlineKeyboardButton(text="« Назад в хаб страны", callback_data=f"country_{country_slug}")])
+    buttons.append([InlineKeyboardButton(text="🏠 В главное меню", callback_data="back_to_menu")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_country_section_back_keyboard(country_slug: str) -> InlineKeyboardMarkup:
     """Navigation keyboard to return from a specific country sub-section to the country hub."""
