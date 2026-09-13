@@ -16,10 +16,10 @@ class handler(BaseHTTPRequestHandler):
             from config.settings import settings
             token_valid = bool(settings.BOT_TOKEN and ":" in settings.BOT_TOKEN)
 
-            # Check incoming request path or forwarded URI
-            request_uri = self.headers.get("x-matched-path") or self.headers.get("x-vercel-matched-path") or self.path
+            # Check incoming request path
+            is_set_webhook = "set_webhook" in self.path or "webhook" in self.path
 
-            if "set_webhook" in self.path or "set_webhook" in request_uri:
+            if is_set_webhook:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 result = loop.run_until_complete(self._set_webhook(settings))
@@ -32,7 +32,8 @@ class handler(BaseHTTPRequestHandler):
                 "status": "ok",
                 "service": "TravelPayBot Vercel Serverless",
                 "bot_name": settings.BOT_NAME,
-                "token_configured": token_valid
+                "token_configured": token_valid,
+                "path": self.path
             })
         except Exception as e:
             import traceback
