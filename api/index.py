@@ -50,6 +50,8 @@ def get_bot_and_dispatcher():
     return _bot, _dp
 
 @app.get("/")
+@app.get("/api")
+@app.get("/api/index")
 async def root():
     from config.settings import settings
     token_status = "configured" if settings.BOT_TOKEN and ":" in settings.BOT_TOKEN else "missing_or_invalid"
@@ -60,6 +62,7 @@ async def root():
         "token_status": token_status
     }
 
+@app.get("/set_webhook")
 @app.get("/api/set_webhook")
 async def setup_webhook(request: Request):
     """
@@ -107,6 +110,7 @@ async def setup_webhook(request: Request):
             content={"error": str(e)}
         )
 
+@app.post("/webhook")
 @app.post("/api/webhook")
 async def telegram_webhook(request: Request):
     """
