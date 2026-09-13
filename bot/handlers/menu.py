@@ -5,7 +5,11 @@ import logging
 
 from bot.keyboards.menu_kb import get_main_menu_kb
 from bot.keyboards.country_kb import (
-    get_countries_keyboard, get_country_summary_keyboard, get_subscription_pay_keyboard
+    get_countries_keyboard,
+    get_country_hub_keyboard,
+    get_country_section_back_keyboard,
+    get_country_summary_keyboard,
+    get_subscription_pay_keyboard
 )
 from database.repositories.users import UserRepository
 from database.repositories.countries import CountryRepository
@@ -66,8 +70,28 @@ async def handle_country_chosen(callback: CallbackQuery, state: FSMContext):
         )
         return
 
-    # User has access: show summary
+    # User has access: show summary / interactive hub
     await UserRepository.log_event(user_id, "view_country_summary", {"slug": slug})
+    expert_data = CountryRepository.get_expert_data(slug)
+
+    if expert_data:
+        # High-value interactive Country Hub
+        c_name = expert_data.get("name", slug.title())
+        headline = expert_data.get("headline", "")
+        
+        hub_text = (
+            f"📍 **ЭКСПЕРТНЫЙ ГИД: {c_name.upper()}**\n\n"
+            f"⚡ **Коротко о главном:**\n_{headline}_\n\n"
+            "💡 _Выберите интересующий раздел ниже, чтобы изучить проверенные факты, "
+            "правила банкоматов, нюансы валюты и реальный опыт туристов:_"
+        )
+        await callback.message.edit_text(
+            hub_text,
+            reply_markup=get_country_hub_keyboard(slug),
+            parse_mode="Markdown"
+        )
+        return
+
     summary = await CountryRepository.get_country_summary(country_id, slug)
 
     lines = [
@@ -106,6 +130,176 @@ async def handle_country_chosen(callback: CallbackQuery, state: FSMContext):
         parse_mode="Markdown",
         disable_web_page_preview=True
     )
+
+# --- SUB-SECTION HANDLERS FOR COUNTRY HUB (TURKEY & OTHERS) ---
+
+@menu_router.callback_query(F.data.startswith("csec_cash_"))
+async def handle_csec_cash(callback: CallbackQuery):
+    await callback.answer()
+    slug = callback.data.replace("csec_cash_", "")
+    await UserRepository.log_event(callback.from_user.id, "view_section_cash", {"slug": slug})
+    expert_data = CountryRepository.get_expert_data(slug)
+
+    if not expert_data:
+        await callback.message.answer("Данные раздела обновляются...")
+        return
+
+    c_info = expert_data.get("currency_info", {})
+    text = (
+        f"💵 **НАЛИЧНЫЕ И ОБМЕН ВАЛЮТЫ: {expert_data['name']}**\n\n"
+        f"🏛 **Местная валюта:** {c_info.get('official_currency')}\n\n"
+        f"🇷🇺 **Наличные рубли:**\n{c_info.get('cash_rubles')}\n\n"
+        f"{c_info.get('usd_eur_rules')}\n\n"
+        f"{c_info.get('best_exchangers')}\n\n"
+        "🔍 _Верификация: Аналитический отдел TravelPay & ЦБ РФ | Проверено: 13.09.2026_"
+    )
+    await callback.message.edit_text(
+        text,
+        reply_markup=get_country_section_back_keyboard(slug),
+        parse_mode="Markdown",
+        disable_web_page_preview=True
+    )
+
+
+@menu_router.callback_query(F.data.startswith("csec_cards_"))
+async def handle_csec_cards(callback: CallbackQuery):
+    await callback.answer()
+    slug = callback.data.replace("csec_cards_", "")
+    await UserRepository.log_event(callback.from_user.id, "view_section_cards", {"slug": slug})
+    expert_data = CountryRepository.get_expert_data(slug)
+
+    if not expert_data:
+        await callback.message.answer("Данные раздела обновляются...")
+        return
+
+    cards = expert_data.get("cards_and_atms", {})
+    dcc = cards.get("dcc_trap", "")
+    up_banks = cards.get("unionpay_status", [])
+
+    lines = [
+        f"💳 **КАРТЫ И БАНКОМАТЫ: {expert_data['name']}**\n",
+        dcc,
+        "\n🏦 **Как работают банкоматы с картами UnionPay (РФ):**"
+    ]
+
+    for b in up_banks:
+        lines.append(
+            f"\n• **{b['bank']}** — {b['status']}\n"
+            f"  💸 Комиссия: {b['fee']}\n"
+            f"  ℹ️ {b['tips']}\n"
+            f"  🔍 _Источник:_ [Официальный сайт]({b['source']}) | _Дата:_ {b['verified_at']}"
+        )
+
+    lines.append("\n⚠️ _Карты Visa и Mastercard, выпущенные банками РФ, за рубежом НЕ работают нигде._")
+
+    full_text = "\n".join(lines)
+    await callback.message.edit_text(
+        full_text,
+        reply_markup=get_country_section_back_keyboard(slug),
+        parse_mode="Markdown",
+        disable_web_page_preview=True
+    )
+
+
+@menu_router.callback_query(F.data.startswith("csec_transfers_"))
+async def handle_csec_transfers(callback: CallbackQuery):
+    await callback.answer()
+    slug = callback.data.replace("csec_transfers_", "")
+    await UserRepository.log_event(callback.from_user.id, "view_section_transfers", {"slug": slug})
+    expert_data = CountryRepository.get_expert_data(slug)
+
+    if not expert_data:
+        await callback.message.answer("Данные раздела обновляются...")
+        return
+
+    transfers = expert_data.get("transfers_and_digital", {})
+    text = (
+        f"📲 **ПЕРЕВОДЫ И ЦИФРОВЫЕ СЕРВИСЫ: {expert_data['name']}**\n\n"
+        f"{transfers.get('koronapay')}\n\n"
+        f"{transfers.get('ininal_letim')}\n\n"
+        "🔍 _Источник: Тарифы Золотой Короны & Ininal | Проверено: 12.09.2026_"
+    )
+    await callback.message.edit_text(
+        text,
+        reply_markup=get_country_section_back_keyboard(slug),
+        parse_mode="Markdown",
+        disable_web_page_preview=True
+    )
+
+
+@menu_router.callback_query(F.data.startswith("csec_scams_"))
+async def handle_csec_scams(callback: CallbackQuery):
+    await callback.answer()
+    slug = callback.data.replace("csec_scams_", "")
+    await UserRepository.log_event(callback.from_user.id, "view_section_scams", {"slug": slug})
+    expert_data = CountryRepository.get_expert_data(slug)
+
+    if not expert_data:
+        await callback.message.answer("Данные раздела обновляются...")
+        return
+
+    scams = expert_data.get("scams_and_warnings", [])
+    lines = [f"⚠️ **СКАМ-СХЕМЫ И ОПАСНОСТИ: {expert_data['name']}**\n"]
+
+    for s in scams:
+        lines.append(
+            f"🚨 **{s['title']}**\n"
+            f"• **Как выглядит схема:** {s['desc']}\n"
+            f"• 🛡 **Как защититься:** {s['protection']}\n"
+            f"• 🔍 _{s['source']}_\n"
+        )
+
+    full_text = "\n".join(lines)
+    await callback.message.edit_text(
+        full_text,
+        reply_markup=get_country_section_back_keyboard(slug),
+        parse_mode="Markdown",
+        disable_web_page_preview=True
+    )
+
+
+@menu_router.callback_query(F.data.startswith("csec_proof_"))
+async def handle_csec_proof(callback: CallbackQuery):
+    await callback.answer()
+    slug = callback.data.replace("csec_proof_", "")
+    await UserRepository.log_event(callback.from_user.id, "view_section_proof", {"slug": slug})
+    expert_data = CountryRepository.get_expert_data(slug)
+
+    if not expert_data:
+        await callback.message.answer("Данные раздела обновляются...")
+        return
+
+    proofs = expert_data.get("social_proof", [])
+    lines = [
+        f"🎬 **РЕАЛЬНЫЙ ОПЫТ И СОЦИАЛЬНЫЕ ДОКАЗАТЕЛЬСТВА: {expert_data['name']}**\n",
+        "_Живой опыт путешественников с датами проверок и пруфами:_\n"
+    ]
+
+    for p in proofs:
+        platform = p.get("platform", "Опыт")
+        author = p.get("author") or p.get("channel", "Турист")
+        date = p.get("date", "недавно")
+        text = p.get("text", "")
+        link = p.get("link", "#")
+
+        lines.append(
+            f"🔹 **{platform}** ({date})\n"
+            f"👤 _Автор / канал:_ {author}\n"
+            f"📌 **{p.get('title')}**\n"
+            f"{text}\n"
+            f"🔗 [Открыть первоисточник / видео ↗]({link})\n"
+        )
+
+    lines.append("💡 _Все материалы проходят предварительную модерацию на актуальность._")
+
+    full_text = "\n".join(lines)
+    await callback.message.edit_text(
+        full_text,
+        reply_markup=get_country_section_back_keyboard(slug),
+        parse_mode="Markdown",
+        disable_web_page_preview=True
+    )
+
 
 @menu_router.callback_query(F.data == "menu_scam_warnings")
 async def handle_scam_warnings(callback: CallbackQuery):

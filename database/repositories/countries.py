@@ -1,19 +1,20 @@
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List
 from database.client import db
+from database.knowledge_base import COUNTRIES_KNOWLEDGE_BASE
 
 class CountryRepository:
     """Repository for country data, verified payment methods, warnings, and 1-country-per-week limit."""
 
     # Default launch countries
     INITIAL_COUNTRIES = [
-        {"name": "Турция", "slug": "turkey"},
-        {"name": "ОАЭ", "slug": "uae"},
-        {"name": "Египет", "slug": "egypt"},
-        {"name": "Таиланд", "slug": "thailand"},
-        {"name": "Казахстан", "slug": "kazakhstan"},
-        {"name": "Армения", "slug": "armenia"},
-        {"name": "Грузия", "slug": "georgia"}
+        {"name": "Турция 🇹🇷", "slug": "turkey"},
+        {"name": "ОАЭ 🇦🇪", "slug": "uae"},
+        {"name": "Таиланд 🇹🇭", "slug": "thailand"},
+        {"name": "Грузия 🇬🇪", "slug": "georgia"},
+        {"name": "Казахстан 🇰🇿", "slug": "kazakhstan"},
+        {"name": "Армения 🇦🇲", "slug": "armenia"},
+        {"name": "Египет 🇪🇬", "slug": "egypt"}
     ]
 
     @staticmethod
@@ -36,6 +37,11 @@ class CountryRepository:
             if c["slug"] == slug:
                 return c
         return None
+
+    @staticmethod
+    def get_expert_data(slug: str) -> Optional[Dict[str, Any]]:
+        """Returns deep expert data with Social Proof and rules if available for this country."""
+        return COUNTRIES_KNOWLEDGE_BASE.get(slug)
 
     @staticmethod
     async def check_user_access(user_id: int, country_id: str, is_premium: bool) -> Dict[str, Any]:
