@@ -1,4 +1,5 @@
 import httpx
+import asyncio
 from typing import Optional, Dict, Any, List
 import logging
 from config.settings import settings
@@ -9,6 +10,7 @@ class AsyncSupabaseClient:
     """
     High-performance async client for Supabase using direct PostgREST REST endpoints.
     Eliminates threadpool overhead and prevents event-loop blocking in aiogram handlers.
+    Safely adapts to serverless event loop lifecycles.
     """
     def __init__(self, url: Optional[str] = None, key: Optional[str] = None):
         self.url = (url or settings.SUPABASE_URL).rstrip("/")
@@ -21,9 +23,21 @@ class AsyncSupabaseClient:
             "Prefer": "return=representation"
         }
         self._client: Optional[httpx.AsyncClient] = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
 
     async def get_client(self) -> httpx.AsyncClient:
-        if self._client is None or self._client.is_closed:
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
+        if self._client is None or self._client.is_closed or self._loop != current_loop:
+            if self._client and not self._client.is_closed:
+                try:
+                    await self._client.aclose()
+                except Exception:
+                    pass
+            self._loop = current_loop
             self._client = httpx.AsyncClient(
                 headers=self._headers,
                 timeout=httpx.Timeout(10.0, connect=5.0)
@@ -32,7 +46,12 @@ class AsyncSupabaseClient:
 
     async def close(self):
         if self._client and not self._client.is_closed:
-            await self._client.aclose()
+            try:
+                await self._client.aclose()
+            except Exception:
+                pass
+        self._client = None
+        self._loop = None
 
     async def select(self, table: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         client = await self.get_client()

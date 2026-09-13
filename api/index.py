@@ -10,6 +10,26 @@ from http.server import BaseHTTPRequestHandler
 import json
 import asyncio
 
+_dp = None
+
+def get_dispatcher():
+    global _dp
+    if _dp is None:
+        from aiogram import Dispatcher
+        from bot.storage import SupabaseStorage
+        from bot.handlers.onboarding import onboarding_router
+        from bot.handlers.menu import menu_router
+        from bot.handlers.legal import legal_router
+        from bot.handlers.stars import stars_router
+
+        storage = SupabaseStorage()
+        _dp = Dispatcher(storage=storage)
+        _dp.include_router(onboarding_router)
+        _dp.include_router(legal_router)
+        _dp.include_router(menu_router)
+        _dp.include_router(stars_router)
+    return _dp
+
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
@@ -20,10 +40,7 @@ class handler(BaseHTTPRequestHandler):
             is_set_webhook = "set_webhook" in self.path or "webhook" in self.path
 
             if is_set_webhook:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                result = loop.run_until_complete(self._set_webhook(settings))
-                loop.close()
+                result = asyncio.run(self._set_webhook(settings))
                 self._send_json(200, result)
                 return
 
@@ -54,14 +71,12 @@ class handler(BaseHTTPRequestHandler):
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8"))
 
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(self._process_update(data, settings))
-            loop.close()
+            asyncio.run(self._process_update(data, settings))
 
             self._send_json(200, {"ok": True})
         except Exception as e:
             import traceback
+            traceback.print_exc(file=sys.stderr)
             self._send_json(200, {"ok": False, "error": str(e)})
 
     async def _set_webhook(self, settings):
@@ -80,26 +95,24 @@ class handler(BaseHTTPRequestHandler):
         return {"success": success, "webhook_url": webhook_url}
 
     async def _process_update(self, data, settings):
-        from aiogram import Bot, Dispatcher
+        from aiogram import Bot
         from aiogram.types import Update
-        from bot.storage import SupabaseStorage
-        from bot.handlers.onboarding import onboarding_router
-        from bot.handlers.menu import menu_router
-        from bot.handlers.legal import legal_router
-        from bot.handlers.stars import stars_router
 
         bot = Bot(token=settings.BOT_TOKEN)
-        storage = SupabaseStorage()
-        dp = Dispatcher(storage=storage)
-        dp.include_router(onboarding_router)
-        dp.include_router(legal_router)
-        dp.include_router(menu_router)
-        dp.include_router(stars_router)
+        dp = get_dispatcher()
 
-        update = Update.model_validate(data, context={"bot": bot})
-        await dp.feed_update(bot=bot, update=update)
-        await storage.close()
-        await bot.session.close()
+        try:
+            update = Update.model_validate(data, context={"bot": bot})
+            await dp.feed_update(bot=bot, update=update)
+        except Exception as e:
+            import traceback
+            print(f"[ERROR processing update]: {e}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+        finally:
+            try:
+                await bot.session.close()
+            except Exception:
+                pass
 
     def _send_json(self, status_code: int, data: dict):
         self.send_response(status_code)

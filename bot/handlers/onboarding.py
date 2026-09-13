@@ -20,39 +20,49 @@ from bot.storage import SupabaseStorage
 logger = logging.getLogger(__name__)
 onboarding_router = Router(name="onboarding")
 
+async def _send_or_edit_step(message_or_cb, text: str, reply_markup):
+    if isinstance(message_or_cb, CallbackQuery):
+        try:
+            if hasattr(message_or_cb.message, "edit_text"):
+                await message_or_cb.message.edit_text(text, reply_markup=reply_markup)
+                return
+        except Exception as e:
+            logger.warning(f"edit_text failed: {e}, falling back to sending new message")
+        try:
+            await message_or_cb.message.answer(text, reply_markup=reply_markup)
+        except Exception:
+            await message_or_cb.bot.send_message(message_or_cb.from_user.id, text, reply_markup=reply_markup)
+    else:
+        await message_or_cb.answer(text, reply_markup=reply_markup)
+
 async def show_step(target_step: int, message_or_cb, state: FSMContext, user_id: int):
     """Helper to render a specific onboarding step and persist state in database."""
-    target_msg = message_or_cb.message if isinstance(message_or_cb, CallbackQuery) else message_or_cb
-    
-    if target_step == 1:
-        await state.set_state(OnboardingStates.step_1)
-        await UserRepository.update_onboarding_step(user_id, 1)
-        await UserRepository.log_event(user_id, "onboarding_step_1")
-        if isinstance(message_or_cb, CallbackQuery):
-            await target_msg.edit_text(STEP_1_TEXT, reply_markup=get_step_1_kb())
-        else:
-            await target_msg.answer(STEP_1_TEXT, reply_markup=get_step_1_kb())
+    step_data = {
+        1: (OnboardingStates.step_1, STEP_1_TEXT, get_step_1_kb()),
+        2: (OnboardingStates.step_2, STEP_2_TEXT, get_step_2_kb()),
+        3: (OnboardingStates.step_3, STEP_3_TEXT, get_step_3_kb()),
+        4: (OnboardingStates.step_4, STEP_4_TEXT, get_step_4_kb()),
+    }
 
-    elif target_step == 2:
-        await state.set_state(OnboardingStates.step_2)
-        await UserRepository.update_onboarding_step(user_id, 2)
-        await UserRepository.log_event(user_id, "onboarding_step_2")
-        await target_msg.edit_text(STEP_2_TEXT, reply_markup=get_step_2_kb())
+    if target_step not in step_data:
+        target_step = 1
 
-    elif target_step == 3:
-        await state.set_state(OnboardingStates.step_3)
-        await UserRepository.update_onboarding_step(user_id, 3)
-        await UserRepository.log_event(user_id, "onboarding_step_3")
-        await target_msg.edit_text(STEP_3_TEXT, reply_markup=get_step_3_kb())
+    fsm_state, text, kb = step_data[target_step]
 
-    elif target_step == 4:
-        await state.set_state(OnboardingStates.step_4)
-        await UserRepository.update_onboarding_step(user_id, 4)
-        await UserRepository.log_event(user_id, "onboarding_step_4")
-        if isinstance(message_or_cb, CallbackQuery):
-            await target_msg.edit_text(STEP_4_TEXT, reply_markup=get_step_4_kb())
-        else:
-            await target_msg.answer(STEP_4_TEXT, reply_markup=get_step_4_kb())
+    # Render message FIRST for instant UI response in Telegram
+    await _send_or_edit_step(message_or_cb, text, kb)
+
+    # Persist FSM state and analytics safely
+    try:
+        await state.set_state(fsm_state)
+    except Exception as e:
+        logger.warning(f"Failed to set FSM state for step {target_step}: {e}")
+
+    try:
+        await UserRepository.update_onboarding_step(user_id, target_step)
+        await UserRepository.log_event(user_id, f"onboarding_step_{target_step}")
+    except Exception as e:
+        logger.warning(f"Failed to persist user onboarding step {target_step}: {e}")
 
 
 @onboarding_router.message(CommandStart())
@@ -93,25 +103,37 @@ async def handle_start(message: Message, state: FSMContext):
 
 @onboarding_router.callback_query(F.data == "onboarding_next_2")
 async def handle_next_2(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
+    try:
+        await callback.answer()
+    except Exception as e:
+        logger.warning(f"callback.answer failed: {e}")
     await show_step(2, callback, state, callback.from_user.id)
 
 
 @onboarding_router.callback_query(F.data == "onboarding_next_3")
 async def handle_next_3(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
+    try:
+        await callback.answer()
+    except Exception as e:
+        logger.warning(f"callback.answer failed: {e}")
     await show_step(3, callback, state, callback.from_user.id)
 
 
 @onboarding_router.callback_query(F.data == "onboarding_next_4")
 async def handle_next_4(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
+    try:
+        await callback.answer()
+    except Exception as e:
+        logger.warning(f"callback.answer failed: {e}")
     await show_step(4, callback, state, callback.from_user.id)
 
 
 @onboarding_router.callback_query(F.data == "onboarding_show_privacy")
 async def handle_show_privacy(callback: CallbackQuery):
-    await callback.answer()
+    try:
+        await callback.answer()
+    except Exception as e:
+        logger.warning(f"callback.answer failed: {e}")
     # Opens separate message with privacy policy without altering onboarding step
     await callback.message.answer(PRIVACY_POLICY_TEXT)
 
@@ -119,24 +141,46 @@ async def handle_show_privacy(callback: CallbackQuery):
 @onboarding_router.callback_query(F.data == "onboarding_consent_accept")
 async def handle_consent_accepted(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
-    await UserRepository.give_consent(user_id)
-    await UserRepository.log_event(user_id, "onboarding_complete")
-    
-    await state.set_state(MainMenuStates.idle)
-    await callback.message.edit_text(STEP_5_TEXT, reply_markup=get_main_menu_kb())
-    await callback.answer("Согласие принято!")
+    try:
+        await callback.answer("Согласие принято!")
+    except Exception as e:
+        logger.warning(f"callback.answer failed: {e}")
+
+    try:
+        await callback.message.edit_text(STEP_5_TEXT, reply_markup=get_main_menu_kb())
+    except Exception:
+        await callback.message.answer(STEP_5_TEXT, reply_markup=get_main_menu_kb())
+
+    try:
+        await UserRepository.give_consent(user_id)
+        await UserRepository.log_event(user_id, "onboarding_complete")
+        await state.set_state(MainMenuStates.idle)
+    except Exception as e:
+        logger.warning(f"Error persisting consent: {e}")
 
 
 @onboarding_router.callback_query(F.data.startswith("onboarding_resume_"))
 async def handle_soft_resume(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
+    try:
+        await callback.answer()
+    except Exception as e:
+        logger.warning(f"callback.answer failed: {e}")
     step = int(callback.data.split("_")[-1])
-    await UserRepository.log_event(callback.from_user.id, "onboarding_resumed_accepted", {"step": step})
+    try:
+        await UserRepository.log_event(callback.from_user.id, "onboarding_resumed_accepted", {"step": step})
+    except Exception:
+        pass
     await show_step(step, callback, state, callback.from_user.id)
 
 
 @onboarding_router.callback_query(F.data == "onboarding_restart_confirm")
 async def handle_restart_confirm(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
-    await UserRepository.reset_consent_and_onboarding(callback.from_user.id)
+    try:
+        await callback.answer()
+    except Exception as e:
+        logger.warning(f"callback.answer failed: {e}")
+    try:
+        await UserRepository.reset_consent_and_onboarding(callback.from_user.id)
+    except Exception:
+        pass
     await show_step(1, callback, state, callback.from_user.id)
