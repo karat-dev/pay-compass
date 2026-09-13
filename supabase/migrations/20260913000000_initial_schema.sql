@@ -206,9 +206,20 @@ ALTER TABLE recommendations ENABLE ROW LEVEL SECURITY;
 
 -- SERVICE ROLE ACCESS (Full access for backend bot/scrapers with service_role key)
 -- Public read access for read-only tables (countries, verified facts, payment methods, warnings)
+DROP POLICY IF EXISTS "Public read access for countries" ON countries;
 CREATE POLICY "Public read access for countries" ON countries FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public read access for verified_facts" ON verified_facts;
 CREATE POLICY "Public read access for verified_facts" ON verified_facts FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public read access for payment_methods" ON payment_methods;
 CREATE POLICY "Public read access for payment_methods" ON payment_methods FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public read access for warnings" ON warnings;
 CREATE POLICY "Public read access for warnings" ON warnings FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public read access for card_instructions" ON card_instructions;
 CREATE POLICY "Public read access for card_instructions" ON card_instructions FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public read access for recommendations" ON recommendations;
 CREATE POLICY "Public read access for recommendations" ON recommendations FOR SELECT USING (true);
