@@ -1,17 +1,16 @@
-import logging
+import os
 import sys
+
+# Ensure workspace root is in sys.path
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
+if PARENT_DIR not in sys.path:
+    sys.path.insert(0, PARENT_DIR)
+
+import logging
 from typing import Optional
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
-from aiogram import Bot, Dispatcher
-from aiogram.types import Update
-
-from config.settings import settings
-from bot.storage import SupabaseStorage
-from bot.handlers.onboarding import onboarding_router
-from bot.handlers.menu import menu_router
-from bot.handlers.legal import legal_router
-from bot.handlers.stars import stars_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,13 +21,21 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="TravelPayBot Webhook")
 
-_bot: Optional[Bot] = None
-_dp: Optional[Dispatcher] = None
-_storage: Optional[SupabaseStorage] = None
+_bot = None
+_dp = None
+_storage = None
 
 def get_bot_and_dispatcher():
     global _bot, _dp, _storage
     if _bot is None:
+        from aiogram import Bot, Dispatcher
+        from config.settings import settings
+        from bot.storage import SupabaseStorage
+        from bot.handlers.onboarding import onboarding_router
+        from bot.handlers.menu import menu_router
+        from bot.handlers.legal import legal_router
+        from bot.handlers.stars import stars_router
+
         if not settings.BOT_TOKEN or ":" not in settings.BOT_TOKEN:
             raise ValueError(
                 f"BOT_TOKEN is invalid or not set in Environment Variables! Current value: '{settings.BOT_TOKEN}'"
@@ -44,6 +51,7 @@ def get_bot_and_dispatcher():
 
 @app.get("/")
 async def root():
+    from config.settings import settings
     token_status = "configured" if settings.BOT_TOKEN and ":" in settings.BOT_TOKEN else "missing_or_invalid"
     return {
         "status": "ok",
@@ -59,6 +67,7 @@ async def setup_webhook(request: Request):
     Pass ?url=https://your-domain.vercel.app or auto-detect from Vercel headers.
     """
     try:
+        from config.settings import settings
         bot, dp = get_bot_and_dispatcher()
     except Exception as e:
         logger.error(f"Configuration error: {e}")
@@ -103,6 +112,9 @@ async def telegram_webhook(request: Request):
     """
     Incoming webhook updates from Telegram Bot API.
     """
+    from config.settings import settings
+    from aiogram.types import Update
+
     secret_header = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
     if settings.WEBHOOK_SECRET and secret_header != settings.WEBHOOK_SECRET:
         logger.warning("Unauthorized webhook request: secret mismatch")
