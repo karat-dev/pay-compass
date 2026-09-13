@@ -67,8 +67,13 @@ cp .env.example .env
 # Заполните BOT_TOKEN, SUPABASE_URL, SUPABASE_KEY
 ```
 
-3. Примените SQL-миграции в Supabase SQL Editor:
-Выполните скрипт из файла `database/migrations/001_initial_schema.sql`.
+3. Примените SQL-миграции в Supabase:
+   - **Автоматически через GitHub Actions**: добавьте в секреты GitHub репозитория (`Settings -> Secrets and variables -> Actions`):
+     - `SUPABASE_ACCESS_TOKEN` (токен из Supabase Dashboard -> Account -> Access Tokens)
+     - `SUPABASE_PROJECT_ID` (Reference ID проекта из URL `https://supabase.com/dashboard/project/<id>`)
+     - `SUPABASE_DB_PASSWORD` (пароль к базе, заданный при создании проекта)
+     При любом пуше в `main` workflow `.github/workflows/supabase_deploy.yml` автоматически накатит миграции из `supabase/migrations/`.
+   - **Либо вручную через Supabase SQL Editor**: откройте `database/migrations/001_initial_schema.sql` (или `supabase/migrations/20260913000000_initial_schema.sql`), вставьте его содержимое и нажмите **Run**.
 
 4. Запустите тесты:
 ```bash
