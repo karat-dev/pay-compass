@@ -185,3 +185,30 @@ CREATE INDEX IF NOT EXISTS idx_user_country_access_user ON user_country_access(u
 CREATE INDEX IF NOT EXISTS idx_verified_facts_country ON verified_facts(country_id);
 CREATE INDEX IF NOT EXISTS idx_payment_methods_country ON payment_methods(country_id);
 CREATE INDEX IF NOT EXISTS idx_warnings_country ON warnings(country_id);
+
+-- ENABLE ROW LEVEL SECURITY (RLS) FOR ALL TABLES
+ALTER TABLE countries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sources ENABLE ROW LEVEL SECURITY;
+ALTER TABLE source_health ENABLE ROW LEVEL SECURITY;
+ALTER TABLE raw_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE verified_facts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payment_methods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE warnings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_states ENABLE ROW LEVEL SECURITY;
+ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_country_access ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE partners ENABLE ROW LEVEL SECURITY;
+ALTER TABLE card_instructions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recommendations ENABLE ROW LEVEL SECURITY;
+
+-- SERVICE ROLE ACCESS (Full access for backend bot/scrapers with service_role key)
+-- Public read access for read-only tables (countries, verified facts, payment methods, warnings)
+CREATE POLICY "Public read access for countries" ON countries FOR SELECT USING (true);
+CREATE POLICY "Public read access for verified_facts" ON verified_facts FOR SELECT USING (true);
+CREATE POLICY "Public read access for payment_methods" ON payment_methods FOR SELECT USING (true);
+CREATE POLICY "Public read access for warnings" ON warnings FOR SELECT USING (true);
+CREATE POLICY "Public read access for card_instructions" ON card_instructions FOR SELECT USING (true);
+CREATE POLICY "Public read access for recommendations" ON recommendations FOR SELECT USING (true);
