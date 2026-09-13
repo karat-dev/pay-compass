@@ -366,44 +366,43 @@ async def handle_csec_scams(callback: CallbackQuery):
     )
 
 
-@menu_router.callback_query(F.data.startswith("csec_proof_"))
-async def handle_csec_proof(callback: CallbackQuery):
+@menu_router.callback_query(F.data.startswith("csec_forum_") | F.data.startswith("csec_proof_"))
+async def handle_csec_forum(callback: CallbackQuery):
     await callback.answer()
-    slug = callback.data.replace("csec_proof_", "")
-    await UserRepository.log_event(callback.from_user.id, "view_section_proof", {"slug": slug})
+    slug = callback.data.replace("csec_forum_", "").replace("csec_proof_", "")
+    await UserRepository.log_event(callback.from_user.id, "view_section_forum_insights", {"slug": slug})
     expert_data = CountryRepository.get_expert_data(slug)
 
     if not expert_data:
         await callback.message.answer("Данные раздела обновляются...")
         return
 
-    proofs = expert_data.get("social_proof", [])
+    insights = expert_data.get("community_insights", {})
+    headline = insights.get("headline", "💬 Опыт туристов (Форум Винского)")
+    desc = insights.get("description", "")
+    period = insights.get("verified_period", "недавно")
+    takeaways = insights.get("key_takeaways", [])
+
     lines = [
-        f"🎬 **РЕАЛЬНЫЙ ОПЫТ И СОЦИАЛЬНЫЕ ДОКАЗАТЕЛЬСТВА: {expert_data['name']}**\n",
-        "_Живой опыт путешественников с датами проверок и пруфами:_\n"
+        f"{headline}\n",
+        f"_{desc}_\n",
+        f"📅 **Период анализа:** {period}\n"
     ]
 
-    for p in proofs:
-        platform = p.get("platform", "Опыт")
-        author = p.get("author") or p.get("channel", "Турист")
-        date = p.get("date", "недавно")
-        text = p.get("text", "")
-        link = p.get("link", "#")
-
+    for item in takeaways:
         lines.append(
-            f"🔹 **{platform}** ({date})\n"
-            f"👤 _Автор / канал:_ {author}\n"
-            f"📌 **{p.get('title')}**\n"
-            f"{text}\n"
-            f"🔗 [Открыть первоисточник / видео ↗]({link})\n"
+            f"📌 **{item['topic']}**\n"
+            f"• **Консенсус:** {item['consensus']}\n"
+            f"{item['details']}\n"
+            f"• 🕒 _Подтверждено отчетами:_ {item['date_verified']} (достоверность: {int(item['confidence']*100)}%)\n"
         )
 
-    lines.append("💡 _Все материалы проверены: кнопки прямого перехода прикреплены ниже 👇_")
+    lines.append("🛡 _Мы фильтруем спам, скрытую рекламу и эмоциональные вбросы, оставляя только факты, подтвержденные независимыми туристами._")
 
     full_text = "\n".join(lines)
     await callback.message.edit_text(
         full_text,
-        reply_markup=get_country_proof_keyboard(slug, proofs),
+        reply_markup=get_country_section_back_keyboard(slug),
         parse_mode="Markdown",
         disable_web_page_preview=True
     )

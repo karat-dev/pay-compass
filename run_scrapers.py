@@ -3,6 +3,7 @@ import logging
 from scrapers.crawlee_scraper import RshbCrawleeScraper
 from scrapers.telethon_scraper import TelethonChannelScraper
 from scrapers.rss_fallback import MediaRssFallbackScraper
+from scrapers.awd_scraper import AwdForumScraper
 from database.client import db
 
 logging.basicConfig(level=logging.INFO)
@@ -16,12 +17,17 @@ async def run_all_scrapers():
     rshb_count = await rshb.run()
     logger.info(f"Official RSHB scraper finished with {rshb_count} raw items.")
 
-    # 2. Telegram Parser (Telethon / fallback)
+    # 2. Forum AWD Scraper (Форум Винского - опыт и нюансы)
+    awd = AwdForumScraper()
+    awd_count = await awd.run()
+    logger.info(f"Forum AWD scraper finished with {awd_count} raw items.")
+
+    # 3. Telegram Parser (Telethon / fallback)
     tg = TelethonChannelScraper("travel_payments_news")
     tg_count = await tg.run()
     logger.info(f"Telegram parser finished with {tg_count} raw items.")
 
-    # 3. Media RSS Fallback
+    # 4. Media RSS Fallback
     rss = MediaRssFallbackScraper()
     rss_count = await rss.run()
     logger.info(f"Media RSS scraper finished with {rss_count} raw items.")

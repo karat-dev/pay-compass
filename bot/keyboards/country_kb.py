@@ -35,7 +35,7 @@ def get_country_hub_keyboard(country_slug: str) -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton(text="⚠️ Скам и ловушка DCC", callback_data=f"csec_scams_{country_slug}"),
-            InlineKeyboardButton(text="🎬 Опыт туристов (Social Proof)", callback_data=f"csec_proof_{country_slug}")
+            InlineKeyboardButton(text="💬 Опыт туристов (Форум)", callback_data=f"csec_forum_{country_slug}")
         ],
         [
             InlineKeyboardButton(text="🚨 Сообщить об ошибке", callback_data=f"report_error_{country_slug}"),
