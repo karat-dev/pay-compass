@@ -72,3 +72,23 @@ async def cmd_delete_me(message: Message, state: FSMContext):
         "🗑 **Ваш аккаунт и все связанные данные успешно удалены.**\n\n"
         "Согласие на обработку данных отозвано. Чтобы начать заново, отправьте команду /start."
     )
+
+@legal_router.message(Command("admin"))
+@legal_router.message(Command("reset_limits"))
+async def cmd_admin(message: Message):
+    """Admin command to verify privileges and clear country access restrictions."""
+    user_id = message.from_user.id
+    if UserRepository.is_admin(user_id):
+        from database.client import db
+        await UserRepository.reset_country_limits(user_id)
+        await db.update("users", {"subscription_status": "premium"}, {"telegram_id": f"eq.{user_id}"})
+        await message.answer(
+            f"👑 **Режим Администратора активирован!**\n\n"
+            f"• Telegram ID: `{user_id}`\n"
+            f"• Статус: **Premium (полный безлимитный доступ)**\n"
+            f"• Лимит на 1 страну: **Сброшен**\n\n"
+            "Вам открыт доступ ко всем странам, разделам и экспертным хабам без ограничений.",
+            parse_mode="Markdown"
+        )
+    else:
+        await message.answer("Эта команда доступна только администраторам сервиса.")

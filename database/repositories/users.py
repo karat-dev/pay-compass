@@ -1,32 +1,67 @@
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 from database.client import db
+from config.settings import settings
 
 class UserRepository:
     """Repository for users, legal consent, country access windows, and product events."""
 
     @staticmethod
+    def is_admin(telegram_id: int) -> bool:
+        """Checks if user has admin privileges (full access to all countries and features)."""
+        admin_ids = {303653591}
+        if settings.ADMIN_TELEGRAM_ID:
+            admin_ids.add(settings.ADMIN_TELEGRAM_ID)
+        return telegram_id in admin_ids
+
+    @staticmethod
     async def get_or_create_user(telegram_id: int, username: Optional[str] = None) -> Dict[str, Any]:
         users = await db.select("users", {"telegram_id": f"eq.{telegram_id}"})
+        is_adm = UserRepository.is_admin(telegram_id)
         if users:
             # Update last_seen_at
             now = datetime.now(timezone.utc).isoformat()
-            await db.update("users", {"last_seen_at": now, "username": username}, {"telegram_id": f"eq.{telegram_id}"})
-            return users[0]
+            update_data: Dict[str, Any] = {"last_seen_at": now, "username": username}
+            if is_adm:
+                update_data["subscription_status"] = "premium"
+            await db.update("users", update_data, {"telegram_id": f"eq.{telegram_id}"})
+            user = users[0]
+            if is_adm:
+                user["subscription_status"] = "premium"
+            return user
         
         created = await db.insert("users", {
             "telegram_id": telegram_id,
             "username": username,
             "consent_given": False,
             "onboarding_step": 1,
-            "subscription_status": "free"
+            "subscription_status": "premium" if is_adm else "free"
         })
+        if created and is_adm:
+            created["subscription_status"] = "premium"
         return created or {}
 
     @staticmethod
     async def get_user(telegram_id: int) -> Optional[Dict[str, Any]]:
         users = await db.select("users", {"telegram_id": f"eq.{telegram_id}"})
-        return users[0] if users else None
+        if users:
+            user = users[0]
+            if UserRepository.is_admin(telegram_id):
+                user["subscription_status"] = "premium"
+            return user
+        if UserRepository.is_admin(telegram_id):
+            return {
+                "telegram_id": telegram_id,
+                "subscription_status": "premium",
+                "consent_given": True,
+                "onboarding_step": 5
+            }
+        return None
+
+    @staticmethod
+    async def reset_country_limits(telegram_id: int):
+        """Clears all country access restrictions for user."""
+        await db.delete("user_country_access", {"user_id": f"eq.{telegram_id}"})
 
     @staticmethod
     async def update_onboarding_step(telegram_id: int, step: int):

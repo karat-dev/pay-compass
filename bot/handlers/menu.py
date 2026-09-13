@@ -49,7 +49,12 @@ async def handle_country_chosen(callback: CallbackQuery, state: FSMContext):
         return
 
     user = await UserRepository.get_user(user_id) or {}
-    is_premium = user.get("subscription_status") == "premium"
+    is_premium = user.get("subscription_status") == "premium" or UserRepository.is_admin(user_id)
+    if UserRepository.is_admin(user_id):
+        try:
+            await UserRepository.reset_country_limits(user_id)
+        except Exception:
+            pass
 
     country_id = str(country.get("id") or slug)
     access = await CountryRepository.check_user_access(user_id, country_id, is_premium)

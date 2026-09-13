@@ -47,11 +47,12 @@ class CountryRepository:
     async def check_user_access(user_id: int, country_id: str, is_premium: bool) -> Dict[str, Any]:
         """
         Enforces rule:
-        - Premium: unlimited countries
+        - Admin or Premium: unlimited countries
         - Free: 1 country per 7 days
         """
-        if is_premium:
-            return {"allowed": True, "reason": "premium"}
+        from database.repositories.users import UserRepository
+        if is_premium or UserRepository.is_admin(user_id):
+            return {"allowed": True, "reason": "admin_or_premium"}
 
         now = datetime.now(timezone.utc)
         records = await db.select("user_country_access", {

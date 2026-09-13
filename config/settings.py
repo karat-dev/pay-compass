@@ -7,7 +7,7 @@ class Settings(BaseSettings):
 
     # Telegram Bot
     BOT_TOKEN: str = "mock_token_for_dev"
-    ADMIN_TELEGRAM_ID: int = 0
+    ADMIN_TELEGRAM_ID: int = 303653591
     BOT_NAME: str = "TravelPayBot"
     WEBHOOK_SECRET: str = "travelpay_webhook_secret"
     VERCEL_URL: Optional[str] = None
