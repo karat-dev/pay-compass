@@ -1,5 +1,6 @@
 import logging
 import sys
+from typing import Optional
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
 from aiogram import Bot, Dispatcher
@@ -19,29 +20,37 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize FastAPI for Vercel Serverless
 app = FastAPI(title="TravelPayBot Webhook")
 
-# Singletons for bot and dispatcher
-bot = Bot(token=settings.BOT_TOKEN)
-storage = SupabaseStorage()
-dp = Dispatcher(storage=storage)
+_bot: Optional[Bot] = None
+_dp: Optional[Dispatcher] = None
+_storage: Optional[SupabaseStorage] = None
 
-# Register routers
-dp.include_router(onboarding_router)
-dp.include_router(legal_router)
-dp.include_router(menu_router)
-dp.include_router(stars_router)
-
+def get_bot_and_dispatcher():
+    global _bot, _dp, _storage
+    if _bot is None:
+        if not settings.BOT_TOKEN or ":" not in settings.BOT_TOKEN:
+            raise ValueError(
+                f"BOT_TOKEN is invalid or not set in Environment Variables! Current value: '{settings.BOT_TOKEN}'"
+            )
+        _bot = Bot(token=settings.BOT_TOKEN)
+        _storage = SupabaseStorage()
+        _dp = Dispatcher(storage=_storage)
+        _dp.include_router(onboarding_router)
+        _dp.include_router(legal_router)
+        _dp.include_router(menu_router)
+        _dp.include_router(stars_router)
+    return _bot, _dp
 
 @app.get("/")
 async def root():
+    token_status = "configured" if settings.BOT_TOKEN and ":" in settings.BOT_TOKEN else "missing_or_invalid"
     return {
         "status": "ok",
         "service": "TravelPayBot Webhook Serverless",
-        "bot_name": settings.BOT_NAME
+        "bot_name": settings.BOT_NAME,
+        "token_status": token_status
     }
-
 
 @app.get("/api/set_webhook")
 async def setup_webhook(request: Request):
@@ -49,6 +58,15 @@ async def setup_webhook(request: Request):
     Helper endpoint to register webhook URL in Telegram with one click.
     Pass ?url=https://your-domain.vercel.app or auto-detect from Vercel headers.
     """
+    try:
+        bot, dp = get_bot_and_dispatcher()
+    except Exception as e:
+        logger.error(f"Configuration error: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"error": f"Bot initialization error: {e}. Check BOT_TOKEN in Vercel Environment Variables."}
+        )
+
     host = request.query_params.get("url")
     if not host:
         host = request.headers.get("x-forwarded-host") or request.headers.get("host")
@@ -80,7 +98,6 @@ async def setup_webhook(request: Request):
             content={"error": str(e)}
         )
 
-
 @app.post("/api/webhook")
 async def telegram_webhook(request: Request):
     """
@@ -92,6 +109,7 @@ async def telegram_webhook(request: Request):
         return Response(status_code=status.HTTP_401_UNAUTHORIZED)
 
     try:
+        bot, dp = get_bot_and_dispatcher()
         update_data = await request.json()
         update = Update.model_validate(update_data, context={"bot": bot})
         await dp.feed_update(bot=bot, update=update)
