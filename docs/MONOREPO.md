@@ -1,6 +1,8 @@
 # Единый проект «Умный туризм» (монорепозиторий)
 
-Три репозитория сходятся в **flight-navigator** — один код, один Supabase, один продуктовый контур.
+Три репозитория сходятся в **один монорепо** — один код, один Supabase, один продуктовый контур.
+
+> **GitHub сегодня:** вся кодовая база и CI живут в репозитории [`karat-dev/pay-compass`](https://github.com/karat-dev/pay-compass) (исторически бот). Репозиторий [`karat-dev/flight-navigator`](https://github.com/karat-dev/flight-navigator) пока содержит только заглушку README — после мержа PR имеет смысл **переименовать** `pay-compass` в `flight-navigator` или сделать force-push main из pay-compass в flight-navigator и архивировать дубликат.
 
 | Было | Роль | Сейчас |
 |------|------|--------|
