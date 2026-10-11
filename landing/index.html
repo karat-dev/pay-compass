@@ -1,0 +1,832 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Умный туризм — блог о выгодных путешествиях</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          paper: '#F7F5EF',
+          stone: '#EDE7D8',
+          ink: '#1C231F',
+          pine: {
+            DEFAULT: '#28402F',
+            deep: '#182A1E',
+            light: '#3E5C46',
+          },
+          brass: '#B08A2E',
+          brassLight: '#D9BE7C',
+        },
+        fontFamily: {
+          display: ['Fraunces', 'serif'],
+          body: ['Inter', 'sans-serif'],
+        },
+      }
+    }
+  }
+</script>
+<style>
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', sans-serif; }
+  .font-display { font-family: 'Fraunces', serif; }
+
+  .route-line {
+    position: absolute;
+    left: 27px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-image: linear-gradient(to bottom, #B08A2E 0 6px, transparent 6px 12px);
+    background-size: 1px 12px;
+    background-repeat: repeat-y;
+  }
+  @media (max-width: 640px) {
+    .route-line { left: 19px; }
+  }
+
+  .waypoint {
+    width: 14px; height: 14px;
+    border-radius: 9999px;
+    border: 2px solid #B08A2E;
+    background: #F7F5EF;
+    transition: background-color .25s ease, transform .25s ease;
+  }
+  .article-item[aria-expanded="true"] .waypoint {
+    background: #B08A2E;
+    transform: scale(1.15);
+  }
+
+  .chevron { transition: transform .3s ease; }
+  .article-item[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+
+  .panel { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s ease; }
+  .article-item[aria-expanded="true"] .panel { grid-template-rows: 1fr; }
+  .panel-inner { overflow: hidden; }
+
+  ::selection { background: #D9BE7C; color: #182A1E; }
+  :focus-visible { outline: 2px solid #B08A2E; outline-offset: 3px; }
+
+  /* View swap */
+  .view { transition: opacity .28s ease; }
+  .view[hidden] { display: none; }
+  .view.is-leaving { opacity: 0; }
+
+  .calc-tab {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.1);
+    color: rgba(247,245,239,0.65);
+  }
+  .calc-tab:hover { background: rgba(255,255,255,0.08); }
+  .calc-tab.is-active {
+    background: #B08A2E;
+    border-color: #B08A2E;
+    color: #182A1E;
+    font-weight: 500;
+  }
+
+  .filter-btn {
+    background: transparent;
+    color: rgba(28,35,31,0.65);
+  }
+  .filter-btn:hover { background: rgba(40,64,47,0.06); }
+  .filter-btn.is-active {
+    background: #28402F;
+    border-color: #28402F;
+    color: #F7F5EF;
+    font-weight: 500;
+  }
+  .article-item[data-hidden="true"] { display: none; }
+  .route-line.is-filtered { display: none; }
+
+  #to-top-btn {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity .25s ease, transform .25s ease;
+  }
+  #to-top-btn.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: 0.01ms !important; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+
+<!-- Travelpayouts / Drive monetization script -->
+<script nowprocket data-noptimize="1" data-cfasync="false" data-wpfc-render="false" seraph-accel-crit="1" data-no-defer="1" data-cmp-ab="2">
+  (function () {
+      var script = document.createElement("script");
+      script.async = 1;
+      script.setAttribute("data-cmp-ab","2");
+      script.src = 'https://emrldtp.com/NTcwMDU4.js?t=570058';
+      document.head.appendChild(script);
+  })();
+</script>
+</head>
+<body class="bg-paper text-ink font-body antialiased">
+
+  <!-- NAV -->
+  <header class="border-b border-ink/10 bg-paper/90 backdrop-blur sticky top-0 z-30">
+    <div class="max-w-5xl mx-auto px-6 sm:px-10 h-16 flex items-center justify-between">
+      <a href="#" data-nav="home" class="flex items-center gap-2.5">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" class="shrink-0">
+          <circle cx="10" cy="10" r="8.5" stroke="#28402F" stroke-width="1.2"/>
+          <path d="M2 10c2-2.2 4.5-2.2 8-2.2s6-2 8-2.2M2 10c2 2.2 4.5 2.2 8 2.2s6 2 8 2.2" stroke="#28402F" stroke-width="1.2" fill="none"/>
+        </svg>
+        <span class="font-display text-lg tracking-tight text-pine-deep">Умный туризм</span>
+      </a>
+      <nav class="hidden sm:flex items-center gap-8 text-sm text-ink/70">
+        <a href="#articles" data-nav="home-articles" class="hover:text-pine-deep transition-colors">Статьи</a>
+        <a href="#" data-nav="about" class="hover:text-pine-deep transition-colors">О нас</a>
+        <a href="#" data-nav="contacts" class="hover:text-pine-deep transition-colors">Контакты</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ============ HOME VIEW ============ -->
+  <div id="view-home" class="view">
+
+    <!-- HERO -->
+    <section id="top" class="relative overflow-hidden">
+      <svg class="absolute inset-0 w-full h-full opacity-[0.06]" preserveAspectRatio="none" viewBox="0 0 1200 500" fill="none">
+        <path d="M-50 420 C 200 380, 260 180, 460 160 S 760 260, 900 120 S 1150 60, 1260 90"
+              stroke="#28402F" stroke-width="2" stroke-dasharray="1 14" stroke-linecap="round"/>
+        <circle cx="460" cy="160" r="4" fill="#28402F"/>
+        <circle cx="900" cy="120" r="4" fill="#28402F"/>
+      </svg>
+      <div class="max-w-5xl mx-auto px-6 sm:px-10 pt-16 sm:pt-24 pb-16 sm:pb-20 relative">
+        <p class="text-sm text-brass font-medium mb-5">Гид по путешествиям, 2026</p>
+        <h1 class="font-display text-[2.5rem] leading-[1.1] sm:text-6xl sm:leading-[1.05] text-pine-deep max-w-3xl">
+          Умный туризм: как путешествовать выгодно в 2026 году
+        </h1>
+        <p class="mt-6 text-lg text-ink/70 max-w-xl leading-relaxed">
+          Разбираем тарифы, стыковки и маршруты так, как это делают опытные travel-хакеры —
+          без воды, с конкретными цифрами и личным опытом.
+        </p>
+        <div class="mt-9 flex flex-wrap items-center gap-4 text-sm text-ink/50">
+          <span>4 подробных гайда</span>
+          <span class="w-1 h-1 rounded-full bg-ink/30"></span>
+          <span>~9 минут на чтение каждого</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEE CALCULATOR WIDGET -->
+    <section class="max-w-5xl mx-auto px-6 sm:px-10 pb-16 sm:pb-20">
+      <div class="rounded-2xl bg-[#12181A] text-paper/90 p-6 sm:p-10 shadow-2xl shadow-pine-deep/20">
+
+        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-2">
+          <div>
+            <p class="text-sm text-brassLight font-medium mb-2">Инструмент</p>
+            <h2 class="font-display text-2xl sm:text-3xl text-paper leading-snug">Калькулятор скрытых сборов: агрегаторы vs авиакомпании</h2>
+          </div>
+        </div>
+        <!-- Route tabs -->
+        <div class="flex flex-wrap gap-2 mt-6 mb-4" role="tablist" aria-label="Маршрут">
+          <button type="button" class="calc-tab is-active text-sm px-4 py-2.5 rounded-lg border transition-colors" data-route="0">1. Восточный Экспресс (Стамбул + Дубай)</button>
+          <button type="button" class="calc-tab text-sm px-4 py-2.5 rounded-lg border transition-colors" data-route="1">2. Райские острова (Абу-Даби + Мальдивы)</button>
+          <button type="button" class="calc-tab text-sm px-4 py-2.5 rounded-lg border transition-colors" data-route="2">3. Окно в Европу (Ереван + Рим)</button>
+        </div>
+
+        <p id="calc-route" class="text-paper/50 text-sm mb-8"></p>
+
+        <!-- Controls -->
+        <div class="grid sm:grid-cols-3 gap-4 mb-8">
+          <div>
+            <label for="calc-pax" class="block text-xs uppercase tracking-wide text-paper/40 mb-2">Пассажиры</label>
+            <select id="calc-pax" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-paper focus:border-brass outline-none transition-colors">
+              <option value="1">1 взрослый</option>
+              <option value="2">2 взрослых</option>
+            </select>
+          </div>
+          <label class="flex items-center gap-3 bg-white/5 border border-white/10 rounded-lg px-4 py-3 cursor-pointer hover:bg-white/[0.07] transition-colors">
+            <input id="calc-baggage" type="checkbox" class="w-4 h-4 accent-brass shrink-0">
+            <span class="text-sm">Нужен багаж (до 20 кг) на каждом плече</span>
+          </label>
+          <label class="flex items-center gap-3 bg-white/5 border border-white/10 rounded-lg px-4 py-3 cursor-pointer hover:bg-white/[0.07] transition-colors">
+            <input id="calc-seats" type="checkbox" class="w-4 h-4 accent-brass shrink-0">
+            <span class="text-sm">Обязательно сидеть вместе</span>
+          </label>
+        </div>
+
+        <!-- Comparison cards -->
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div class="rounded-xl bg-blue-500/10 border border-blue-400/25 p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-display text-lg text-paper">Aviasales / Trip.com</h3>
+              <span class="text-[11px] leading-none px-2.5 py-1.5 rounded-full bg-blue-400/15 text-blue-200 border border-blue-400/25">Оплата картами РФ</span>
+            </div>
+            <p class="text-xs text-paper/40 mb-1">Итого за всех пассажиров</p>
+            <p id="calc-agg-total" class="font-display text-4xl text-paper tabular-nums transition-all duration-300">0 ₽</p>
+          </div>
+          <div class="rounded-xl bg-emerald-500/10 border border-emerald-400/25 p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-display text-lg text-paper">Раздельная покупка напрямую</h3>
+              <span class="text-[11px] leading-none px-2.5 py-1.5 rounded-full bg-emerald-400/15 text-emerald-200 border border-emerald-400/25">Нужна иностранная карта</span>
+            </div>
+            <p class="text-xs text-paper/40 mb-1">Итого за всех пассажиров, NDC-тариф</p>
+            <p id="calc-direct-total" class="font-display text-4xl text-paper tabular-nums transition-all duration-300">0 ₽</p>
+          </div>
+        </div>
+
+        <!-- Savings banner -->
+        <div class="mt-4 rounded-xl bg-brass/15 border border-brass/30 px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <span class="text-sm text-brassLight">Ваша чистая экономия</span>
+          <span id="calc-savings" class="font-display text-3xl text-brassLight tabular-nums transition-all duration-300">0 ₽</span>
+        </div>
+
+        <a id="calc-cta" href="https://t.me/smarttttravel" target="_blank" rel="noopener" class="mt-5 w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-brass text-pine-deep font-medium rounded-lg px-7 py-3.5 hover:bg-brassLight transition-colors">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="shrink-0"><path d="M21.05 3.51a1.4 1.4 0 0 0-1.45-.16L2.7 10.42c-.84.35-1.03 1.03-.15 1.4l4.42 1.42 1.7 5.44c.23.6.4.83.82.83.28 0 .42-.13.6-.31l1.7-1.62 4.06 3.03c.85.5 1.35.24 1.55-.65l3.04-14.2c.24-1.02-.13-1.48-.4-1.85ZM8.98 13.62l8.98-5.85c.42-.27.8-.12.49.18l-7.63 6.94-.3 3.24-1.54-4.51Z"/></svg>
+          <span>Заказать этот или подобрать другой выгодный маршрут</span>
+        </a>
+        <p class="text-xs text-paper/40 mt-2.5">Кнопка откроет чат в Telegram с <span class="text-paper/60">@smarttttravel</span></p>
+
+        <p class="text-xs text-paper/30 mt-4">Расчёт условный, на основе усреднённых надбавок агрегаторов и прямых NDC-тарифов на маршруте. Точная цена зависит от даты, перевозчика и наличия мест по льготному классу бронирования.</p>
+      </div>
+    </section>
+
+    <!-- ARTICLES -->
+    <section id="articles" class="bg-stone/60 border-y border-ink/10">
+      <div class="max-w-5xl mx-auto px-6 sm:px-10 py-16 sm:py-20">
+        <div class="flex items-baseline justify-between mb-6">
+          <h2 class="font-display text-2xl sm:text-3xl text-pine-deep">Маршрут этого выпуска</h2>
+          <span class="hidden sm:inline text-sm text-ink/50">Нажмите на статью, чтобы открыть</span>
+        </div>
+
+        <!-- Category filter -->
+        <div class="flex flex-wrap gap-2 mb-10" role="tablist" aria-label="Раздел статей">
+          <button type="button" class="filter-btn is-active text-sm px-4 py-2 rounded-full border border-pine-deep/20 transition-colors" data-filter="all">Все статьи</button>
+          <button type="button" class="filter-btn text-sm px-4 py-2 rounded-full border border-pine-deep/20 transition-colors" data-filter="guides">Гайды по странам</button>
+          <button type="button" class="filter-btn text-sm px-4 py-2 rounded-full border border-pine-deep/20 transition-colors" data-filter="fares">Тарифы и авиакомпании</button>
+          <button type="button" class="filter-btn text-sm px-4 py-2 rounded-full border border-pine-deep/20 transition-colors" data-filter="hacks">Лайфхаки и личный опыт</button>
+        </div>
+
+        <div class="relative">
+          <div id="route-line-el" class="route-line"></div>
+          <ul class="space-y-3">
+
+            <!-- Article 0 (new) -->
+            <li class="article-item" aria-expanded="false" data-category="hacks">
+              <div class="relative pl-12 sm:pl-16">
+                <span class="waypoint absolute left-[21px] sm:left-[21px] top-6 -translate-x-1/2 z-10"></span>
+                <button class="article-toggle w-full text-left bg-paper hover:bg-white rounded-lg border border-ink/10 overflow-hidden transition-colors" aria-controls="panel-6">
+                  <img src="https://images.unsplash.com/photo-1631729311503-6cdcfcf2bc93?q=80&w=1200&auto=format&fit=crop"
+                       alt="Собранный чемодан у кровати в номере"
+                       class="w-full h-48 object-cover rounded-t-lg" loading="lazy">
+                  <div class="px-5 sm:px-7 py-5">
+                    <div class="flex items-start justify-between gap-4">
+                      <div>
+                        <p class="text-xs uppercase tracking-wide text-brass mb-1.5">Лайфхаки и личный опыт · 16 сентября 2026</p>
+                        <h3 class="font-display text-xl sm:text-2xl text-pine-deep leading-snug">Ручная кладь без доплат: как собраться и не попасть на кассу лоукостера</h3>
+                      </div>
+                      <svg class="chevron shrink-0 mt-1" width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 7l5 5 5-5" stroke="#28402F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                  </div>
+                </button>
+                <div class="panel" id="panel-6">
+                  <div class="panel-inner">
+                    <div class="px-5 sm:px-7 pt-5 pb-7 text-[15px] leading-relaxed text-ink/80 space-y-4 max-w-2xl">
+                      <p>У лоукостеров почти всегда два разных лимита на ручную кладь: один — «личная вещь» под переднее сиденье (обычно 35–40×20×25 см), второй — полноценная ручная кладь в верхний багажник (около 55×40×20 см), и второй часто уже входит только в более дорогой тариф. Первое, что стоит сделать перед поездкой — не полагаться на глазомер, а свериться с сайтом конкретного перевозчика и, если есть сомнения, обмерить сумку рулеткой дома: у некоторых компаний счётчик см включает колёсики и внешние карманы, и сумка, которая «всегда проходила», у другой авиакомпании может не пройти калибратор на стойке.</p>
+                      <p>Второй момент — вес. Даже если сумка идеально влезает в габариты, у части лоукостеров есть отдельный лимит по весу для ручной клади (обычно 8–10 кг), и его тоже проверяют на регистрации при малейшем подозрении. Дешёвые кухонные весы с крюком решают проблему за 30 секунд дома — я взвешиваю сумку перед каждым таким перелётом, и это спасло от доплаты минимум раз пять за последний год. Компрессионные packing cubes также помогают: они не уменьшают вес, но освобождают 20–30% объёма, а значит, снижают риск, что сумка «раздуется» и перестанет вписываться в калибратор на глазах у гейт-агента.</p>
+                      <p>Третий приём — использовать «личную вещь» по максимуму, а не как декоративный аксессуар. Просторная куртка или жилет с большими карманами, надетый поверх, — это фактически бесплатный дополнительный объём: пауэрбанк, зарядки, книга спокойно перекочёвывают в карманы прямо перед посадкой, освобождая место в сумке для калибратора. Отдельно стоит держать прозрачный пакет с жидкостями собранным заранее — не потому что это спасёт от доплаты, а потому что споры и пересборка сумки в очереди на контроле — ровно тот момент, когда агенты чаще всего просят приложить сумку к калибратору «на всякий случай».</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+
+            <!-- Article 1 -->
+            <li class="article-item" aria-expanded="false" data-category="fares">
+              <div class="relative pl-12 sm:pl-16">
+                <span class="waypoint absolute left-[21px] sm:left-[21px] top-6 -translate-x-1/2 z-10"></span>
+                <button class="article-toggle w-full text-left bg-paper hover:bg-white rounded-lg border border-ink/10 overflow-hidden transition-colors" aria-controls="panel-1">
+                  <img src="https://images.unsplash.com/photo-1542336423-e251474b8a4a?q=80&w=1200&auto=format&fit=crop"
+                       alt="Вид на крыло самолёта в полёте над облаками"
+                       class="w-full h-48 object-cover rounded-t-lg" loading="lazy">
+                  <div class="px-5 sm:px-7 py-5">
+                    <div class="flex items-start justify-between gap-4">
+                      <div>
+                        <p class="text-xs uppercase tracking-wide text-brass mb-1.5">Тарифы и авиакомпании · 10 сентября 2026</p>
+                        <h3 class="font-display text-xl sm:text-2xl text-pine-deep leading-snug">Что такое NDC-тарифы авиакомпаний и как на них сэкономить</h3>
+                      </div>
+                      <svg class="chevron shrink-0 mt-1" width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 7l5 5 5-5" stroke="#28402F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                  </div>
+                </button>
+                <div class="panel" id="panel-1">
+                  <div class="panel-inner">
+                    <div class="px-5 sm:px-7 pt-5 pb-7 text-[15px] leading-relaxed text-ink/80 space-y-4 max-w-2xl">
+                      <p>NDC (New Distribution Capability) — это стандарт передачи данных, который авиакомпании продвигают, чтобы продавать билеты в обход классических GDS-систем, через которые работает большинство агрегаторов. Проще говоря: часть тарифов, которые вы видите на сайте самой авиакомпании, физически не попадает на Skyscanner, Aviasales или в личный кабинет турагента — их можно купить только напрямую. Именно поэтому иногда на официальном сайте цена оказывается ниже, чем на любом агрегаторе, хотя логика подсказывает обратное.</p>
+                      <p>На практике это означает, что стратегию поиска билетов стоит пересмотреть. Сначала ищите оптимальный маршрут и даты через агрегатор — это по-прежнему быстрее всего для сравнения десятков комбинаций. Но прежде чем платить, откройте сайты 2–3 ключевых авиакомпаний на маршруте напрямую и сравните цену на те же даты. Разница в 5–15% в пользу прямой покупки через NDC-канал сейчас не редкость, особенно у Lufthansa Group, IAG (British Airways, Iberia) и ряда ближневосточных перевозчиков.</p>
+                      <p>Есть и обратная сторона: NDC-тарифы часто жёстче по условиям возврата и обмена, а бонусные мили начисляются не всегда автоматически, если билет куплен через стороннего NDC-агента. Поэтому правило простое: для гибких билетов бизнес-класса и рейсов с милями агрегатор и классический тариф остаются надёжнее, а для простых перелётов «туда-обратно» без изменений NDC-канал напрямую у авиакомпании стоит проверять каждый раз — это пара лишних вкладок в браузере, которые окупаются.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+
+            <!-- Article 2 (new) -->
+            <li class="article-item" aria-expanded="false" data-category="fares">
+              <div class="relative pl-12 sm:pl-16">
+                <span class="waypoint absolute left-[21px] sm:left-[21px] top-6 -translate-x-1/2 z-10"></span>
+                <button class="article-toggle w-full text-left bg-paper hover:bg-white rounded-lg border border-ink/10 overflow-hidden transition-colors" aria-controls="panel-2">
+                  <img src="https://images.unsplash.com/photo-1567748534085-467f8a8a475d?q=80&w=1200&auto=format&fit=crop"
+                       alt="Посадочный талон и карта авиакомпании в руках"
+                       class="w-full h-48 object-cover rounded-t-lg" loading="lazy">
+                  <div class="px-5 sm:px-7 py-5">
+                    <div class="flex items-start justify-between gap-4">
+                      <div>
+                        <p class="text-xs uppercase tracking-wide text-brass mb-1.5">Тарифы и авиакомпании · 5 сентября 2026</p>
+                        <h3 class="font-display text-xl sm:text-2xl text-pine-deep leading-snug">Мили и статусы авиакомпаний: как копить и не потерять</h3>
+                      </div>
+                      <svg class="chevron shrink-0 mt-1" width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 7l5 5 5-5" stroke="#28402F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                  </div>
+                </button>
+                <div class="panel" id="panel-2">
+                  <div class="panel-inner">
+                    <div class="px-5 sm:px-7 pt-5 pb-7 text-[15px] leading-relaxed text-ink/80 space-y-4 max-w-2xl">
+                      <p>Мильные программы кажутся запутанными до тех пор, пока не разобраться с одним фактом: мили начисляются не за деньги, потраченные на билет, а за тарифный класс бронирования. Самый дешёвый лоукост-тариф эконома часто даёт 25% миль от расстояния, а более гибкий тариф того же класса — все 100% или даже больше. Поэтому перед покупкой стоит на секунду заглянуть в таблицу начисления миль авиаальянса — иногда разница в 1500–2000 рублей за более гибкий тариф окупается почти вдвое большим начислением, которое пригодится для следующего перелёта.</p>
+                      <p>Второй момент — куда вступать. Не обязательно копить мили именно у той авиакомпании, которой вы летаете чаще всего: три крупных альянса (Star Alliance, oneworld, SkyTeam) объединяют десятки перевозчиков, и мили можно копить на карту одного из партнёров, даже если сами рейсы летаете разными компаниями альянса. Это особенно удобно, если ваши поездки не привязаны к одному хабу — мили не «утекают» между разными брендами, если оставаться внутри одного альянса.</p>
+                      <p>Третье — статусы сгорают быстрее, чем кажется: у большинства программ есть срок неактивности (обычно 12–24 месяца), после которого баланс обнуляется. Простое правило — раз в год совершать хотя бы одну активность по счёту: перелёт, начисление от партнёра (отель, аренда авто, иногда даже банковская карта с милями) или покупку через партнёрский магазин программы. Это бесплатно продлевает срок жизни накопленных миль и экономит от необходимости копить с нуля.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+
+            <!-- Article 3 -->
+            <li class="article-item" aria-expanded="false" data-category="guides">
+              <div class="relative pl-12 sm:pl-16">
+                <span class="waypoint absolute left-[21px] sm:left-[21px] top-6 -translate-x-1/2 z-10"></span>
+                <button class="article-toggle w-full text-left bg-paper hover:bg-white rounded-lg border border-ink/10 overflow-hidden transition-colors" aria-controls="panel-3">
+                  <img src="https://images.unsplash.com/photo-1763965367191-6455ef032c79?q=80&w=1200&auto=format&fit=crop"
+                       alt="Панорама Босфора и мечетей Стамбула"
+                       class="w-full h-48 object-cover rounded-t-lg" loading="lazy">
+                  <div class="px-5 sm:px-7 py-5">
+                    <div class="flex items-start justify-between gap-4">
+                      <div>
+                        <p class="text-xs uppercase tracking-wide text-brass mb-1.5">Гайды по странам · 28 августа 2026</p>
+                        <h3 class="font-display text-xl sm:text-2xl text-pine-deep leading-snug">Топ-5 скрытых фишек Стамбула, о которых молчат путеводители</h3>
+                      </div>
+                      <svg class="chevron shrink-0 mt-1" width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 7l5 5 5-5" stroke="#28402F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                  </div>
+                </button>
+                <div class="panel" id="panel-3">
+                  <div class="panel-inner">
+                    <div class="px-5 sm:px-7 pt-5 pb-7 text-[15px] leading-relaxed text-ink/80 space-y-4 max-w-2xl">
+                      <p>Большинство путеводителей ведут вас в Айя-Софию и на Гранд-базар, и это оправдано, но за пределами туристического маршрута у Стамбула есть слои, которые видят немногие. Первая находка — паром на Принцевы острова в будний день, а не в выходные: та же панорама Босфора, но без толп, а на острове Бююкада можно взять велосипед вместо конной повозки, что дешевле втрое. Вторая — район Balat вечером, после того как закроются кафе с открытками: именно тогда местные жители выходят пить чай на улицу, и цветные дома оживают в тёплом свете.</p>
+                      <p>Третья фишка касается еды: лучший балык-экмек (сэндвич с рыбой) продают не у моста Галата, где стоят лодки для туристов, а в районе Kumkapı на маленьких лодках рыбацкого рынка — там же вечером открываются мейхане (таверны), где меню не переводят на английский специально, чтобы держать цены для местных. Четвёртая — хамамы: вместо туристических Çemberlitaş или Cağaloğlu стоит поискать районный хамам вроде Kadıköy Çinili Hamamı, отреставрированный в 2022 году, — атмосфера подлинная, а цена в два-три раза ниже.</p>
+                      <p>Пятая и главная фишка — карта Istanbulkart для транспорта. Её продают в киосках у любой станции метро, и она не только даёт скидку на каждую поездку по сравнению с жетонами, но и работает на паромах, фуникулёрах и даже в некоторых музеях с транспортной интеграцией. Пополнить её можно наличными или картой прямо в автомате, а невостребованный залог за карту при отъезде можно вернуть на том же киоске — мало кто из туристов об этом знает.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+
+            <!-- Article 4 -->
+            <li class="article-item" aria-expanded="false" data-category="guides">
+              <div class="relative pl-12 sm:pl-16">
+                <span class="waypoint absolute left-[21px] sm:left-[21px] top-6 -translate-x-1/2 z-10"></span>
+                <button class="article-toggle w-full text-left bg-paper hover:bg-white rounded-lg border border-ink/10 overflow-hidden transition-colors" aria-controls="panel-4">
+                  <img src="https://images.unsplash.com/photo-1741204472540-e213116cb3ef?q=80&w=1200&auto=format&fit=crop"
+                       alt="Мечеть шейха Зайда в Абу-Даби на закате"
+                       class="w-full h-48 object-cover rounded-t-lg" loading="lazy">
+                  <div class="px-5 sm:px-7 py-5">
+                    <div class="flex items-start justify-between gap-4">
+                      <div>
+                        <p class="text-xs uppercase tracking-wide text-brass mb-1.5">Гайды по странам · 20 августа 2026</p>
+                        <h3 class="font-display text-xl sm:text-2xl text-pine-deep leading-snug">Полный гайд по Абу-Даби: что посмотреть за 3 дня</h3>
+                      </div>
+                      <svg class="chevron shrink-0 mt-1" width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 7l5 5 5-5" stroke="#28402F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                  </div>
+                </button>
+                <div class="panel" id="panel-4">
+                  <div class="panel-inner">
+                    <div class="px-5 sm:px-7 pt-5 pb-7 text-[15px] leading-relaxed text-ink/80 space-y-4 max-w-2xl">
+                      <p>Абу-Даби часто остаётся в тени Дубая, и совершенно незаслуженно: за три дня столица ОАЭ раскрывается как город с гораздо более спокойным темпом и продуманной архитектурой. Первый день стоит полностью посвятить мечети шейха Зайда — приезжайте к открытию, около 9:00, пока не собрались автобусы с турами, и у вас будет полчаса почти в одиночестве среди белого мрамора и самой большой ковровой ручной работы в мире. После обеда логично отправиться на набережную Корниш: там тянется восьмикилометровая велодорожка, а прокат велосипедов стоит около 20 дирхамов в час.</p>
+                      <p>Второй день посвятите острову Саадият — это не только пляжи, но и культурный квартал, где уже открыт Лувр Абу-Даби, а к 2026 году заработал и Гуггенхайм. Билет в Лувр лучше бронировать заранее онлайн, это экономит до часа очереди в высокий сезон (декабрь–март). Вечером стоит доехать до Yas Island: там находится Ferrari World с самыми быстрыми американскими горками в мире, а закат лучше встретить на пляже Yas Beach, откуда видно трассу «Формулы-1».</p>
+                      <p>На третий день оставьте время на менее туристический Абу-Даби: рынок Al Mina, где рыбаки продают улов прямо с лодок ранним утром, и квартал Al Bateen с невысокими домами и локальными кафе. Если бюджет позволяет, вечернюю сафари-поездку в пустыню Liwa стоит бронировать напрямую у операторов, а не через отель — разница в цене может достигать 30–40%. Три дня — минимальный, но рабочий срок, чтобы увидеть город не только глазами транзитного пассажира.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+
+            <!-- Article 5 -->
+            <li class="article-item" aria-expanded="false" data-category="hacks">
+              <div class="relative pl-12 sm:pl-16">
+                <span class="waypoint absolute left-[21px] sm:left-[21px] top-6 -translate-x-1/2 z-10"></span>
+                <button class="article-toggle w-full text-left bg-paper hover:bg-white rounded-lg border border-ink/10 overflow-hidden transition-colors" aria-controls="panel-5">
+                  <img src="https://images.unsplash.com/photo-1758669246636-17a5f6d972ec?q=80&w=1200&auto=format&fit=crop"
+                       alt="Терминал аэропорта с эскалаторами и указателями"
+                       class="w-full h-48 object-cover rounded-t-lg" loading="lazy">
+                  <div class="px-5 sm:px-7 py-5">
+                    <div class="flex items-start justify-between gap-4">
+                      <div>
+                        <p class="text-xs uppercase tracking-wide text-brass mb-1.5">Лайфхаки и личный опыт · 12 августа 2026</p>
+                        <h3 class="font-display text-xl sm:text-2xl text-pine-deep leading-snug">Как стыковать лоукостеры самостоятельно: личный опыт</h3>
+                      </div>
+                      <svg class="chevron shrink-0 mt-1" width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 7l5 5 5-5" stroke="#28402F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                  </div>
+                </button>
+                <div class="panel" id="panel-5">
+                  <div class="panel-inner">
+                    <div class="px-5 sm:px-7 pt-5 pb-7 text-[15px] leading-relaxed text-ink/80 space-y-4 max-w-2xl">
+                      <p>Самостоятельная стыковка лоукостеров — это когда вы покупаете два отдельных билета у разных бюджетных перевозчиков, не связанных общим договором, и сами отвечаете за пересадку. Я делал так больше десятка раз, и главный урок звучит просто: закладывайте между рейсами минимум 3–4 часа, если это разные аэропорты одного города (как Girona и Barcelona-El Prat), и не меньше 2,5 часов, если это один и тот же терминал. Лоукостеры не обязаны ждать вас и не пересаживают на следующий рейс бесплатно при опоздании.</p>
+                      <p>Второй урок — всегда летите налегке или чётко считайте багаж отдельно на каждом плече маршрута. Однажды я не пересчитал габариты ручной клади у Wizz Air после Ryanair, и разница в сантиметрах обошлась в доплату на стойке. Сейчас перед такими маршрутами я свожу требования обеих компаний в одну таблицу — вес, размеры, доплаты за приоритетную посадку — это занимает 10 минут, но избавляет от неприятных сюрпризов в аэропорту.</p>
+                      <p>Третье: страхуйте именно риск пропущенной стыковки — есть отдельные полисы, которые компенсируют новый билет, если первый рейс задержали. Это стоит 5–10 евро за поездку и полностью снимает тревожность. Экономия на такой схеме против прямого перелёта или билета через одну авиакомпанию бывает существенной — 30–50% на популярных европейских направлениях, но это осознанный компромисс между ценой и контролем над форс-мажором.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+
+          </ul>
+        </div>
+      </div>
+    </section>
+  </div>
+  <!-- ============ /HOME VIEW ============ -->
+
+  <!-- ============ ABOUT VIEW ============ -->
+  <div id="view-about" class="view" hidden>
+    <section class="max-w-3xl mx-auto px-6 sm:px-10 py-20 sm:py-28">
+      <p class="text-sm text-brass font-medium mb-5">О проекте</p>
+      <h1 class="font-display text-4xl sm:text-5xl text-pine-deep leading-tight mb-8">О нас</h1>
+      <p class="text-lg leading-relaxed text-ink/80 max-w-xl">Мы — команда независимых путешественников и инженеров. Наша миссия — помогать людям находить честные цены на авиабилеты напрямую у авиакомпаний, минуя скрытые комиссии агентств.</p>
+    </section>
+
+    <section class="bg-stone/60 border-y border-ink/10">
+      <div class="max-w-5xl mx-auto px-6 sm:px-10 py-16 sm:py-20">
+        <p class="text-sm text-brass font-medium mb-3">Наш опыт</p>
+        <h2 class="font-display text-2xl sm:text-3xl text-pine-deep mb-6 max-w-xl">Больше 10 лет в дороге — сначала для себя, теперь для клиентов</h2>
+        <p class="text-[15px] leading-relaxed text-ink/75 max-w-2xl">Мы путешествуем больше десяти лет — сначала вдвоём, потом с детьми, и за это время побывали более чем в 40 странах. За эти годы мы выработали привычку разбирать перелёт на составляющие: тариф, багаж, место, страховку, — и покупать только то, что действительно нужно, а не то, что упаковано в готовую бронь агрегатора. Сначала этим пользовались только мы сами, потом — друзья и коллеги, которые просили «подобрать билеты как обычно», а сейчас это стало полноценным сервисом для клиентов.</p>
+
+        <div class="grid sm:grid-cols-3 gap-4 my-10">
+          <figure class="rounded-lg overflow-hidden">
+            <img src="https://images.unsplash.com/photo-1673720403337-0f7c449ee8c2?q=80&w=900&auto=format&fit=crop"
+                 alt="Вид в иллюминатор самолёта" class="w-full h-44 object-cover" loading="lazy">
+          </figure>
+          <figure class="rounded-lg overflow-hidden">
+            <img src="https://images.unsplash.com/photo-1513415756790-2ac1db1297d0?q=80&w=900&auto=format&fit=crop"
+                 alt="Рисовые террасы, один из маршрутов" class="w-full h-44 object-cover" loading="lazy">
+          </figure>
+          <figure class="rounded-lg overflow-hidden">
+            <img src="https://images.unsplash.com/photo-1783442696892-ba77ad766822?q=80&w=900&auto=format&fit=crop"
+                 alt="Санторини, один из маршрутов" class="w-full h-44 object-cover" loading="lazy">
+          </figure>
+        </div>
+
+        <h3 class="font-display text-xl text-pine-deep mb-4">Что мы реально используем при поиске билетов</h3>
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-[15px] leading-relaxed text-ink/75 max-w-3xl">
+          <li class="flex gap-2.5"><span class="text-brass mt-0.5">—</span><span>Сравниваем цену агрегатора с сайтом авиакомпании напрямую — разница в 5–15% встречается регулярно.</span></li>
+          <li class="flex gap-2.5"><span class="text-brass mt-0.5">—</span><span>Ищем даты с гибким окном ±3 дня — календарь цен показывает провалы стоимости на будних вылетах.</span></li>
+          <li class="flex gap-2.5"><span class="text-brass mt-0.5">—</span><span>Следим за закрытыми распродажами и flash-sale авиакомпаний — они не всегда попадают в топ поисковой выдачи.</span></li>
+          <li class="flex gap-2.5"><span class="text-brass mt-0.5">—</span><span>Проверяем цену в режиме инкогнито и без сохранённых cookies — иногда это меняет показанный тариф.</span></li>
+          <li class="flex gap-2.5"><span class="text-brass mt-0.5">—</span><span>Используем раздельное бронирование (self-transfer) там, где это дешевле прямого рейса и рисками можно управлять.</span></li>
+          <li class="flex gap-2.5"><span class="text-brass mt-0.5">—</span><span>Учитываем программы миль и стыковок через хаб — иногда доплата за более длинный маршрут окупается бонусами.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="max-w-3xl mx-auto px-6 sm:px-10 py-14">
+      <a href="#" data-nav="home" class="inline-flex items-center gap-2 text-sm text-pine-deep hover:text-brass transition-colors">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Вернуться к статьям
+      </a>
+    </section>
+  </div>
+
+  <!-- ============ CONTACTS VIEW ============ -->
+  <div id="view-contacts" class="view" hidden>
+    <section class="max-w-3xl mx-auto px-6 sm:px-10 py-20 sm:py-28">
+      <p class="text-sm text-brass font-medium mb-5">Связаться с нами</p>
+      <h1 class="font-display text-4xl sm:text-5xl text-pine-deep leading-tight mb-8">Контакты</h1>
+      <p class="text-lg leading-relaxed text-ink/80 max-w-xl mb-2">Мы отвечаем только в Telegram — так быстрее, и вы сразу можете прислать даты и маршрут.</p>
+
+      <div class="mb-4">
+        <a href="https://t.me/smarttttravel" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-2.5 text-lg text-pine-deep font-medium hover:text-brass transition-colors">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="#28402F" class="shrink-0"><path d="M21.05 3.51a1.4 1.4 0 0 0-1.45-.16L2.7 10.42c-.84.35-1.03 1.03-.15 1.4l4.42 1.42 1.7 5.44c.23.6.4.83.82.83.28 0 .42-.13.6-.31l1.7-1.62 4.06 3.03c.85.5 1.35.24 1.55-.65l3.04-14.2c.24-1.02-.13-1.48-.4-1.85ZM8.98 13.62l8.98-5.85c.42-.27.8-.12.49.18l-7.63 6.94-.3 3.24-1.54-4.51Z"/></svg>
+          @smarttttravel
+        </a>
+        <p class="text-sm text-ink/50 mt-1">Обычно отвечаем в течение пары часов в будни</p>
+      </div>
+
+      <div class="flex flex-wrap gap-x-8 gap-y-2 text-sm text-ink/50 mb-14">
+        <span>Более 40 стран за плечами</span>
+        <span class="w-1 h-1 rounded-full bg-ink/30 self-center"></span>
+        <span>10+ лет в перелётах</span>
+        <span class="w-1 h-1 rounded-full bg-ink/30 self-center"></span>
+        <span>Консультация бесплатная</span>
+      </div>
+
+      <h2 class="font-display text-2xl text-pine-deep mb-8">Как проходит консультация</h2>
+      <div class="relative mb-16">
+        <div class="route-line !left-[15px] sm:!left-[15px]"></div>
+        <ol class="space-y-7">
+          <li class="relative pl-11">
+            <span class="waypoint absolute left-[15px] top-0.5 -translate-x-1/2 z-10" style="background:#B08A2E"></span>
+            <p class="font-medium text-pine-deep mb-1">Пишете нам маршрут и даты</p>
+            <p class="text-[15px] text-ink/70 leading-relaxed">Можно прислать скриншот из калькулятора на главной или просто написать «Москва — Бали, конец ноября».</p>
+          </li>
+          <li class="relative pl-11">
+            <span class="waypoint absolute left-[15px] top-0.5 -translate-x-1/2 z-10" style="background:#B08A2E"></span>
+            <p class="font-medium text-pine-deep mb-1">Мы сравниваем варианты</p>
+            <p class="text-[15px] text-ink/70 leading-relaxed">Смотрим агрегаторы, сайты авиакомпаний напрямую и стыковки — ищем связку с наименьшей суммой скрытых сборов.</p>
+          </li>
+          <li class="relative pl-11">
+            <span class="waypoint absolute left-[15px] top-0.5 -translate-x-1/2 z-10" style="background:#B08A2E"></span>
+            <p class="font-medium text-pine-deep mb-1">Присылаем 2–3 конкретных варианта</p>
+            <p class="text-[15px] text-ink/70 leading-relaxed">С ценами, ссылками и пометкой, где выгоднее покупать — вы бронируете сами, без наценки посредника.</p>
+          </li>
+        </ol>
+      </div>
+
+      <h2 class="font-display text-2xl text-pine-deep mb-6">Частые вопросы</h2>
+      <div class="space-y-5 mb-6">
+        <div>
+          <p class="font-medium text-pine-deep mb-1">Это платно?</p>
+          <p class="text-[15px] text-ink/70 leading-relaxed">Нет, сравнение вариантов по вашему маршруту бесплатное — мы не берём комиссию с билета.</p>
+        </div>
+        <div>
+          <p class="font-medium text-pine-deep mb-1">А если у меня сложный маршрут с несколькими городами?</p>
+          <p class="text-[15px] text-ink/70 leading-relaxed">Это как раз то, где раздельная покупка обычно выгоднее всего — присылайте все точки маршрута сразу.</p>
+        </div>
+        <div>
+          <p class="font-medium text-pine-deep mb-1">Вы бронируете билет за меня?</p>
+          <p class="text-[15px] text-ink/70 leading-relaxed">Нет, мы присылаем готовые варианты со ссылками — бронируете вы сами, напрямую у авиакомпании или агрегатора.</p>
+        </div>
+      </div>
+
+      <a href="#" data-nav="home" class="inline-flex items-center gap-2 mt-6 text-sm text-pine-deep hover:text-brass transition-colors">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Вернуться к статьям
+      </a>
+    </section>
+  </div>
+
+  <!-- ============ PRIVACY VIEW ============ -->
+  <div id="view-privacy" class="view" hidden>
+    <section class="max-w-3xl mx-auto px-6 sm:px-10 py-20 sm:py-28">
+      <p class="text-sm text-brass font-medium mb-5">Юридическая информация</p>
+      <h1 class="font-display text-4xl sm:text-5xl text-pine-deep leading-tight mb-8">Политика конфиденциальности</h1>
+      <div class="space-y-5 text-[15px] leading-relaxed text-ink/80 max-w-xl">
+        <p>Настоящий сайт не собирает и не хранит персональные данные посетителей. Мы не запрашиваем и не обрабатываем имена, адреса, платёжные данные или иную информацию, позволяющую прямо идентифицировать пользователя, за исключением случаев, когда посетитель добровольно указывает свои данные в форме обратной связи для получения ответа.</p>
+        <p>Сайт использует файлы cookie исключительно в целях анализа посещаемости и улучшения качества контента — например, для подсчёта количества просмотров страниц и понимания того, какие статьи наиболее полезны читателям. Эти данные обрабатываются в обезличенном и агрегированном виде и не используются для профилирования отдельных пользователей.</p>
+        <p>Мы не передаём какие-либо данные третьим лицам в рекламных целях и не продаём информацию о посетителях. Продолжая пользоваться сайтом, вы соглашаетесь с использованием cookies в описанном выше объёме. Вы можете отключить cookies в настройках своего браузера в любой момент.</p>
+      </div>
+      <a href="#" data-nav="home" class="inline-flex items-center gap-2 mt-12 text-sm text-pine-deep hover:text-brass transition-colors">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Вернуться к статьям
+      </a>
+    </section>
+  </div>
+
+  <!-- Back to top -->
+  <button id="to-top-btn" type="button" aria-label="Наверх"
+          class="fixed bottom-6 right-6 z-40 w-11 h-11 rounded-full bg-pine-deep text-paper shadow-lg flex items-center justify-center hover:bg-pine transition-colors">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 11l5-5 5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- FOOTER -->
+  <footer class="bg-pine-deep text-paper/80">
+    <div class="max-w-5xl mx-auto px-6 sm:px-10 py-14">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-8">
+        <div>
+          <p class="font-display text-2xl text-paper">Умный туризм</p>
+          <p class="mt-2 text-sm text-paper/50 max-w-sm">Практические гайды о перелётах, маршрутах и городах — без спонсорских преувеличений.</p>
+        </div>
+        <nav class="flex flex-wrap gap-x-8 gap-y-3 text-sm">
+          <a href="#" data-nav="about" class="hover:text-paper transition-colors">О нас</a>
+          <a href="#" data-nav="contacts" class="hover:text-paper transition-colors">Контакты</a>
+          <a href="#" data-nav="privacy" class="hover:text-paper transition-colors">Политика конфиденциальности</a>
+        </nav>
+      </div>
+      <div class="mt-10 pt-6 border-t border-paper/10 text-xs text-paper/40">
+        © 2026 Умный туризм. Все права защищены.
+      </div>
+    </div>
+  </footer>
+
+<script>
+  // Fee calculator: 3 routes, tabs, dynamic dates, auto-run on load
+  (function () {
+    const routeEl = document.getElementById('calc-route');
+    const paxEl = document.getElementById('calc-pax');
+    const baggageEl = document.getElementById('calc-baggage');
+    const seatsEl = document.getElementById('calc-seats');
+    const aggTotalEl = document.getElementById('calc-agg-total');
+    const directTotalEl = document.getElementById('calc-direct-total');
+    const savingsEl = document.getElementById('calc-savings');
+    const tabButtons = document.querySelectorAll('.calc-tab');
+    const ctaEl = document.getElementById('calc-cta');
+
+    function formatDate(d) {
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      return `${dd}.${mm}.${yyyy}`;
+    }
+
+    function addDays(base, days) {
+      const d = new Date(base);
+      d.setDate(d.getDate() + days);
+      return d;
+    }
+
+    function formatRub(n) {
+      return n.toLocaleString('ru-RU') + ' ₽';
+    }
+
+    const today = new Date();
+    const departure1 = formatDate(addDays(today, 14));
+    const departure2 = formatDate(addDays(today, 21));
+
+    // Seat-selection surcharge is not route-specific per the brief, so it stays constant across routes.
+    const SEATS = { aggregator: 2500, direct: 1200 };
+
+    const ROUTES = [
+      {
+        label: 'Москва ➔ Стамбул ➔ Дубай',
+        aggregatorBase: 27000,
+        directBase: 24000,
+        baggage: { aggregator: 5500, direct: 4000 },
+      },
+      {
+        label: 'Москва ➔ Абу-Даби ➔ Мальдивы',
+        aggregatorBase: 68000,
+        directBase: 59000,
+        baggage: { aggregator: 8000, direct: 6000 },
+      },
+      {
+        label: 'Москва ➔ Ереван ➔ Рим',
+        aggregatorBase: 42000,
+        directBase: 36000,
+        baggage: { aggregator: 6500, direct: 4800 },
+      },
+    ];
+
+    let activeRoute = 0;
+
+    function recalc() {
+      const route = ROUTES[activeRoute];
+      const pax = parseInt(paxEl.value, 10);
+      const withBaggage = baggageEl.checked;
+      const withSeats = seatsEl.checked;
+
+      let aggPerPerson = route.aggregatorBase;
+      let directPerPerson = route.directBase;
+
+      if (withBaggage) {
+        aggPerPerson += route.baggage.aggregator;
+        directPerPerson += route.baggage.direct;
+      }
+      if (withSeats) {
+        aggPerPerson += SEATS.aggregator;
+        directPerPerson += SEATS.direct;
+      }
+
+      const aggTotal = aggPerPerson * pax;
+      const directTotal = directPerPerson * pax;
+      const savings = aggTotal - directTotal;
+
+      routeEl.textContent = `${route.label} · вылет ${departure1}, второй перелёт ${departure2}`;
+      aggTotalEl.textContent = formatRub(aggTotal);
+      directTotalEl.textContent = formatRub(directTotal);
+      savingsEl.textContent = formatRub(savings);
+
+      if (ctaEl) {
+        const prefill = `Здравствуйте! Хочу обсудить маршрут «${route.label}» (вылет ${departure1}) — по расчёту экономия около ${formatRub(savings)}.`;
+        ctaEl.href = `https://t.me/smarttttravel?text=${encodeURIComponent(prefill)}`;
+      }
+    }
+
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeRoute = parseInt(btn.getAttribute('data-route'), 10);
+        tabButtons.forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        recalc();
+      });
+    });
+
+    [paxEl, baggageEl, seatsEl].forEach(el => el.addEventListener('change', recalc));
+
+    // Auto-run on load so the calculator shows real numbers immediately, not "0 ₽".
+    recalc();
+  })();
+
+  // Accordion
+  document.querySelectorAll('.article-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = btn.closest('.article-item');
+      const isOpen = item.getAttribute('aria-expanded') === 'true';
+      document.querySelectorAll('.article-item').forEach(el => el.setAttribute('aria-expanded', 'false'));
+      item.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+    });
+  });
+
+  // Back-to-top button
+  const toTopBtn = document.getElementById('to-top-btn');
+  if (toTopBtn) {
+    window.addEventListener('scroll', () => {
+      toTopBtn.classList.toggle('is-visible', window.scrollY > 480);
+    });
+    toTopBtn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  // Category filter
+  const filterButtons = document.querySelectorAll('.filter-btn');
+  const articleItems = document.querySelectorAll('.article-item');
+  const routeLineEl = document.getElementById('route-line-el');
+
+  filterButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const filter = btn.getAttribute('data-filter');
+      filterButtons.forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+
+      articleItems.forEach(item => {
+        const match = filter === 'all' || item.getAttribute('data-category') === filter;
+        if (match) {
+          item.removeAttribute('data-hidden');
+        } else {
+          item.setAttribute('data-hidden', 'true');
+          item.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      if (routeLineEl) {
+        routeLineEl.classList.toggle('is-filtered', filter !== 'all');
+      }
+    });
+  });
+
+
+  // View router (home / about / contacts / privacy) with smooth crossfade
+  const views = {
+    home: document.getElementById('view-home'),
+    about: document.getElementById('view-about'),
+    contacts: document.getElementById('view-contacts'),
+    privacy: document.getElementById('view-privacy'),
+  };
+  let current = 'home';
+
+  function showView(name, scrollToArticles) {
+    if (!views[name]) return;
+    if (name === current) {
+      if (name === 'home' && scrollToArticles) {
+        document.getElementById('articles').scrollIntoView({ behavior: 'smooth' });
+      }
+      return;
+    }
+    const from = views[current];
+    const to = views[name];
+    from.classList.add('is-leaving');
+    setTimeout(() => {
+      from.hidden = true;
+      from.classList.remove('is-leaving');
+      to.hidden = false;
+      to.style.opacity = '0';
+      requestAnimationFrame(() => { to.style.opacity = '1'; });
+      window.scrollTo({ top: 0 });
+      if (name === 'home' && scrollToArticles) {
+        setTimeout(() => document.getElementById('articles').scrollIntoView({ behavior: 'smooth' }), 50);
+      }
+      current = name;
+    }, 220);
+  }
+
+  document.querySelectorAll('[data-nav]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = el.getAttribute('data-nav');
+      if (target === 'home-articles') {
+        showView('home', true);
+      } else {
+        showView(target, false);
+      }
+    });
+  });
+</script>
+
+</body>
+</html>

@@ -1,3 +1,11 @@
+# Flight Navigator — «Умный туризм» (монорепозиторий)
+
+Единый репозиторий: **лендинг** (`landing/`), **Telegram-бот Pay Compass** (корень), **Supabase** (`supabase/`).  
+План миграции с трёх репо и один Supabase: [`docs/MONOREPO.md`](docs/MONOREPO.md).  
+Продуктовый контекст для Grok / агентов: [`docs/product/PRODUCT_BRIEF.md`](docs/product/PRODUCT_BRIEF.md).
+
+---
+
 # Независимый справочник по платежам за границей (Telegram Bot + Канал)
 
 Архитектурный каркас Telegram-бота и системы сбора данных для российских путешественников.
@@ -32,6 +40,8 @@
 
 ```text
 .
+├── landing/               # Статический лендинг «Умный туризм» (ex smart-travel-landing)
+├── docs/                  # MONOREPO, Supabase hosting, product brief, Grok
 ├── bot/
 │   ├── handlers/          # Онбординг, главное меню, Stars, юридические команды
 │   ├── keyboards/         # Inline клавиатуры шагов и меню
