@@ -1,7 +1,9 @@
 """
-Parser and analyzer for Forum AWD (Форум Винского) payment topics.
-Extracts real traveler messages, filters relevant payment reports,
-evaluates confidence scores, and produces summarized insights.
+Parser for Forum AWD (Форум Винского) payment topics.
+
+Collected posts are internal verification material only. They are stored with
+an internal marker and must not be copied into bot messages, country guides,
+or any other traveler-facing text.
 """
 
 import logging
@@ -14,11 +16,30 @@ from database.repositories.sources import SourceRepository
 
 logger = logging.getLogger(__name__)
 
+# Prefix on every stored forum row. User-facing formatters must drop these rows.
+INTERNAL_VERIFICATION_MARKER = "[INTERNAL_VERIFICATION_ONLY]"
+
+
+def user_facing_text_from_raw(text: Optional[str]) -> Optional[str]:
+    """Return text only when it is safe to show a traveler.
+
+    Forum rows are internal verification and always return None.
+    """
+    if not text or INTERNAL_VERIFICATION_MARKER in text:
+        return None
+    lowered = text.lower()
+    if "forum.awd.ru" in lowered or "форум винского" in lowered:
+        return None
+    return text
+
+
 class AwdForumScraper(BaseScraper):
     """
-    Scrapes and analyzes payment threads from Forum AWD (Форум Винского).
-    Collects raw messages, filters noise, and extracts validated facts.
+    Scrapes payment threads from Forum AWD for internal verification.
+    Does not produce traveler-facing copy.
     """
+
+    user_facing = False
 
     TARGET_TOPICS = [
         {
@@ -68,9 +89,20 @@ class AwdForumScraper(BaseScraper):
                     messages.append({
                         "text": clean_text,
                         "relevance": round(relevance_score, 2),
-                        "matches_count": matches
+                        "matches_count": matches,
+                        "user_facing": False,
+                        "visibility": "internal_only",
                     })
         return messages
+
+    def build_stored_text(self, topic: Dict[str, Any], post: Dict[str, Any]) -> str:
+        """Raw forum text plus the internal-only marker. Not for users."""
+        body = f"[{topic['title']}]\n{post['text']}\nРелевантность: {post['relevance']}"
+        return f"{INTERNAL_VERIFICATION_MARKER}\n{body}"
+
+    def to_user_facing_text(self, stored_text: Optional[str] = None) -> None:
+        """Forum output is never shown to users, with or without the marker."""
+        return None
 
     async def fetch_topic_page(self, client: httpx.AsyncClient, topic_url: str) -> Optional[str]:
         headers = {
@@ -104,9 +136,15 @@ class AwdForumScraper(BaseScraper):
 
                 posts = self.extract_messages_from_html(html)
                 for p in posts[:max_posts_per_topic]:
-                    entry_text = f"[{topic['title']}]\n{p['text']}\nРелевантность: {p['relevance']}"
+                    entry_text = self.build_stored_text(topic, p)
+                    if self.to_user_facing_text(entry_text) is not None:
+                        logger.error("Forum AWD text was marked user-facing; refusing to store it.")
+                        continue
                     await SourceRepository.save_raw_post(self.source_id, entry_text)
                     total_saved += 1
 
-        logger.info(f"Forum AWD scraper parsed {total_saved} relevant reports.")
+        logger.info(
+            f"Forum AWD scraper stored {total_saved} internal verification reports. "
+            "These rows are not for user-facing texts."
+        )
         return total_saved

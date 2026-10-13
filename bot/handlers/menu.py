@@ -15,6 +15,7 @@ from bot.keyboards.country_kb import (
 )
 from database.repositories.users import UserRepository
 from database.repositories.countries import CountryRepository
+from database.knowledge_base import forum_section_text, format_source_link
 from texts.onboarding import STEP_5_TEXT
 from config.settings import settings
 
@@ -89,8 +90,9 @@ async def handle_country_chosen(callback: CallbackQuery, state: FSMContext):
         hub_text = (
             f"📍 **ЭКСПЕРТНЫЙ ГИД: {c_name.upper()}**\n\n"
             f"⚡ **Коротко о главном:**\n_{headline}_\n\n"
-            "💡 _Выберите интересующий раздел ниже, чтобы изучить проверенные факты, "
-            "правила банкоматов, нюансы валюты и реальный опыт туристов:_"
+            "💡 _Выберите раздел ниже: наличные, карты, QR и переводы. "
+            "Там, где у факта есть статус проверки, он указан в тексте. "
+            "Сообщения с форумов в справочник не выводятся._"
         )
         await callback.message.edit_text(
             hub_text,
@@ -152,14 +154,23 @@ async def handle_csec_cash(callback: CallbackQuery):
         return
 
     c_info = expert_data.get("currency_info", {})
-    source_url = c_info.get("source_url", "https://cbr.ru/crosscut/lawacts/file/5923")
+    if "source_url" in c_info:
+        source_url = c_info.get("source_url")
+    else:
+        source_url = "https://cbr.ru/crosscut/lawacts/file/5923"
+    source_label = c_info.get("source_label", "Указ ЦБ РФ о вывозе наличных")
+    checked = c_info.get("date_verified", "13.09.2026")
+    if source_url:
+        footer = f"🔍 _Источник:_ [{source_label}]({source_url}) | _Проверено: {checked}_"
+    else:
+        footer = f"🔍 _Проверено: {checked}. {source_label}_"
     text = (
         f"💵 **НАЛИЧНЫЕ И ОБМЕН ВАЛЮТЫ: {expert_data['name']}**\n\n"
         f"🏛 **Местная валюта:** {c_info.get('official_currency')}\n\n"
         f"🇷🇺 **Наличные рубли:**\n{c_info.get('cash_rubles')}\n\n"
         f"{c_info.get('usd_eur_rules')}\n\n"
         f"{c_info.get('best_exchangers')}\n\n"
-        f"🔍 _Источник:_ [Указ ЦБ РФ о вывозе наличных]({source_url}) | _Проверено: 13.09.2026_"
+        f"{footer}"
     )
     await callback.message.edit_text(
         text,
@@ -183,21 +194,23 @@ async def handle_csec_cards(callback: CallbackQuery):
     cards = expert_data.get("cards_and_atms", {})
     dcc = cards.get("dcc_trap", "")
     up_banks = cards.get("unionpay_status", [])
+    section_title = cards.get("section_title", "Как работают банкоматы с картами UnionPay (РФ):")
 
     lines = [
         f"💳 **КАРТЫ И БАНКОМАТЫ: {expert_data['name']}**\n",
         dcc,
-        "\n🏦 **Как работают банкоматы с картами UnionPay (РФ):**"
+        f"\n🏦 **{section_title}**"
     ]
 
     for b in up_banks:
         map_link = f" | [На карте Google Maps ↗]({b['map_url']})" if b.get("map_url") else ""
         fee_info = b.get("fee", "0%")
+        source_label = format_source_link(b.get("source"), b.get("source_type"), "Тарифы банка")
         lines.append(
-            f"\n• **{b['bank']}** — {b['status']}\n"
+            f"\n• **{b['bank']}** — статус: {b['status']}\n"
             f"  💸 Комиссия: {fee_info}\n"
             f"  ℹ️ {b['tips']}\n"
-            f"  🔍 _Источник:_ [Тарифы банка]({b['source']}){map_link} | _Дата:_ {b['verified_at']}"
+            f"  🔍 _Источник:_ {source_label}{map_link} | _Дата:_ {b['verified_at']}"
         )
 
     lines.append("\n⚠️ _Карты Visa и Mastercard, выпущенные банками РФ, за рубежом НЕ работают нигде._")
@@ -223,12 +236,21 @@ async def handle_csec_transfers(callback: CallbackQuery):
         return
 
     transfers = expert_data.get("transfers_and_digital", {})
-    source_url = transfers.get("source_url", "https://koronapay.com")
+    if "source_url" in transfers:
+        source_url = transfers.get("source_url")
+    else:
+        source_url = "https://koronapay.com"
+    source_label = transfers.get("source_label", "Тарифы Золотой Короны")
+    checked = transfers.get("date_verified", "13.09.2026")
+    if source_url:
+        footer = f"🔍 _Источник:_ [{source_label}]({source_url}) | _Проверено: {checked}_"
+    else:
+        footer = f"🔍 _Проверено: {checked}. {source_label}_"
     text = (
         f"📲 **ПЕРЕВОДЫ И ЦИФРОВЫЕ СЕРВИСЫ: {expert_data['name']}**\n\n"
         f"{transfers.get('koronapay')}\n\n"
         f"{transfers.get('ininal_letim')}\n\n"
-        f"🔍 _Источник:_ [Тарифы Золотой Короны]({source_url}) | _Проверено: 13.09.2026_"
+        f"{footer}"
     )
     await callback.message.edit_text(
         text,
@@ -257,12 +279,20 @@ async def handle_csec_qr(callback: CallbackQuery):
     ]
 
     for b in qr.get("supported_banks", []):
+        status = b.get("status")
+        status_line = f"  🏷 _Статус:_ {status}\n" if status else ""
+        source_label = format_source_link(
+            b.get("source_url"),
+            b.get("source_type"),
+            "Официальное подтверждение",
+        )
         lines.append(
             f"\n• **{b['bank']}**:\n"
+            f"{status_line}"
             f"  📲 _Как платить:_ {b['how']}\n"
             f"  💰 _Лимиты и комиссии:_ {b['limits']}\n"
             f"  🏪 _Где принимают:_ {b['places']}\n"
-            f"  🔍 _Источник:_ [Официальное подтверждение]({b['source_url']})"
+            f"  🔍 _Источник:_ {source_label}"
         )
 
     lines.append(f"\n{qr.get('important_tips', '')}")
@@ -289,14 +319,11 @@ async def handle_csec_lifehacks(callback: CallbackQuery):
         return
 
     lh = expert_data.get("lifehacks", {})
-    lines = [
-        f"💡 **ЛАЙФХАКИ, ЧАЕВЫЕ И ПРАВИЛА: {expert_data['name']}**\n",
-        lh.get("tipping", ""),
-        "\n" + lh.get("bargaining", ""),
-        "\n" + lh.get("nfc_apple_pay", ""),
-        "\n" + lh.get("customs_rules", ""),
-        "\n" + lh.get("crypto_rules", "")
-    ]
+    lines = [f"💡 **ЛАЙФХАКИ, ЧАЕВЫЕ И ПРАВИЛА: {expert_data['name']}**\n"]
+    for key in ("practical", "tipping", "bargaining", "nfc_apple_pay", "customs_rules", "crypto_rules"):
+        val = (lh.get(key) or "").strip()
+        if val:
+            lines.append(val)
 
     full_text = "\n".join(lines)
     await callback.message.edit_text(
@@ -319,14 +346,21 @@ async def handle_csec_maps(callback: CallbackQuery):
         return
 
     maps = expert_data.get("maps", {})
-    text = (
-        f"🗺 **КАРТЫ БАНКОМАТОВ И ОБМЕННИКОВ: {expert_data['name']}**\n\n"
-        "Мы собрали для вас прямые ссылки на Google Maps с уже настроенными поисковыми фильтрами:\n\n"
-        "• **Банкоматы без комиссии (VakıfBank, Ziraat, Halkbank)** — сразу показывают ближайшие рабочие точки рядом с вашим текущим местоположением.\n"
-        "• **Обменники Гранд-Базара (Kapalıçarşı)** — точки с минимальным спредом и лучшим курсом обмена валюты в Стамбуле.\n"
-        "• **Отделения почты PTT** — официальные точки получения наличных по Золотой Короне.\n\n"
-        "👇 _Нажмите на нужную кнопку ниже, чтобы открыть маршрут в приложении карт:_"
-    )
+    maps_intro = (expert_data.get("maps_intro") or "").strip()
+    if maps_intro:
+        text = (
+            f"🗺 **КАРТЫ БАНКОМАТОВ И ОБМЕННИКОВ: {expert_data['name']}**\n\n"
+            f"{maps_intro}"
+        )
+    else:
+        text = (
+            f"🗺 **КАРТЫ БАНКОМАТОВ И ОБМЕННИКОВ: {expert_data['name']}**\n\n"
+            "Мы собрали для вас прямые ссылки на Google Maps с уже настроенными поисковыми фильтрами:\n\n"
+            "• **Банкоматы без комиссии (VakıfBank, Ziraat, Halkbank)** — сразу показывают ближайшие рабочие точки рядом с вашим текущим местоположением.\n"
+            "• **Обменники Гранд-Базара (Kapalıçarşı)** — точки с минимальным спредом и лучшим курсом обмена валюты в Стамбуле.\n"
+            "• **Отделения почты PTT** — официальные точки получения наличных по Золотой Короне.\n\n"
+            "👇 _Нажмите на нужную кнопку ниже, чтобы открыть маршрут в приложении карт:_"
+        )
     await callback.message.edit_text(
         text,
         reply_markup=get_country_maps_keyboard(slug, maps),
@@ -350,11 +384,12 @@ async def handle_csec_scams(callback: CallbackQuery):
     lines = [f"⚠️ **СКАМ-СХЕМЫ И ОПАСНОСТИ: {expert_data['name']}**\n"]
 
     for s in scams:
+        source_label = format_source_link(s.get("source"), s.get("source_type"), "Официальное предупреждение")
         lines.append(
             f"🚨 **{s['title']}**\n"
             f"• **Как выглядит схема:** {s['desc']}\n"
             f"• 🛡 **Как защититься:** {s['protection']}\n"
-            f"• 🔍 _Источник:_ [Официальное предупреждение]({s['source']})\n"
+            f"• 🔍 _Источник:_ {source_label}\n"
         )
 
     full_text = "\n".join(lines)
@@ -377,29 +412,8 @@ async def handle_csec_forum(callback: CallbackQuery):
         await callback.message.answer("Данные раздела обновляются...")
         return
 
-    insights = expert_data.get("community_insights", {})
-    headline = insights.get("headline", "💬 Опыт туристов (Форум Винского)")
-    desc = insights.get("description", "")
-    period = insights.get("verified_period", "недавно")
-    takeaways = insights.get("key_takeaways", [])
-
-    lines = [
-        f"{headline}\n",
-        f"_{desc}_\n",
-        f"📅 **Период анализа:** {period}\n"
-    ]
-
-    for item in takeaways:
-        lines.append(
-            f"📌 **{item['topic']}**\n"
-            f"• **Консенсус:** {item['consensus']}\n"
-            f"{item['details']}\n"
-            f"• 🕒 _Подтверждено отчетами:_ {item['date_verified']} (достоверность: {int(item['confidence']*100)}%)\n"
-        )
-
-    lines.append("🛡 _Мы фильтруем спам, скрытую рекламу и эмоциональные вбросы, оставляя только факты, подтвержденные независимыми туристами._")
-
-    full_text = "\n".join(lines)
+    # Forum posts and curated forum summaries stay internal. Do not render takeaways.
+    full_text = forum_section_text(expert_data)
     await callback.message.edit_text(
         full_text,
         reply_markup=get_country_section_back_keyboard(slug),

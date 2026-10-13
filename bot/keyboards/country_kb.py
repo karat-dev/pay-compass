@@ -1,11 +1,29 @@
 from typing import List, Dict, Any
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+from database.knowledge_base import COUNTRIES_KNOWLEDGE_BASE
+
 def get_countries_keyboard(countries: List[Dict[str, Any]]) -> InlineKeyboardMarkup:
+    """Country buttons, including guides that exist only in the knowledge base."""
+    by_slug: Dict[str, Dict[str, Any]] = {}
+    for c in countries:
+        slug = c.get("slug")
+        if slug:
+            by_slug[slug] = c
+
+    ordered: List[Dict[str, Any]] = []
+    for slug, data in COUNTRIES_KNOWLEDGE_BASE.items():
+        existing = by_slug.pop(slug, None)
+        if existing:
+            ordered.append(existing)
+        else:
+            ordered.append({"slug": slug, "name": data.get("name") or slug})
+    ordered.extend(by_slug.values())
+
     buttons = []
     # 2 buttons per row
     row = []
-    for c in countries:
+    for c in ordered:
         slug = c.get("slug") or "unknown"
         name = c.get("name") or "Страна"
         row.append(InlineKeyboardButton(text=f"{name}", callback_data=f"country_{slug}"))
@@ -19,23 +37,29 @@ def get_countries_keyboard(countries: List[Dict[str, Any]]) -> InlineKeyboardMar
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_country_hub_keyboard(country_slug: str) -> InlineKeyboardMarkup:
-    """Interactive Hub keyboard for a country: detailed thematic sub-sections."""
+    """Interactive Hub keyboard for a country: detailed thematic sub-sections.
+
+    Forum reports are internal verification only and have no button.
+    """
+    data = COUNTRIES_KNOWLEDGE_BASE.get(country_slug) or {}
+    labels = data.get("hub_labels") or {}
+    qr_label = labels.get("qr", "📱 Оплата по QR (Karekod)")
+    transfer_label = labels.get("transfers", "📲 Золотая Корона")
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="💵 Наличные и обмен ($)", callback_data=f"csec_cash_{country_slug}"),
             InlineKeyboardButton(text="💳 Карты и банкоматы", callback_data=f"csec_cards_{country_slug}")
         ],
         [
-            InlineKeyboardButton(text="📱 Оплата по QR (Karekod)", callback_data=f"csec_qr_{country_slug}"),
-            InlineKeyboardButton(text="📲 Золотая Корона", callback_data=f"csec_transfers_{country_slug}")
+            InlineKeyboardButton(text=qr_label, callback_data=f"csec_qr_{country_slug}"),
+            InlineKeyboardButton(text=transfer_label, callback_data=f"csec_transfers_{country_slug}")
         ],
         [
             InlineKeyboardButton(text="💡 Лайфхаки, чаевые и лимиты", callback_data=f"csec_lifehacks_{country_slug}"),
             InlineKeyboardButton(text="🗺 Карты банкоматов и обменников", callback_data=f"csec_maps_{country_slug}")
         ],
         [
-            InlineKeyboardButton(text="⚠️ Скам и ловушка DCC", callback_data=f"csec_scams_{country_slug}"),
-            InlineKeyboardButton(text="💬 Опыт туристов (Форум)", callback_data=f"csec_forum_{country_slug}")
+            InlineKeyboardButton(text="⚠️ Скам и ловушка DCC", callback_data=f"csec_scams_{country_slug}")
         ],
         [
             InlineKeyboardButton(text="🚨 Сообщить об ошибке", callback_data=f"report_error_{country_slug}"),
