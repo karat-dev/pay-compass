@@ -1,9 +1,10 @@
 """
-Country guides, schema v2 (13.10.2026).
+Country guides, schema v2 with a trust scale (13.10.2026).
 
-Eight sections in a fixed order. Travellers see confirmed facts by default.
-Unconfirmed and outdated facts appear only on request, with a warning.
-needs_owner_check, decision_needed and unknown_zone stay internal.
+Eight sections in a fixed order. Display thresholds live in config/trust_config.json.
+By default travellers see green and yellow zones. Red and black open with
+«Показать непроверенное». Gaps are labelled «не исследовано».
+Scores, breakdowns, needs_owner_check, decision_needed and unknown_zone stay internal.
 Forum summaries are not stored and are not shown.
 """
 
@@ -36,24 +37,31 @@ SUBSECTION_TITLES = {
     "local_card": "Местная карта или счёт",
 }
 
-ALLOWED_FACT_STATUSES = ("confirmed", "unconfirmed", "outdated")
-ON_REQUEST_STATUSES = ("unconfirmed", "outdated")
+ALLOWED_FACT_STATUSES = ("confirmed", "unconfirmed", "outdated", "outdated_or_refuted", "gap")
+FACT_TYPES = ("fact", "advice", "gap")
 DATE_VERIFIED = "13.10.2026"
-STATUS_WARNING = {
-    "unconfirmed": "Не подтверждено",
-    "outdated": "Устарело",
-}
+TRUST_CONFIG_PATH = Path(__file__).resolve().parents[1] / "config" / "trust_config.json"
 
-NOT_FOR_TOURIST_LOCAL_CARD = ("china", "hong_kong", "uae", "turkey")
-LOCAL_CARD_NOT_FOR_TOURIST = "не актуально для туриста"
 
-# Kept in the data, hidden until there is a verified fact. Not shown even on request.
-TURKEY_FORCE_UNCONFIRMED = (
-    "Газпромбанк",
-    "Visa/Mastercard банков РФ",
-    "ВТБ: TR QR",
-    "Сбер: TR QR",
-)
+def load_trust_config() -> Dict[str, Any]:
+    with TRUST_CONFIG_PATH.open(encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def zone_sets(config: Dict[str, Any]) -> tuple:
+    """Default zones are those at or above display.default_min. The rest stay behind the button."""
+    display = config["display"]
+    default_min = display["default_min"]
+    default = {zone["name"] for zone in config["zones"] if zone["min"] >= default_min}
+    hidden = {zone["name"] for zone in config["zones"] if zone["min"] < default_min}
+    hidden.update(display.get("extra_hidden_zones") or [])
+    return default, hidden
+
+
+TRUST_CONFIG = load_trust_config()
+DEFAULT_ZONES, HIDDEN_ZONES = zone_sets(TRUST_CONFIG)
+GAP_ZONES = set(TRUST_CONFIG["display"].get("gap_zones") or ["gap"])
+GAP_LABEL = TRUST_CONFIG["display"]["gap_label"]
 
 INSTRUCTION_SECTION = {
     "mts_tr_qr": "2_pay_on_site",
@@ -74,8 +82,13 @@ INSTRUCTION_LABELS = {
 
 FACT_FIELDS = (
     "text",
+    "type",
     "status",
+    "zone",
+    "score",
+    "score_breakdown",
     "date_verified",
+    "date_estimated",
     "source",
     "needs_owner_check",
     "decision_needed",
@@ -94,17 +107,37 @@ def normalize_fact(raw: Dict[str, Any]) -> Dict[str, Any]:
     status = raw.get("status")
     if status not in ALLOWED_FACT_STATUSES:
         raise ValueError(f"Unexpected fact status: {status!r} in {raw.get('text', '')[:80]!r}")
-    source = raw.get("source")
+    fact_type = raw.get("fact_type") or raw.get("type") or "fact"
+    if fact_type not in FACT_TYPES:
+        raise ValueError(f"Unexpected fact type: {fact_type!r} in {raw.get('text', '')[:80]!r}")
+    source = raw.get("source") or None
+    if "date_verified" in raw:
+        date_verified = raw.get("date_verified") or None
+    else:
+        date_verified = _date_verified(raw.get("checked_at"))
+    breakdown = raw.get("score_breakdown")
     return {
         "text": raw["text"],
+        "type": fact_type,
+        "fact_type": fact_type,
         "status": status,
+        "zone": raw.get("zone"),
+        "score": raw.get("score"),
+        "score_breakdown": breakdown if isinstance(breakdown, dict) else None,
+        "date_verified": date_verified,
+        "date_estimated": raw.get("date_estimated"),
         "checked_at": raw.get("checked_at"),
-        "date_verified": _date_verified(raw.get("checked_at")),
-        "source": source if source else None,
+        "source": source,
         "source_type": raw.get("source_type"),
+        "source_user_facing": raw.get("source_user_facing", True),
+        "source_kind": raw.get("source_kind"),
         "needs_owner_check": bool(raw.get("needs_owner_check")),
         "decision_needed": raw.get("decision_needed") or None,
         "unknown_zone": raw.get("unknown_zone") or None,
+        "reason": raw.get("reason"),
+        "refuted": bool(raw.get("refuted")),
+        "verified_by_us": bool(raw.get("verified_by_us")),
+        "status_derived_from": raw.get("status_derived_from"),
     }
 
 
@@ -126,29 +159,6 @@ def iter_facts(country: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
         yield from section.get("facts") or []
         for subsection in (section.get("subsections") or {}).values():
             yield from subsection.get("facts") or []
-
-
-def _mark_turkey_unconfirmed(country: Dict[str, Any]) -> None:
-    if country["slug"] != "turkey":
-        return
-    for fact in iter_facts(country):
-        if any(marker in fact["text"] for marker in TURKEY_FORCE_UNCONFIRMED):
-            fact["status"] = "unconfirmed"
-
-
-def _apply_local_card_decisions(country: Dict[str, Any]) -> None:
-    section = country["sections"]["3_local_wallets_cards"]
-    local_card = section["subsections"]["local_card"]
-    if country["slug"] in NOT_FOR_TOURIST_LOCAL_CARD:
-        local_card["applicable"] = False
-        local_card["reason"] = LOCAL_CARD_NOT_FOR_TOURIST
-        for fact in local_card["facts"]:
-            fact["excluded_from_user_view"] = True
-        return
-    if country["slug"] == "thailand":
-        for fact in local_card["facts"]:
-            if "Bangkok Bank" in fact["text"] and "Kasikorn" in fact["text"]:
-                fact["hidden_until_verified"] = True
 
 
 def _build_country(slug: str, raw: Dict[str, Any], instruction_ids: List[str]) -> Dict[str, Any]:
@@ -175,16 +185,15 @@ def _build_country(slug: str, raw: Dict[str, Any], instruction_ids: List[str]) -
         "slug": slug,
         "date_verified": DATE_VERIFIED,
         "headline": (
-            "По умолчанию здесь только подтверждённые факты. "
-            "Непроверенное и устаревшее открывается кнопкой «Показать непроверенное»."
+            "По умолчанию зелёная и жёлтая зоны. "
+            "Красная и чёрная открываются кнопкой «Показать непроверенное». "
+            "Пробелы в данных подписаны «не исследовано»."
         ),
         "sections": sections,
         "instruction_ids": instruction_ids,
     }
     if raw.get("base"):
         country["base"] = raw["base"]
-    _mark_turkey_unconfirmed(country)
-    _apply_local_card_decisions(country)
     return country
 
 
@@ -193,16 +202,7 @@ def _build_instructions(raw_instructions: Dict[str, Any]) -> Dict[str, Any]:
     for instruction_id, raw in raw_instructions.items():
         steps = []
         for step in raw.get("steps") or []:
-            fact = normalize_fact({
-                "text": step["text"],
-                "status": step["status"],
-                "checked_at": step.get("checked_at"),
-                "source": step.get("source"),
-                "source_type": None,
-                "needs_owner_check": step.get("needs_owner_check"),
-                "decision_needed": step.get("decision_needed"),
-                "unknown_zone": step.get("unknown_zone"),
-            })
+            fact = normalize_fact(step)
             fact["n"] = step.get("n")
             fact["stage"] = step.get("stage")
             steps.append(fact)
@@ -257,12 +257,25 @@ def user_visible_fact(fact: Dict[str, Any]) -> bool:
     return True
 
 
+def is_gap(fact: Dict[str, Any]) -> bool:
+    return fact.get("type") == "gap" or fact.get("zone") in GAP_ZONES
+
+
+def fact_on_request(fact: Dict[str, Any]) -> bool:
+    """Red, black, and other non-default zones. Gaps are not in this bucket."""
+    if is_gap(fact):
+        return False
+    return fact.get("zone") not in DEFAULT_ZONES
+
+
 def select_facts(facts: List[Dict[str, Any]], show_unverified: bool) -> List[Dict[str, Any]]:
     chosen = []
     for fact in facts:
         if not user_visible_fact(fact):
             continue
-        if fact["status"] == "confirmed" or (show_unverified and fact["status"] in ON_REQUEST_STATUSES):
+        if is_gap(fact) or fact.get("zone") in DEFAULT_ZONES:
+            chosen.append(fact)
+        elif show_unverified and fact_on_request(fact):
             chosen.append(fact)
     return chosen
 
@@ -275,31 +288,52 @@ def section_has_unverified(country: Dict[str, Any], section_key: str) -> bool:
             pools.append(subsection.get("facts") or [])
     for pool in pools:
         for fact in pool:
-            if user_visible_fact(fact) and fact["status"] in ON_REQUEST_STATUSES:
+            if user_visible_fact(fact) and fact_on_request(fact):
                 return True
     return False
 
 
-def format_fact(fact: Dict[str, Any], *, warn: bool = False) -> str:
-    """Traveller-facing fact. Internal flags are never included."""
-    lines = [fact["text"]]
-    if warn and fact["status"] in STATUS_WARNING:
-        lines.append(f"⚠️ {STATUS_WARNING[fact['status']]}, проверено {fact['date_verified']}.")
-    else:
-        lines.append(f"Проверено: {fact['date_verified']}.")
+def _display_date(value: Optional[str]) -> Optional[str]:
+    if not value or not isinstance(value, str):
+        return None
+    if len(value) >= 10 and value[4] == "-" and value[7] == "-":
+        year, month, day = value[:10].split("-")
+        return f"{day}.{month}.{year}"
+    return value
+
+
+def _source_line(fact: Dict[str, Any]) -> str:
+    if fact.get("source_user_facing") is False:
+        return "Официальной ссылки нет."
     source = fact.get("source")
     if isinstance(source, str) and source.startswith("http"):
-        lines.append(f"Источник: {source}")
-    else:
-        lines.append("Официальной ссылки нет.")
+        return f"Источник: {source}"
+    return "Официальной ссылки нет."
+
+
+def format_fact(fact: Dict[str, Any], *, warn: bool = False) -> str:
+    """Traveller-facing line. Scores, breakdowns and internal flags stay out."""
+    if is_gap(fact):
+        text = fact["text"]
+        if GAP_LABEL not in text.lower():
+            return f"{GAP_LABEL}: {text}"
+        return text
+    lines = [fact["text"]]
+    shown_date = _display_date(fact.get("date_verified"))
+    if warn:
+        when = f", проверено {shown_date}" if shown_date else ""
+        lines.append(f"⚠️ Непроверено{when}.")
+    elif shown_date:
+        estimate = " (дата ориентировочная)" if fact.get("date_estimated") else ""
+        lines.append(f"Проверено: {shown_date}{estimate}.")
+    lines.append(_source_line(fact))
     return "\n".join(lines)
 
 
 def _render_fact_blocks(facts: List[Dict[str, Any]], show_unverified: bool) -> List[str]:
     blocks = []
     for fact in select_facts(facts, show_unverified):
-        warn = fact["status"] in ON_REQUEST_STATUSES
-        blocks.append(format_fact(fact, warn=warn))
+        blocks.append(format_fact(fact, warn=fact_on_request(fact)))
     return blocks
 
 
@@ -308,11 +342,11 @@ def render_section(country: Dict[str, Any], section_key: str, show_unverified: b
     lines = [f"{section['title']} — {country['name']}"]
     if show_unverified:
         lines.append(
-            "⚠️ Непроверенное и устаревшее. Это не подтверждённые правила. "
-            "У такого факта есть пометка «не подтверждено» или «устарело» и дата проверки."
+            "⚠️ Красная и чёрная зоны. Это не проверенные правила. "
+            "У такого факта есть пометка «непроверено» и дата, если она известна."
         )
     else:
-        lines.append("Только подтверждённые факты.")
+        lines.append("Зелёная и жёлтая зоны. Пробелы подписаны «не исследовано».")
 
     if not section["applicable"]:
         lines.append(f"Раздел не применим: {section['reason']}")
@@ -322,7 +356,7 @@ def render_section(country: Dict[str, Any], section_key: str, show_unverified: b
     if blocks:
         lines.extend(blocks)
     elif not section.get("subsections"):
-        lines.append("Подтверждённых фактов в этом разделе нет." if not show_unverified else "Дополнительных непроверенных фактов нет.")
+        lines.append("В зелёной и жёлтой зоне фактов нет." if not show_unverified else "Дополнительных непроверенных фактов нет.")
 
     for name, subsection in (section.get("subsections") or {}).items():
         title = SUBSECTION_TITLES.get(name, name)
@@ -334,7 +368,7 @@ def render_section(country: Dict[str, Any], section_key: str, show_unverified: b
         if sub_blocks:
             lines.extend(sub_blocks)
         elif not show_unverified:
-            lines.append("Подтверждённых фактов нет.")
+            lines.append("В зелёной и жёлтой зоне фактов нет.")
         else:
             lines.append("Дополнительных непроверенных фактов нет.")
 
@@ -353,16 +387,16 @@ def render_instruction(instruction_id: str, show_unverified: bool = False) -> st
     lines = [instruction["service"] or instruction_id]
     if show_unverified:
         lines.append(
-            "⚠️ Непроверенные шаги. Это не подтверждённая инструкция. "
-            "У такого шага есть пометка «не подтверждено» или «устарело» и дата проверки."
+            "⚠️ Красная и чёрная зоны. Это не проверенные шаги. "
+            "У такого шага есть пометка «непроверено» и дата, если она известна."
         )
     else:
-        lines.append("Только подтверждённые шаги.")
+        lines.append("Зелёная и жёлтая зоны.")
     blocks = _render_fact_blocks(instruction.get("steps") or [], show_unverified)
     if blocks:
         lines.extend(blocks)
     elif not show_unverified:
-        lines.append("Подтверждённых шагов нет.")
+        lines.append("В зелёной и жёлтой зоне шагов нет.")
     else:
         lines.append("Дополнительных непроверенных шагов нет.")
     return "\n\n".join(lines)
@@ -370,7 +404,7 @@ def render_instruction(instruction_id: str, show_unverified: bool = False) -> st
 
 def instruction_has_unverified(instruction_id: str) -> bool:
     for step in INSTRUCTIONS[instruction_id].get("steps") or []:
-        if user_visible_fact(step) and step["status"] in ON_REQUEST_STATUSES:
+        if user_visible_fact(step) and fact_on_request(step):
             return True
     return False
 
@@ -392,7 +426,10 @@ def forum_section_text(country: Optional[Dict[str, Any]] = None) -> str:
     )
 
 
-def _html_source(source: Optional[str]) -> str:
+def _html_source(fact: Dict[str, Any]) -> str:
+    if fact.get("source_user_facing") is False:
+        return "Официальной ссылки нет."
+    source = fact.get("source")
     if isinstance(source, str) and source.startswith("http"):
         url = source.split()[0]
         note = html.escape(source[len(url):].strip())
@@ -402,21 +439,27 @@ def _html_source(source: Optional[str]) -> str:
 
 
 def format_fact_html(fact: Dict[str, Any], *, warn: bool = False) -> str:
+    if is_gap(fact):
+        text = fact["text"]
+        if GAP_LABEL not in text.lower():
+            text = f"{GAP_LABEL}: {text}"
+        return html.escape(text)
     lines = [html.escape(fact["text"])]
-    if warn and fact["status"] in STATUS_WARNING:
-        lines.append(
-            f"⚠️ {html.escape(STATUS_WARNING[fact['status']])}, проверено {html.escape(fact['date_verified'])}."
-        )
-    else:
-        lines.append(f"Проверено: {html.escape(fact['date_verified'])}.")
-    lines.append(_html_source(fact.get("source")))
+    shown_date = _display_date(fact.get("date_verified"))
+    if warn:
+        when = f", проверено {html.escape(shown_date)}" if shown_date else ""
+        lines.append(f"⚠️ Непроверено{when}.")
+    elif shown_date:
+        estimate = " (дата ориентировочная)" if fact.get("date_estimated") else ""
+        lines.append(f"Проверено: {html.escape(shown_date)}{estimate}.")
+    lines.append(_html_source(fact))
     return "\n".join(lines)
 
 
 def _html_blocks(facts: List[Dict[str, Any]], show_unverified: bool) -> List[str]:
     blocks = []
     for fact in select_facts(facts, show_unverified):
-        blocks.append(format_fact_html(fact, warn=fact["status"] in ON_REQUEST_STATUSES))
+        blocks.append(format_fact_html(fact, warn=fact_on_request(fact)))
     return blocks
 
 
@@ -425,11 +468,11 @@ def render_section_html(country: Dict[str, Any], section_key: str, show_unverifi
     lines = [f"<b>{html.escape(section['title'])}</b> — {html.escape(country['name'])}"]
     if show_unverified:
         lines.append(
-            "⚠️ Непроверенное и устаревшее. Это не подтверждённые правила. "
-            "У такого факта есть пометка «не подтверждено» или «устарело» и дата проверки."
+            "⚠️ Красная и чёрная зоны. Это не проверенные правила. "
+            "У такого факта есть пометка «непроверено» и дата, если она известна."
         )
     else:
-        lines.append("Только подтверждённые факты.")
+        lines.append("Зелёная и жёлтая зоны. Пробелы подписаны «не исследовано».")
     if not section["applicable"]:
         lines.append(f"Раздел не применим: {html.escape(section['reason'] or '')}")
         return "\n\n".join(lines)
@@ -438,7 +481,7 @@ def render_section_html(country: Dict[str, Any], section_key: str, show_unverifi
         lines.extend(blocks)
     elif not section.get("subsections"):
         lines.append(
-            "Подтверждённых фактов в этом разделе нет."
+            "В зелёной и жёлтой зоне фактов нет."
             if not show_unverified
             else "Дополнительных непроверенных фактов нет."
         )
@@ -451,7 +494,7 @@ def render_section_html(country: Dict[str, Any], section_key: str, show_unverifi
         if sub_blocks:
             lines.extend(sub_blocks)
         elif not show_unverified:
-            lines.append("Подтверждённых фактов нет.")
+            lines.append("В зелёной и жёлтой зоне фактов нет.")
         else:
             lines.append("Дополнительных непроверенных фактов нет.")
     text = "\n\n".join(lines)
@@ -465,16 +508,16 @@ def render_instruction_html(instruction_id: str, show_unverified: bool = False) 
     lines = [f"<b>{html.escape(instruction['service'] or instruction_id)}</b>"]
     if show_unverified:
         lines.append(
-            "⚠️ Непроверенные шаги. Это не подтверждённая инструкция. "
-            "У такого шага есть пометка «не подтверждено» или «устарело» и дата проверки."
+            "⚠️ Красная и чёрная зоны. Это не проверенные шаги. "
+            "У такого шага есть пометка «непроверено» и дата, если она известна."
         )
     else:
-        lines.append("Только подтверждённые шаги.")
+        lines.append("Зелёная и жёлтая зоны.")
     blocks = _html_blocks(instruction.get("steps") or [], show_unverified)
     if blocks:
         lines.extend(blocks)
     elif not show_unverified:
-        lines.append("Подтверждённых шагов нет.")
+        lines.append("В зелёной и жёлтой зоне шагов нет.")
     else:
         lines.append("Дополнительных непроверенных шагов нет.")
     text = "\n\n".join(lines)

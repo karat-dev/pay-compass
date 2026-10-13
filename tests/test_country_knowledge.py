@@ -1,26 +1,33 @@
-"""Schema v2 country guides: eight sections, confirmed-by-default, forum isolation."""
+"""Schema v2 country guides: trust zones, gaps, forum isolation."""
 
 from database.knowledge_base import (
     ALLOWED_FACT_STATUSES,
     CHINA_DATA,
     COUNTRIES_KNOWLEDGE_BASE,
     DATE_VERIFIED,
+    DEFAULT_ZONES,
     FACT_FIELDS,
+    FACT_TYPES,
+    GAP_LABEL,
+    HIDDEN_ZONES,
     HONG_KONG_DATA,
     INSTRUCTIONS,
-    LOCAL_CARD_NOT_FOR_TOURIST,
     SECTION_KEYS,
     THAILAND_DATA,
+    TRUST_CONFIG,
     TURKEY_DATA,
     UAE_DATA,
+    fact_on_request,
     format_fact,
     forum_section_text,
+    is_gap,
     iter_facts,
     render_instruction,
     render_section,
     render_section_html,
     render_user_facing,
     user_visible_fact,
+    zone_sets,
 )
 from database.repositories.countries import CountryRepository
 from bot.keyboards.country_kb import get_countries_keyboard, get_country_hub_keyboard, get_section_nav_keyboard
@@ -52,7 +59,13 @@ def _check_fact(fact):
     for field in FACT_FIELDS:
         assert field in fact
     assert fact["status"] in ALLOWED_FACT_STATUSES
-    assert fact["date_verified"] == DATE_VERIFIED
+    assert fact["type"] in FACT_TYPES
+    assert fact["type"] == fact["fact_type"]
+    assert isinstance(fact["zone"], str) and fact["zone"]
+    assert fact["score"] is None or isinstance(fact["score"], int)
+    assert fact["score_breakdown"] is None or isinstance(fact["score_breakdown"], dict)
+    assert fact["date_verified"] is None or isinstance(fact["date_verified"], str)
+    assert fact["date_estimated"] is None or isinstance(fact["date_estimated"], bool)
     assert fact["source"] is None or isinstance(fact["source"], str)
     assert isinstance(fact["needs_owner_check"], bool)
     assert fact["decision_needed"] is None or isinstance(fact["decision_needed"], str)
@@ -98,66 +111,88 @@ def test_schema_v2_sections_and_fact_fields():
     assert {"china", "hong_kong", "thailand", "uae", "turkey"} <= seeded
 
 
-def test_default_view_is_confirmed_only_and_unverified_is_warned():
+def test_thresholds_come_from_config():
+    assert TRUST_CONFIG["display"]["default_min"] == 50
+    assert TRUST_CONFIG["zones"][0]["name"] == "green"
+    assert TRUST_CONFIG["zones"][0]["min"] == 75
+    assert DEFAULT_ZONES == {"green", "yellow"}
+    assert {"red", "black", "advice-unsupported"} <= HIDDEN_ZONES
+    stricter, hidden = zone_sets({
+        "zones": TRUST_CONFIG["zones"],
+        "display": {"default_min": 75, "extra_hidden_zones": []},
+    })
+    assert stricter == {"green"}
+    assert {"yellow", "red", "black"} <= hidden
+
+
+def test_default_view_is_green_and_yellow():
     for slug, country in GUIDES.items():
         default = render_user_facing(country, show_unverified=False)
         requested = render_user_facing(country, show_unverified=True)
         assert "forum.awd.ru" not in default and "forum.awd.ru" not in requested
         assert "форум" not in default.lower() and "форум" not in requested.lower()
+        assert "согласованность" not in default and "согласованность" not in requested
         assert "Форум Винского" not in default
         for fact in iter_facts(country):
             if not user_visible_fact(fact):
                 assert fact["text"] not in default
                 assert fact["text"] not in requested
                 continue
-            if fact.get("unknown_zone"):
-                assert fact["unknown_zone"] not in default
-                assert fact["unknown_zone"] not in requested
-            if fact.get("decision_needed"):
-                assert fact["decision_needed"] not in default
-                assert fact["decision_needed"] not in requested
-            if fact["status"] == "confirmed":
+            for private in ("unknown_zone", "decision_needed", "reason"):
+                value = fact.get(private)
+                if isinstance(value, str) and value.strip():
+                    assert value not in default
+                    assert value not in requested
+            if fact.get("score_breakdown"):
+                assert "score_breakdown" not in default
+            if is_gap(fact):
                 assert fact["text"] in default
-                assert f"Проверено: {DATE_VERIFIED}." in format_fact(fact, warn=False)
-                if isinstance(fact.get("source"), str) and fact["source"].startswith("http"):
-                    assert fact["source"].split()[0] in default
+                assert GAP_LABEL in format_fact(fact)
+                continue
+            shown_by_default = fact.get("zone") in DEFAULT_ZONES
+            if shown_by_default:
+                assert fact["text"] in default
+                if fact.get("date_estimated") and fact.get("date_verified"):
+                    assert "дата ориентировочная" in format_fact(fact, warn=False)
             else:
+                assert fact_on_request(fact)
                 assert fact["text"] not in default
                 assert fact["text"] in requested
                 warned = format_fact(fact, warn=True)
-                assert "⚠️" in warned
-                assert DATE_VERIFIED in warned
-                label = "Не подтверждено" if fact["status"] == "unconfirmed" else "Устарело"
-                assert label in warned
+                assert "⚠️ Непроверено" in warned
+            rendered = format_fact(fact, warn=fact_on_request(fact))
+            if fact.get("source_user_facing") is False:
+                source = fact.get("source")
+                if isinstance(source, str) and source.startswith("http"):
+                    assert source.split()[0] not in rendered
+                assert "Официальной ссылки нет." in rendered or is_gap(fact)
+            elif shown_by_default and isinstance(fact.get("source"), str) and fact["source"].startswith("http"):
+                assert fact["source"].split()[0] in default
 
 
-def test_local_card_and_turkey_product_decisions():
-    for slug in ("china", "hong_kong", "uae", "turkey"):
-        country = GUIDES[slug]
-        local_card = country["sections"]["3_local_wallets_cards"]["subsections"]["local_card"]
-        assert local_card["applicable"] is False
-        assert local_card["reason"] == LOCAL_CARD_NOT_FOR_TOURIST
-        shown = render_section(country, "3_local_wallets_cards", show_unverified=True)
-        assert LOCAL_CARD_NOT_FOR_TOURIST in shown
-        for fact in local_card["facts"]:
-            assert fact["text"] not in shown
+def test_gaps_show_and_red_black_stay_behind_the_button():
+    china_cards = render_section(CHINA_DATA, "3_local_wallets_cards")
+    assert "Счёт в китайском банке для туриста — не исследовано." in china_cards
+    assert "Привязка UnionPay АТБ/РСХБ к Alipay/WeChat." not in china_cards
+    china_all = render_section(CHINA_DATA, "3_local_wallets_cards", show_unverified=True)
+    assert "Привязка UnionPay АТБ/РСХБ к Alipay/WeChat." in china_all
+    assert "⚠️ Непроверено" in china_all
 
     opening = "Bangkok Bank и Kasikorn не открывают счета туристам"
     thailand_default = render_user_facing(THAILAND_DATA)
-    thailand_all = render_user_facing(THAILAND_DATA, show_unverified=True)
-    assert opening not in thailand_default and opening not in thailand_all
+    assert opening in thailand_default
     assert "Мобильный банк привязан к SIM" in thailand_default
 
     turkey_default = render_user_facing(TURKEY_DATA)
     turkey_all = render_user_facing(TURKEY_DATA, show_unverified=True)
-    for hidden in (
-        "Газпромбанк",
-        "ВТБ: TR QR",
-        "Сбер: TR QR",
-        "оплата по TR QR картами Visa/Mastercard банков РФ",
-    ):
-        assert hidden not in turkey_default
-        assert hidden in turkey_all
+    hidden = (
+        "ВТБ поддерживает оплату по TR QR в Турции",
+        "UnionPay Газпромбанка снимает лиры",
+    )
+    for phrase in hidden:
+        assert phrase not in turkey_default
+        assert phrase in turkey_all
+    assert "Газпромбанк под санкциями США" in turkey_default
     assert "Участники форума" not in turkey_default
     assert "community_insights" not in TURKEY_DATA
 
