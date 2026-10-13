@@ -9,8 +9,10 @@ class CountryRepository:
     # Default launch countries
     INITIAL_COUNTRIES = [
         {"name": "Турция 🇹🇷", "slug": "turkey"},
-        {"name": "ОАЭ 🇦🇪", "slug": "uae"},
+        {"name": "Китай 🇨🇳", "slug": "china"},
+        {"name": "Гонконг 🇭🇰", "slug": "hong_kong"},
         {"name": "Таиланд 🇹🇭", "slug": "thailand"},
+        {"name": "ОАЭ 🇦🇪", "slug": "uae"},
         {"name": "Грузия 🇬🇪", "slug": "georgia"},
         {"name": "Казахстан 🇰🇿", "slug": "kazakhstan"},
         {"name": "Армения 🇦🇲", "slug": "armenia"},
