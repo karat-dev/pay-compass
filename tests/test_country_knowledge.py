@@ -10,6 +10,7 @@ from database.knowledge_base import (
     FACT_TYPES,
     GAP_LABEL,
     HIDDEN_ZONES,
+    GEORGIA_DATA,
     HONG_KONG_DATA,
     INSTRUCTIONS,
     SECTION_KEYS,
@@ -23,6 +24,7 @@ from database.knowledge_base import (
     is_gap,
     iter_facts,
     render_instruction,
+    render_instruction_html,
     render_section,
     render_section_html,
     render_user_facing,
@@ -31,7 +33,7 @@ from database.knowledge_base import (
 )
 from database.repositories.countries import CountryRepository
 from bot.keyboards.country_kb import get_countries_keyboard, get_country_hub_keyboard, get_section_nav_keyboard
-from bot.handlers.menu import _parse_section_callback
+from bot.handlers.menu import _parse_instruction_callback, _parse_section_callback
 from scrapers.awd_scraper import (
     AwdForumScraper,
     INTERNAL_VERIFICATION_MARKER,
@@ -44,6 +46,7 @@ GUIDES = {
     "thailand": THAILAND_DATA,
     "uae": UAE_DATA,
     "turkey": TURKEY_DATA,
+    "georgia": GEORGIA_DATA,
 }
 
 
@@ -108,7 +111,9 @@ def test_schema_v2_sections_and_fact_fields():
                 _check_fact(step)
 
     seeded = {item["slug"] for item in CountryRepository.INITIAL_COUNTRIES}
-    assert {"china", "hong_kong", "thailand", "uae", "turkey"} <= seeded
+    assert {"china", "hong_kong", "thailand", "uae", "turkey", "georgia"} <= seeded
+    assert "tbc_georgia" in GEORGIA_DATA["instruction_ids"]
+    assert INSTRUCTIONS["tbc_georgia"]["section"] == "3_local_wallets_cards"
 
 
 def test_thresholds_come_from_config():
@@ -210,6 +215,8 @@ def test_unverified_button_and_eight_section_hub():
     assert "country_hong_kong" in callbacks
     assert "country_thailand" in callbacks
     assert "country_uae" in callbacks
+    assert "country_georgia" in callbacks
+    assert "Грузия 🇬🇪" in _button_texts(kb)
 
     hub = get_country_hub_keyboard("china")
     hub_callbacks = _callbacks(hub)
@@ -225,6 +232,27 @@ def test_unverified_button_and_eight_section_hub():
 
     assert _parse_section_callback("csec_qr_hong_kong") == ("hong_kong", "2", False)
     assert _parse_section_callback("cunv_8_uae") == ("uae", "8", True)
+    assert _parse_section_callback("csec_3_georgia") == ("georgia", "3", False)
+
+    cards = get_section_nav_keyboard("georgia", "3", show_unverified=False)
+    assert "📋 TBC: карта за 1–2 дня" in _button_texts(cards)
+    assert "cins_tbc_georgia_georgia" in _callbacks(cards)
+    assert _parse_instruction_callback("cins_tbc_georgia_georgia") == ("tbc_georgia", "georgia", False)
+    assert _parse_instruction_callback("cinu_tbc_georgia_georgia") == ("tbc_georgia", "georgia", True)
+
+    guide = render_instruction("tbc_georgia", show_unverified=False)
+    hidden_guide = render_instruction("tbc_georgia", show_unverified=True)
+    assert "Поставить приложение-переводчик" in guide
+    assert "Минимальная сумма — 6 000 ₽" not in guide
+    assert "Минимальная сумма — 6 000 ₽" in hidden_guide
+    html_guide = render_instruction_html("tbc_georgia", show_unverified=True)
+    assert len(html_guide) < 4096
+    assert "В России: включить роуминг данных в MyMagti." in html_guide
+    assert "…" not in html_guide
+    georgia_default = render_user_facing(GEORGIA_DATA)
+    assert "Российские карты в Грузии не работают совсем" in georgia_default
+    assert "Курсы обменников Тбилиси — не собраны." in georgia_default
+    assert "Минимальная сумма перевода Т-Банка в Грузию" not in georgia_default
 
 
 def test_official_links_and_html_fit_telegram():

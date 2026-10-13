@@ -70,6 +70,7 @@ INSTRUCTION_SECTION = {
     "vtb_china_wallets": "3_local_wallets_cards",
     "wechat_pay": "3_local_wallets_cards",
     "alipay": "3_local_wallets_cards",
+    "tbc_georgia": "3_local_wallets_cards",
 }
 INSTRUCTION_LABELS = {
     "mts_tr_qr": "📋 Мой МТС: оплата по QR",
@@ -78,6 +79,7 @@ INSTRUCTION_LABELS = {
     "vtb_china_wallets": "📋 ВТБ: перевод в Китай",
     "wechat_pay": "📋 WeChat Pay по шагам",
     "alipay": "📋 Alipay по шагам",
+    "tbc_georgia": "📋 TBC: карта за 1–2 дня",
 }
 
 FACT_FIELDS = (
@@ -242,12 +244,14 @@ HONG_KONG_DATA = _COUNTRIES["hong_kong"]
 THAILAND_DATA = _COUNTRIES["thailand"]
 UAE_DATA = _COUNTRIES["uae"]
 TURKEY_DATA = _COUNTRIES["turkey"]
+GEORGIA_DATA = _COUNTRIES["georgia"]
 COUNTRIES_KNOWLEDGE_BASE = {
     "turkey": TURKEY_DATA,
     "china": CHINA_DATA,
     "hong_kong": HONG_KONG_DATA,
     "thailand": THAILAND_DATA,
     "uae": UAE_DATA,
+    "georgia": GEORGIA_DATA,
 }
 
 
@@ -498,8 +502,8 @@ def render_section_html(country: Dict[str, Any], section_key: str, show_unverifi
         else:
             lines.append("Дополнительных непроверенных фактов нет.")
     text = "\n\n".join(lines)
-    if len(text) > 4000:
-        text = text[:3900] + "\n\n…"
+    if len(text) > 4096:
+        text = text[:4000] + "\n\n…"
     return text
 
 
@@ -521,6 +525,6 @@ def render_instruction_html(instruction_id: str, show_unverified: bool = False) 
     else:
         lines.append("Дополнительных непроверенных шагов нет.")
     text = "\n\n".join(lines)
-    if len(text) > 4000:
-        text = text[:3900] + "\n\n…"
+    if len(text) > 4096:
+        text = text[:4000] + "\n\n…"
     return text

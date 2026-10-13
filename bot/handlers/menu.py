@@ -16,6 +16,7 @@ from bot.keyboards.country_kb import (
 from database.repositories.users import UserRepository
 from database.repositories.countries import CountryRepository
 from database.knowledge_base import (
+    COUNTRIES_KNOWLEDGE_BASE,
     INSTRUCTIONS,
     NUMBER_BY_SECTION,
     SECTION_BY_NUMBER,
@@ -181,7 +182,8 @@ def _parse_instruction_callback(data: str):
     if not (data.startswith("cins_") or show_unverified):
         return None
     body = data[5:]
-    for slug in ("hong_kong", "thailand", "turkey", "china", "uae"):
+    # Longest slug first so hong_kong is not cut at a shorter suffix.
+    for slug in sorted(COUNTRIES_KNOWLEDGE_BASE, key=len, reverse=True):
         suffix = "_" + slug
         if body.endswith(suffix):
             return body[: -len(suffix)], slug, show_unverified
