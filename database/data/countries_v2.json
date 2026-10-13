@@ -1,0 +1,2213 @@
+{
+  "schema_version": 2,
+  "checked_at": "2026-10-13",
+  "sections": {
+    "1_checklist": "Что сделать до поездки",
+    "2_pay_on_site": "Чем платить на месте: российская карта / QR",
+    "3_local_wallets_cards": "Местные кошельки и карты (а: кошельки и пополнение из РФ; б: местная банковская карта/счёт)",
+    "4_cash_exchange": "Наличные и обмен",
+    "5_atms": "Банкоматы и комиссии",
+    "6_transport": "Транспортная карта",
+    "7_risks": "Мошенники, 115-ФЗ, что делать при блокировке карты",
+    "8_tax_free": "Tax free"
+  },
+  "rules_ref": "VERIFICATION_RULES.md",
+  "display": {
+    "default": [
+      "confirmed"
+    ],
+    "on_request_with_warning": [
+      "unconfirmed",
+      "outdated"
+    ]
+  },
+  "countries": {
+    "china": {
+      "name": "Китай 🇨🇳",
+      "sections": {
+        "1_checklist": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Установить Alipay и/или WeChat, пройти верификацию по паспорту дома.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://cs.help.wechat.com/hc/en-us/articles/11975770896271-How-to-Set-Up-International-Cards-for-Weixin-Pay",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Сделать пробное пополнение кошелька на мин. сумму до вылета.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "рекомендация",
+              "needs_owner_check": true,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Оформить UnionPay АТБ/РСХБ как запасной вариант.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.atb.su/atb-karta-unionpay-lp-6/",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "eSIM/местная SIM: приложения оплаты в роуминге по LTE работают плохо.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "отзывы путешественников ≥2, 10.2026",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Взять ¥300–500 наличными.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "2_pay_on_site": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "ВТБ: оплата по QR в Китае из ВТБ Онлайн (страна в официальном списке). Лимит — после сканирования.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.vtb.ru/personal/platezhi-i-perevody/qr/",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "Какие QR принимаются (UnionPay QR / Alipay / WeChat) — не указано; выяснить в чате ВТБ или тестом."
+            },
+            {
+              "text": "РСХБ: QR через приложение Nihao China, регистрация по номеру РФ (официально).",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.rshb.ru/natural/debetcards/unionpay-china",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Nihao China на практике: QR только по Wi-Fi, пополнение Tour Wallet сбоит (10.2026).",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "отзывы путешественников",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "UnionPay АТБ/РСХБ в терминалах.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "«Мир» в этой стране не работает.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ, противоречия",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "НСПК не публикует список стран приёма в доступном виде; проверить раздел «Мир» за рубежом на mironline.ru (геоблок) — нужен российский IP."
+            }
+          ]
+        },
+        "3_local_wallets_cards": {
+          "applicable": true,
+          "facts": [],
+          "subsections": {
+            "wallets": [
+              {
+                "text": "WeChat Pay и Alipay: регистрация по +7, верификация по паспорту; лимиты для иностранцев $5 000 за операцию / $50 000 в год.",
+                "status": "confirmed",
+                "checked_at": "2026-10-13",
+                "source": "https://english.www.gov.cn/news/202404/11/content_WS6617c858c6d0868f4e8e5f4d.html",
+                "source_type": "official",
+                "needs_owner_check": false,
+                "decision_needed": null,
+                "unknown_zone": null
+              },
+              {
+                "text": "С иностранной карты: 0% до ¥200, 3% выше.",
+                "status": "confirmed",
+                "checked_at": "2026-10-13",
+                "source": "https://cs.help.wechat.com/hc/en-us/articles/11975770896271-How-to-Set-Up-International-Cards-for-Weixin-Pay",
+                "source_type": "official",
+                "needs_owner_check": false,
+                "decision_needed": null,
+                "unknown_zone": null
+              },
+              {
+                "text": "Пополнение из РФ через «Мой МТС»: без комиссии, 1 100 – 400 000 ₽, курс МТС.",
+                "status": "confirmed",
+                "checked_at": "2026-10-13",
+                "source": "https://media.mts.ru/technologies/213834-kak-popolnit-wechat-i-alipay-iz-rossii",
+                "source_type": "official",
+                "needs_owner_check": true,
+                "decision_needed": null,
+                "unknown_zone": "Реальная наценка МТС на курс; как перевод отображается в кошельке — нужен тестовый перевод."
+              },
+              {
+                "text": "Пополнение через ВТБ по номеру: от 0%, до 350 000 ₽.",
+                "status": "confirmed",
+                "checked_at": "2026-10-13",
+                "source": "https://www.vtb.ru/personal/platezhi-i-perevody/perevody-v-kitaj/",
+                "source_type": "official",
+                "needs_owner_check": false,
+                "decision_needed": null,
+                "unknown_zone": "Пошаговые экраны ВТБ не опубликованы; работа с кошельком на +7 — отзывы 2025."
+              },
+              {
+                "text": "Привязка UnionPay АТБ/РСХБ к Alipay/WeChat.",
+                "status": "unconfirmed",
+                "checked_at": "2026-10-13",
+                "source": null,
+                "source_type": "отзывы, противоречат",
+                "needs_owner_check": true,
+                "decision_needed": null,
+                "unknown_zone": "Официально банки не заявляют; нужен личный тест или 2 свежих отчёта."
+              },
+              {
+                "text": "Остаток кошелька вывести на карту РФ официально нельзя — пополнять только на планируемые траты +10–15%.",
+                "status": "unconfirmed",
+                "checked_at": "2026-10-13",
+                "source": null,
+                "source_type": "нет официального способа",
+                "needs_owner_check": false,
+                "decision_needed": null,
+                "unknown_zone": null
+              }
+            ],
+            "local_card": [
+              {
+                "text": "Счёт в китайском банке для туриста — не исследовано.",
+                "status": "unconfirmed",
+                "checked_at": "2026-10-13",
+                "source": null,
+                "source_type": "official",
+                "needs_owner_check": false,
+                "decision_needed": "Нужен ли подраздел «местная карта» для Китая или пометить «не актуально для туриста»?",
+                "unknown_zone": "Изучить требования Bank of China/ICBC для нерезидентов."
+              }
+            ]
+          }
+        },
+        "4_cash_exchange": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Наличные обязаны принимать; держите резерв юаней.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://english.www.gov.cn/news/202404/11/content_WS6617c858c6d0868f4e8e5f4d.html",
+              "source_type": "гид правительства (общие слова)",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Где выгодно менять USD→CNY — не собрано.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "Курсы банков КНР vs обменники; собрать по официальным курсам Bank of China."
+            }
+          ]
+        },
+        "5_atms": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "АТБ UnionPay: открытие 6 000 ₽ (570 ¥); обслуживание 0 ₽ при тратах/остатке от 30 000 ₽ в мес., иначе 399 ₽; снятие за рубежом 1,5% + 250 ₽ (руб.) / 2,5% + 22 ¥ (юань), в банкоматах АТБ — бесплатно.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.atb.su/atb-karta-unionpay-lp-6/",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "РСХБ UnionPay: первая рублёвая карта бесплатно, следующие 4 500 ₽, валютная 380 ¥; снятие за рубежом 2%, мин. 299 ₽.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.rshb.ru/natural/debetcards/unionpay-cash",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "UnionPay для карт РФ: лимит снятия 50 000 ¥/день, 500 000 ¥/год.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.rshb.ru/ (PDF «Информация о доступности сети приёма карт UnionPay в мире»)",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Внимание к DCC: при снятии/оплате выбирать списание в местной валюте («without conversion»), иначе двойная конвертация.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "6_transport": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Метро крупных городов оплачивается QR в Alipay/WeChat (транспортный код).",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "гиды",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "Проверить официальные страницы метро Пекина/Шанхая."
+            }
+          ]
+        },
+        "7_risks": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Если банк заблокировал карту или онлайн-банк: позвонить в банк и узнать основание (115-ФЗ или база мошеннических операций ЦБ по 161-ФЗ). По 161-ФЗ — заявление об исключении из базы через банк или интернет-приёмную ЦБ. По 115-ФЗ — представить документы, банк отвечает до 7 рабочих дней, отказ обжалуется в МВК при ЦБ.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.cbr.ru/Reception/TopicalMessage/Page/10853",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Деньги при блокировке не пропадают; снять их обычно можно в отделении банка по паспорту — но вы за границей, поэтому держите вторую карту другого банка и наличные.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://ajva.ru/constructor/articles/za-kakie-perevody-blokiruyut-karty-2026/",
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Частые переводы физлицам (обменники, P2P) — типичный повод для блокировки по 115-ФЗ.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://cbr.ru/protection_rights/recomendation/",
+              "source_type": "рекомендации ЦБ для предпринимателей, перенос на физлиц — наша интерпретация",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Обмен через Telegram, курьеров, «предоплата незнакомцу» — главный риск потери денег. Не рекомендуем.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ/отзывы",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Российские Visa/Mastercard за рубежом не работают; не привязываются к Apple Pay/Google Pay.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "общеизвестно",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "8_tax_free": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Возврат НДС иностранцам: покупки от ¥200 в одном магазине с табличкой tax refund за день; товар не использован; вывоз ≤90 дней.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.szlhq.gov.cn/english/licc/newsevents/newsevent/content/post_12226136.html",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Ставка возврата 11% (товары по ставке НДС 13%) или 8% (9%); минус комиссия агента, на руки ≈9%.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://shanghai.chinatax.gov.cn/zcfw/zcjd/202505/W020250528598833125034.pdf",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Наличными юанями до ¥20 000; больше — только банковским переводом.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://munich.mofcom.gov.cn/sqfb/swzn/art/2026/art_5ebbccc135274358b82a94539e9821b8.html",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "С 01.07.2026 (версия 2.0): для покупок до ¥10 000 — выборочная проверка таможней, бумажные формы не нужны; «мгновенный возврат» в магазине, выезд в течение 28 дней.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.chinatax.gov.cn/eng/c101269/c5250095/content.html",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Где: на таможне до регистрации багажа, затем стойка агента. Аэропорты: Пудун, Хунцяо, Шоуду, Дасин, Байюнь, Тяньфу и др.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "гиды",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "Официальный список портов — chinatax.gov.cn."
+            },
+            {
+              "text": "Возврат на российскую карту — вероятно, невозможен; выбирайте наличные (до ¥20 000).",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "вывод",
+              "needs_owner_check": true,
+              "decision_needed": null,
+              "unknown_zone": "Возьмёт ли агент UnionPay РФ — проверить на месте."
+            }
+          ]
+        }
+      }
+    },
+    "hong_kong": {
+      "name": "Гонконг 🇭🇰",
+      "sections": {
+        "1_checklist": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Взять наличные (USD/CNY/HKD) и UnionPay для снятия.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "рекомендация",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "2_pay_on_site": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "РСХБ UnionPay: снятие в аэропорту проходит, в магазинах часто отказ (09.2026).",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "1 отзыв",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "Нужен второй отчёт ≤30 дней."
+            },
+            {
+              "text": "AlipayHK с картой РФ не работает.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "1 отзыв",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "«Мир» в этой стране не работает.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ, противоречия",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "НСПК не публикует список стран приёма в доступном виде; проверить раздел «Мир» за рубежом на mironline.ru (геоблок) — нужен российский IP."
+            }
+          ]
+        },
+        "3_local_wallets_cards": {
+          "applicable": true,
+          "facts": [],
+          "subsections": {
+            "wallets": [
+              {
+                "text": "Octopus пополняется через Weixin Pay — вариант для тех, у кого есть материковый WeChat Pay с балансом.",
+                "status": "confirmed",
+                "checked_at": "2026-10-13",
+                "source": "https://www.octopus.com.hk/",
+                "source_type": "official",
+                "needs_owner_check": false,
+                "decision_needed": null,
+                "unknown_zone": null
+              }
+            ],
+            "local_card": [
+              {
+                "text": "Счёт в банке Гонконга для туриста — не исследовано.",
+                "status": "unconfirmed",
+                "checked_at": "2026-10-13",
+                "source": null,
+                "source_type": "official",
+                "needs_owner_check": false,
+                "decision_needed": "Оставить «не актуально для туриста»?",
+                "unknown_zone": null
+              }
+            ]
+          }
+        },
+        "4_cash_exchange": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Наличные HKD — основной способ для россиян.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "5_atms": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "АТБ UnionPay: открытие 6 000 ₽ (570 ¥); обслуживание 0 ₽ при тратах/остатке от 30 000 ₽ в мес., иначе 399 ₽; снятие за рубежом 1,5% + 250 ₽ (руб.) / 2,5% + 22 ¥ (юань), в банкоматах АТБ — бесплатно.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.atb.su/atb-karta-unionpay-lp-6/",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "РСХБ UnionPay: первая рублёвая карта бесплатно, следующие 4 500 ₽, валютная 380 ¥; снятие за рубежом 2%, мин. 299 ₽.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.rshb.ru/natural/debetcards/unionpay-cash",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "UnionPay для карт РФ: лимит снятия 50 000 ¥/день, 500 000 ¥/год.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.rshb.ru/ (PDF «Информация о доступности сети приёма карт UnionPay в мире»)",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Внимание к DCC: при снятии/оплате выбирать списание в местной валюте («without conversion»), иначе двойная конвертация.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Банкоматы BoC/BoCom/HSBC для UnionPay АТБ.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "6_transport": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Tourist Octopus HK$39 без залога; пополнение наличными в 7-Eleven, Circle K, на станциях.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.octopus.com.hk/",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "7_risks": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Если банк заблокировал карту или онлайн-банк: позвонить в банк и узнать основание (115-ФЗ или база мошеннических операций ЦБ по 161-ФЗ). По 161-ФЗ — заявление об исключении из базы через банк или интернет-приёмную ЦБ. По 115-ФЗ — представить документы, банк отвечает до 7 рабочих дней, отказ обжалуется в МВК при ЦБ.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.cbr.ru/Reception/TopicalMessage/Page/10853",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Деньги при блокировке не пропадают; снять их обычно можно в отделении банка по паспорту — но вы за границей, поэтому держите вторую карту другого банка и наличные.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://ajva.ru/constructor/articles/za-kakie-perevody-blokiruyut-karty-2026/",
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Частые переводы физлицам (обменники, P2P) — типичный повод для блокировки по 115-ФЗ.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://cbr.ru/protection_rights/recomendation/",
+              "source_type": "рекомендации ЦБ для предпринимателей, перенос на физлиц — наша интерпретация",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Обмен через Telegram, курьеров, «предоплата незнакомцу» — главный риск потери денег. Не рекомендуем.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ/отзывы",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Российские Visa/Mastercard за рубежом не работают; не привязываются к Apple Pay/Google Pay.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "общеизвестно",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "8_tax_free": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "В Гонконге нет НДС/налога с продаж — tax free не нужен, цена на ценнике окончательная.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.investhk.gov.hk/en/setting-up-in-hong-kong",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        }
+      }
+    },
+    "thailand": {
+      "name": "Таиланд 🇹🇭",
+      "sections": {
+        "1_checklist": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "UnionPay РСХБ/АТБ + наличные USD/EUR.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "рекомендация",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "2_pay_on_site": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "РСХБ UnionPay: Big C — проходит, Makro — нет (09–10.2026).",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "отзывы путешественников",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Оплата по QR через «Мой МТС» (Thai QR) — МТС заявляет 10 стран, включая Таиланд.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://smi24.net/smi/sociumpr-li/427859773/",
+              "source_type": "пересказ пресс-релиза",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "Найти официальную страницу МТС по Таиланду."
+            },
+            {
+              "text": "«Мир» в этой стране не работает.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ, противоречия",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "НСПК не публикует список стран приёма в доступном виде; проверить раздел «Мир» за рубежом на mironline.ru (геоблок) — нужен российский IP."
+            }
+          ]
+        },
+        "3_local_wallets_cards": {
+          "applicable": true,
+          "facts": [],
+          "subsections": {
+            "wallets": [],
+            "local_card": [
+              {
+                "text": "Bangkok Bank и Kasikorn не открывают счета туристам (нужна долгосрочная виза).",
+                "status": "unconfirmed",
+                "checked_at": "2026-10-13",
+                "source": null,
+                "source_type": "СМИ",
+                "needs_owner_check": false,
+                "decision_needed": "ПОД ВОПРОСОМ: показывать ли сценарий открытия карты вообще?",
+                "unknown_zone": "Открыть официальные страницы bangkokbank.com Foreign-Customers и kasikornbank.com."
+              },
+              {
+                "text": "Мобильный банк привязан к SIM на имя клиента; при несовпадении — приостановка.",
+                "status": "confirmed",
+                "checked_at": "2026-10-13",
+                "source": "https://www.true.th/en/help/mobile/setting/faq-mobile-banking-authen",
+                "source_type": "official",
+                "needs_owner_check": false,
+                "decision_needed": null,
+                "unknown_zone": null
+              }
+            ]
+          }
+        },
+        "4_cash_exchange": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Обменники: курс и условия не собраны.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "Собрать курсы SuperRich и банков."
+            }
+          ]
+        },
+        "5_atms": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "АТБ UnionPay: открытие 6 000 ₽ (570 ¥); обслуживание 0 ₽ при тратах/остатке от 30 000 ₽ в мес., иначе 399 ₽; снятие за рубежом 1,5% + 250 ₽ (руб.) / 2,5% + 22 ¥ (юань), в банкоматах АТБ — бесплатно.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.atb.su/atb-karta-unionpay-lp-6/",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "РСХБ UnionPay: первая рублёвая карта бесплатно, следующие 4 500 ₽, валютная 380 ¥; снятие за рубежом 2%, мин. 299 ₽.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.rshb.ru/natural/debetcards/unionpay-cash",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "UnionPay для карт РФ: лимит снятия 50 000 ¥/день, 500 000 ¥/год.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.rshb.ru/ (PDF «Информация о доступности сети приёма карт UnionPay в мире»)",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Внимание к DCC: при снятии/оплате выбирать списание в местной валюте («without conversion»), иначе двойная конвертация.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Комиссия тайского банкомата ~220–250 THB.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Банкоматы Bangkok Bank/Krungsri/SCB для UnionPay РФ.",
+              "status": "outdated",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "нет отчётов >60 дней",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "6_transport": {
+          "applicable": false,
+          "reason": "Единой туристической транспортной карты нет; BTS/MRT — отдельные карты (не исследовано).",
+          "facts": []
+        },
+        "7_risks": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Если банк заблокировал карту или онлайн-банк: позвонить в банк и узнать основание (115-ФЗ или база мошеннических операций ЦБ по 161-ФЗ). По 161-ФЗ — заявление об исключении из базы через банк или интернет-приёмную ЦБ. По 115-ФЗ — представить документы, банк отвечает до 7 рабочих дней, отказ обжалуется в МВК при ЦБ.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.cbr.ru/Reception/TopicalMessage/Page/10853",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Деньги при блокировке не пропадают; снять их обычно можно в отделении банка по паспорту — но вы за границей, поэтому держите вторую карту другого банка и наличные.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://ajva.ru/constructor/articles/za-kakie-perevody-blokiruyut-karty-2026/",
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Частые переводы физлицам (обменники, P2P) — типичный повод для блокировки по 115-ФЗ.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://cbr.ru/protection_rights/recomendation/",
+              "source_type": "рекомендации ЦБ для предпринимателей, перенос на физлиц — наша интерпретация",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Обмен через Telegram, курьеров, «предоплата незнакомцу» — главный риск потери денег. Не рекомендуем.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ/отзывы",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Российские Visa/Mastercard за рубежом не работают; не привязываются к Apple Pay/Google Pay.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "общеизвестно",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "8_tax_free": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "VAT Refund for Tourists: от 2 000 THB в одном магазине в день, всего от 5 000 THB; форма P.P.10 в магазине; вывоз ≤60 дней; только при вылете из международного аэропорта.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://vrtweb2.rd.go.th/81.html",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Порядок: таможня до регистрации (обязательно при покупках от 20 000 THB) → регистрация → паспортный контроль → стойка VAT Refund; дорогие вещи (от 40 000 THB/шт.) показать ещё раз.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.rd.go.th/english/56327.html",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Наличными до 30 000 THB с комиссией 100 THB; больше — на карту или банковским чеком.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://vrtmap.rd.go.th/gps/en/Conditions.aspx",
+              "source_type": "сумма комиссии — по пересказу",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "Уточнить на странице Processing Fees rd.go.th."
+            },
+            {
+              "text": "Возврат на карту РФ, вероятно, невозможен — выбирайте наличные.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "вывод",
+              "needs_owner_check": true,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        }
+      }
+    },
+    "uae": {
+      "name": "ОАЭ 🇦🇪",
+      "sections": {
+        "1_checklist": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Наличные USD; UnionPay — запасной вариант без гарантий.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "рекомендация",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "2_pay_on_site": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "UnionPay РСХБ: ADCB/ENBD/Magnati пропускают, Network/NeoPay отклоняют.",
+              "status": "outdated",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "нет отчётов >60 дней",
+              "needs_owner_check": true,
+              "decision_needed": null,
+              "unknown_zone": "Нужны свежие отчёты (Telegram-чаты/форум, внутренне)."
+            },
+            {
+              "text": "«Мир» в этой стране не работает.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ, противоречия",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "НСПК не публикует список стран приёма в доступном виде; проверить раздел «Мир» за рубежом на mironline.ru (геоблок) — нужен российский IP."
+            }
+          ]
+        },
+        "3_local_wallets_cards": {
+          "applicable": true,
+          "facts": [],
+          "subsections": {
+            "wallets": [],
+            "local_card": [
+              {
+                "text": "Счёт в ОАЭ для туриста — не исследовано.",
+                "status": "unconfirmed",
+                "checked_at": "2026-10-13",
+                "source": null,
+                "source_type": "official",
+                "needs_owner_check": false,
+                "decision_needed": "Исследовать или «не актуально»?",
+                "unknown_zone": null
+              }
+            ]
+          }
+        },
+        "4_cash_exchange": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "USD→AED: спред ~0,5–1%.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "1 источник",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "5_atms": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "АТБ UnionPay: открытие 6 000 ₽ (570 ¥); обслуживание 0 ₽ при тратах/остатке от 30 000 ₽ в мес., иначе 399 ₽; снятие за рубежом 1,5% + 250 ₽ (руб.) / 2,5% + 22 ¥ (юань), в банкоматах АТБ — бесплатно.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.atb.su/atb-karta-unionpay-lp-6/",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "РСХБ UnionPay: первая рублёвая карта бесплатно, следующие 4 500 ₽, валютная 380 ¥; снятие за рубежом 2%, мин. 299 ₽.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.rshb.ru/natural/debetcards/unionpay-cash",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "UnionPay для карт РФ: лимит снятия 50 000 ¥/день, 500 000 ¥/год.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.rshb.ru/ (PDF «Информация о доступности сети приёма карт UnionPay в мире»)",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Внимание к DCC: при снятии/оплате выбирать списание в местной валюте («without conversion»), иначе двойная конвертация.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Mashreq без комиссии банкомата.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "1 коммерческий источник",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "6_transport": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Nol Silver/Gold: продаётся в кассах и автоматах метро; анонимная карта 25 AED (19 AED на балансе); пополнение в автоматах от 20 AED или в приложении nol Pay от 5 AED; для входа в метро нужно ≥7,5 AED.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.rta.ae/wps/portal/rta/ae/public-transport/nol/nol-how",
+              "source_type": "rta.ae в пересказе поиска",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "Цифры из сниппета — открыть rta.ae напрямую."
+            },
+            {
+              "text": "Пополнение Nol наличными на кассе метро.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "7_risks": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Если банк заблокировал карту или онлайн-банк: позвонить в банк и узнать основание (115-ФЗ или база мошеннических операций ЦБ по 161-ФЗ). По 161-ФЗ — заявление об исключении из базы через банк или интернет-приёмную ЦБ. По 115-ФЗ — представить документы, банк отвечает до 7 рабочих дней, отказ обжалуется в МВК при ЦБ.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.cbr.ru/Reception/TopicalMessage/Page/10853",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Деньги при блокировке не пропадают; снять их обычно можно в отделении банка по паспорту — но вы за границей, поэтому держите вторую карту другого банка и наличные.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://ajva.ru/constructor/articles/za-kakie-perevody-blokiruyut-karty-2026/",
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Частые переводы физлицам (обменники, P2P) — типичный повод для блокировки по 115-ФЗ.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://cbr.ru/protection_rights/recomendation/",
+              "source_type": "рекомендации ЦБ для предпринимателей, перенос на физлиц — наша интерпретация",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Обмен через Telegram, курьеров, «предоплата незнакомцу» — главный риск потери денег. Не рекомендуем.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ/отзывы",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Российские Visa/Mastercard за рубежом не работают; не привязываются к Apple Pay/Google Pay.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "общеизвестно",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "8_tax_free": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Planet Tax Free: от 250 AED (без НДС) за чек в магазине-участнике; въезд по туристической визе, 18+; вывоз ≤90 дней.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://tax.gov.ae/en/services/tourist.VAT.refunds.aspx",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Возвращают 87% НДС минус 3,60 AED за чек (НДС 5% → ≈4,35% цены).",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://planetpayment.ae/merchants/local-rules",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Валидация до сдачи багажа: киоск Planet (скан паспорта) или стойка; выезд в течение 6 ч после валидации. City kiosk в ТЦ — при вылете в течение 24 ч и онлайн-посадочном.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://planettaxfree.ae/tourists-landing/tourist-frequently-asked-questions/",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Способы: наличные (до 35 000 AED, стойки Travelex после паспортного контроля), карта (Visa/MC/Amex/UnionPay/JCB), WeChat Pay/Alipay.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://planetpayment.ae/merchants/local-rules",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Аэропорты: DXB T1/T2/T3, DWC, AUH (Zayed), Шарджа, Аль-Айн, РАК, Фуджейра + сухопутные границы.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.planetpayment.ae/media/wczh2d0a/eng_the-guide-to-tax-free-shopping-in-the-uae-2026-2.pdf",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Возврат на UnionPay РФ — не проверено; надёжнее наличные.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "вывод",
+              "needs_owner_check": true,
+              "decision_needed": null,
+              "unknown_zone": "Проверить возврат на UnionPay РСХБ/АТБ при поездке."
+            }
+          ]
+        }
+      }
+    },
+    "turkey": {
+      "name": "Турция 🇹🇷",
+      "base": "karat-dev/pay-compass TURKEY_DATA (verified_at 11–13.09.2026), перепроверено 13.10.2026",
+      "sections": {
+        "1_checklist": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Установить «Мой МТС», привязать карту заранее.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://moskva.mts.ru/personal/servisy/oplata-po-qr-kodu-v-turcii",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Взять USD/EUR наличными (новые купюры).",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "репозиторий/СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "2_pay_on_site": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "«Мой МТС» → Деньги → Оплата по QR-коду → TR QR; картой любого банка РФ или со счёта МТС; МТС без комиссии, курс МТС.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://moskva.mts.ru/personal/servisy/oplata-po-qr-kodu-v-turcii",
+              "source_type": "official",
+              "needs_owner_check": true,
+              "decision_needed": null,
+              "unknown_zone": "Наценка на курс (в репо «+2–3%» без источника) и лимиты — тестовым платежом; нужен ли статус абонента для оплаты картой."
+            },
+            {
+              "text": "ВТБ: TR QR. Интерфакс (2025) сообщал о запуске, но официальная страница ВТБ на 13.10.2026 Турцию в списке стран НЕ содержит.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.vtb.ru/personal/platezhi-i-perevody/qr/",
+              "source_type": "конфликт",
+              "needs_owner_check": false,
+              "decision_needed": "Убрать ВТБ из Турции в продукте (в репо указан как работающий)?",
+              "unknown_zone": null
+            },
+            {
+              "text": "Т-Банк: в Турции QR не работает (официальный список: Армения, Вьетнам, Таджикистан, Кыргызстан).",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.tbank.ru/bank/help/payments/make-payments/online-pay/qr-code/",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Сбер: TR QR — официального подтверждения не найдено (в репо ссылка на общую страницу QR).",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.sberbank.ru/ru/person/payments/qr",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "Проверить через ru_fetch страницу Сбера."
+            },
+            {
+              "text": "СБП-QR через Turinvoice (Анталья/Стамбул), курс ~1,9 ₽/лира при тесте АТОР.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://travel.rambler.ru/abroad/56367629-turisty-iz-rf-mogut-platit-v-turtsii-po-sbp-cherez-prilozhenie-svoego-banka/",
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "ОШИБКА в репо: «оплата по TR QR картами Visa/Mastercard банков РФ» — не подтверждено ни одним официальным источником.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "репозиторий",
+              "needs_owner_check": false,
+              "decision_needed": "Удалить фразу из TURKEY_DATA?",
+              "unknown_zone": null
+            },
+            {
+              "text": "Количество точек TR QR («50 000» в репо) — без источника.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "репозиторий",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "«Мир» в этой стране не работает.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ, противоречия",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "НСПК не публикует список стран приёма в доступном виде; проверить раздел «Мир» за рубежом на mironline.ru (геоблок) — нужен российский IP."
+            }
+          ]
+        },
+        "3_local_wallets_cards": {
+          "applicable": true,
+          "facts": [],
+          "subsections": {
+            "wallets": [
+              {
+                "text": "Предоплаченные карты Ininal/Letim (покупка в Migros/D&R, пополнение через Корону) — из репо.",
+                "status": "unconfirmed",
+                "checked_at": "2026-10-13",
+                "source": null,
+                "source_type": "репозиторий",
+                "needs_owner_check": false,
+                "decision_needed": null,
+                "unknown_zone": "Официальные условия ininal.com для иностранцев."
+              }
+            ],
+            "local_card": [
+              {
+                "text": "Счёт в турецком банке для туриста — не исследовано.",
+                "status": "unconfirmed",
+                "checked_at": "2026-10-13",
+                "source": null,
+                "source_type": "official",
+                "needs_owner_check": false,
+                "decision_needed": "Исследовать?",
+                "unknown_zone": null
+              }
+            ]
+          }
+        },
+        "4_cash_exchange": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Доллары нового образца; старые «белые» берут хуже.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "репозиторий (источник — форум, в продукте не цитировать)",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Обменники Гранд-Базар/Сиркеджи — лучший курс.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "репозиторий",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "5_atms": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "АТБ UnionPay: открытие 6 000 ₽ (570 ¥); обслуживание 0 ₽ при тратах/остатке от 30 000 ₽ в мес., иначе 399 ₽; снятие за рубежом 1,5% + 250 ₽ (руб.) / 2,5% + 22 ¥ (юань), в банкоматах АТБ — бесплатно.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.atb.su/atb-karta-unionpay-lp-6/",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "РСХБ UnionPay: первая рублёвая карта бесплатно, следующие 4 500 ₽, валютная 380 ¥; снятие за рубежом 2%, мин. 299 ₽.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.rshb.ru/natural/debetcards/unionpay-cash",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "UnionPay для карт РФ: лимит снятия 50 000 ¥/день, 500 000 ¥/год.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.rshb.ru/ (PDF «Информация о доступности сети приёма карт UnionPay в мире»)",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Внимание к DCC: при снятии/оплате выбирать списание в местной валюте («without conversion»), иначе двойная конвертация.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "UnionPay РФ в банкоматах VakıfBank/Ziraat/Halkbank без комиссии турецкого банка.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "репозиторий; ссылки ведут на общие страницы банков, не подтверждают",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "Нужны 2 отчёта ≤30 дней."
+            },
+            {
+              "text": "ОШИБКА в репо: Газпромбанк UnionPay указан как работающий — эмитент под санкциями США, карты за рубежом, по данным СМИ, не работают.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://t-j.ru/union-pain/",
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": "Удалить Газпромбанк из TURKEY_DATA?",
+              "unknown_zone": null
+            }
+          ]
+        },
+        "6_transport": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Istanbulkart — не исследовано.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "Официальный сайт istanbulkart.istanbul."
+            }
+          ]
+        },
+        "7_risks": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Если банк заблокировал карту или онлайн-банк: позвонить в банк и узнать основание (115-ФЗ или база мошеннических операций ЦБ по 161-ФЗ). По 161-ФЗ — заявление об исключении из базы через банк или интернет-приёмную ЦБ. По 115-ФЗ — представить документы, банк отвечает до 7 рабочих дней, отказ обжалуется в МВК при ЦБ.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.cbr.ru/Reception/TopicalMessage/Page/10853",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Деньги при блокировке не пропадают; снять их обычно можно в отделении банка по паспорту — но вы за границей, поэтому держите вторую карту другого банка и наличные.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://ajva.ru/constructor/articles/za-kakie-perevody-blokiruyut-karty-2026/",
+              "source_type": "СМИ",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Частые переводы физлицам (обменники, P2P) — типичный повод для блокировки по 115-ФЗ.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://cbr.ru/protection_rights/recomendation/",
+              "source_type": "рекомендации ЦБ для предпринимателей, перенос на физлиц — наша интерпретация",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Обмен через Telegram, курьеров, «предоплата незнакомцу» — главный риск потери денег. Не рекомендуем.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "СМИ/отзывы",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Российские Visa/Mastercard за рубежом не работают; не привязываются к Apple Pay/Google Pay.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "общеизвестно",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Фальшивые крипто-курьеры (в репо источник — Telegram-канал).",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "репозиторий",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        },
+        "8_tax_free": {
+          "applicable": true,
+          "facts": [
+            {
+              "text": "Минимум 1 000 TRY за чек в магазине-участнике; резидент не более 6 мес.; таможенная отметка ≤90 дней после месяца выписки формы.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://taxfree.weareplanet.com/countries/turkey",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Возврат = НДС (20%, на одежду/обувь/сумки 10%) минус комиссия оператора; наличными после валидации до 1 500 EUR (Planet).",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://taxfree.weareplanet.com/countries/turkey",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Аэропорт Стамбула: с багажом — таможня у стоек G3–5 (Turkish Airlines) или K25–27 (остальные) после получения посадочного; ручная кладь — таможня справа после паспортного контроля; деньги — Global Exchange за инфостойкой.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.istairport.com/en/services/discover/airport-facilities/tax-refunds?locale=en",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Порог 10 000 TL (2025) относится к возврату НДС компаниям, а не туристам.",
+              "status": "confirmed",
+              "checked_at": "2026-10-13",
+              "source": "https://www.pwc.com.tr/tr/hizmetlerimiz/vergi/dolayli-vergi/bultenler/kdv-otv-bultenleri/2025/kdv-iadelerinde-asgari-tutar-tutun-mamullerinde-otv-orani-ve-maktu-vergi-tutarlari.html",
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": null
+            },
+            {
+              "text": "Анталья: стойки tax free — не исследовано; Global Blue в Турции — не исследовано.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "official",
+              "needs_owner_check": false,
+              "decision_needed": null,
+              "unknown_zone": "Сайты AYT и Global Blue."
+            },
+            {
+              "text": "Возврат на карту РФ, вероятно, невозможен — выбирайте наличные.",
+              "status": "unconfirmed",
+              "checked_at": "2026-10-13",
+              "source": null,
+              "source_type": "вывод",
+              "needs_owner_check": true,
+              "decision_needed": null,
+              "unknown_zone": null
+            }
+          ]
+        }
+      }
+    }
+  },
+  "instructions": {
+    "mts_tr_qr": {
+      "service": "Мой МТС — оплата по TR QR",
+      "countries": [
+        "turkey"
+      ],
+      "app": "Мой МТС (iOS/Android)",
+      "provider": "МТС",
+      "status": "подтверждено",
+      "checked_at": "2026-10-13",
+      "sources": [
+        "https://moskva.mts.ru/personal/servisy/oplata-po-qr-kodu-v-turcii",
+        "https://payment.mts.ru/cyber/pay-qr",
+        "https://moskva.mts.ru/about/media-centr/soobshheniya-kompanii/novosti-mts-v-rossii-i-mire/2025-03-12/mts-zapustila-v-mobilnom-prilozhenii-oplatu-po-qr-kodu-v-turcii"
+      ],
+      "prereq": [
+        "Установить «Мой МТС» и войти по номеру телефона (дома, до поездки).",
+        "Абонентом МТС быть не обязательно для оплаты картой — не подтверждено для TR QR (подтверждено только для переводов в Китай).",
+        "Мобильный интернет или Wi‑Fi на кассе."
+      ],
+      "steps": [
+        {
+          "n": 1,
+          "text": "Деньги → «Добавить новую карту» → ввести реквизиты → «Привязать карту» (делается заранее).",
+          "status": "confirmed",
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "n": 2,
+          "text": "На кассе попросить оплату по TR QR — код показывается на терминале.",
+          "status": "confirmed",
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "n": 3,
+          "text": "Открыть «Мой МТС» → вкладка «Деньги» → «Оплата по QR-коду» (или долгое нажатие на иконку приложения → «Оплата по QR-коду»).",
+          "status": "confirmed",
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "n": 4,
+          "text": "Навести камеру на QR-код на терминале.",
+          "status": "confirmed",
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "n": 5,
+          "text": "Выбрать способ списания: банковская карта или мобильный счёт МТС.",
+          "status": "confirmed",
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "n": 6,
+          "text": "Проверить сумму в рублях на экране и подтвердить.",
+          "status": "confirmed",
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        }
+      ],
+      "costs": "МТС комиссию не берёт; с карты другого банка возможна комиссия вашего банка. Оплата в рублях, курс МТС «меняется каждый день», наценка не публикуется.",
+      "limits": "не опубликованы — не подтверждено",
+      "risks": [
+        "Курс хуже биржевого — сравните сумму в рублях до подтверждения.",
+        "Не во всех точках есть TR QR — имейте наличные лиры.",
+        "Без интернета не работает."
+      ]
+    },
+    "mts_china_wallets": {
+      "service": "Мой МТС — пополнение Alipay/WeChat",
+      "countries": [
+        "china"
+      ],
+      "app": "Мой МТС",
+      "provider": "МТС",
+      "status": "подтверждено",
+      "checked_at": "2026-10-13",
+      "sources": [
+        "https://media.mts.ru/technologies/213834-kak-popolnit-wechat-i-alipay-iz-rossii"
+      ],
+      "prereq": [
+        "Аккаунт Alipay или WeChat, зарегистрированный на российский номер, верифицированный по загранпаспорту.",
+        "Абонентом МТС быть не обязательно."
+      ],
+      "steps": [
+        {
+          "n": 1,
+          "text": "Открыть «Мой МТС», войти по номеру.",
+          "status": "confirmed",
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "n": 2,
+          "text": "Внизу нажать «Деньги».",
+          "status": "confirmed",
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "n": 3,
+          "text": "Выбрать «Переводы за рубеж».",
+          "status": "confirmed",
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "n": 4,
+          "text": "Найти и нажать «Китай».",
+          "status": "confirmed",
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "n": 5,
+          "text": "Выбрать карту списания (или привязать новую; абоненты МТС могут платить с мобильного счёта).",
+          "status": "confirmed",
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "n": 6,
+          "text": "Выбрать валюту CNY (юани) и ввести сумму в рублях — до нажатия «Способ перевода».",
+          "status": "confirmed",
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "n": 7,
+          "text": "«Способ перевода» → WeChat или Alipay.",
+          "status": "confirmed",
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "n": 8,
+          "text": "«Продолжить» → ввести российский номер, к которому привязан кошелёк → завершить платёж.",
+          "status": "confirmed",
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        }
+      ],
+      "costs": "Без комиссии; курс внутри приложения (наценка не опубликована).",
+      "limits": "1 100 – 400 000 ₽ за перевод.",
+      "risks": [
+        "Вывести остаток с кошелька обратно почти невозможно — пополняйте только на планируемые траты +10–15%.",
+        "Пробное пополнение на минимальную сумму до вылета."
+      ]
+    },
+    "vtb_china_wallets": {
+      "service": "ВТБ — перевод в Китай на кошелёк по номеру",
+      "countries": [
+        "china"
+      ],
+      "app": "ВТБ Онлайн",
+      "provider": "ВТБ",
+      "status": "подтверждено (услуга); пошаговая инструкция — не подтверждено",
+      "checked_at": "2026-10-13",
+      "sources": [
+        "https://www.vtb.ru/personal/platezhi-i-perevody/perevody-v-kitaj/"
+      ],
+      "prereq": [
+        "Кошелёк Alipay/WeChat на ваш номер."
+      ],
+      "steps": [
+        {
+          "n": 1,
+          "text": "Официальной пошаговой инструкции с названиями кнопок на странице ВТБ не найдено — шаги не публикуем до проверки.",
+          "status": "unconfirmed",
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        }
+      ],
+      "costs": "от 0%, курс банка.",
+      "limits": "до 350 000 ₽ (со страницы переводов в Китай).",
+      "risks": [
+        "Работа с кошельком на российском номере — по отзывам 2025, устарело."
+      ]
+    },
+    "wechat_pay": {
+      "service": "WeChat Pay (Weixin Pay) — полная настройка",
+      "countries": [
+        "china"
+      ],
+      "app": "WeChat (Tencent)",
+      "provider": "Tencent",
+      "status": "частично подтверждено",
+      "checked_at": "2026-10-13",
+      "sources": [
+        "https://cs.help.wechat.com/hc/en-us/articles/11975770896271-How-to-Set-Up-International-Cards-for-Weixin-Pay",
+        "https://cs.help.wechat.com/hc/en-us/articles/11975718899087-How-to-Remove-WeChat-Pay-Restrictions-and-Complete-Real-Name-Authentication",
+        "https://www.tencent.com/en-us/articles/2201831.html",
+        "https://media.mts.ru/technologies/213834-kak-popolnit-wechat-i-alipay-iz-rossii",
+        "https://www.vtb.ru/personal/platezhi-i-perevody/perevody-v-kitaj/"
+      ],
+      "steps": [
+        {
+          "stage": "1. Скачать",
+          "text": "App Store или Google Play: «WeChat», разработчик Tencent. Официальный сайт: weixin.qq.com.",
+          "status": "confirmed",
+          "source": "https://weixin.qq.com/",
+          "n": 1,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "1. Скачать",
+          "text": "Если в российском App Store приложения нет — временно сменить регион Apple ID (с иностранным способом оплаты или балансом). На Android без Google Play — APK с weixin.qq.com. APK со сторонних сайтов не ставить.",
+          "status": "unconfirmed",
+          "source": "СМИ",
+          "n": 2,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "2. Регистрация",
+          "text": "Зарегистрироваться по номеру +7: нужен номер, на который приходят SMS. Китайский номер не нужен.",
+          "status": "confirmed",
+          "source": "https://cs.help.wechat.com/hc/en-us/articles/11975770896271-How-to-Set-Up-International-Cards-for-Weixin-Pay",
+          "n": 3,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "2. Регистрация",
+          "text": "Иногда WeChat просит подтвердить нового пользователя через другого пользователя WeChat (сканирование QR другом) — заложите на это время.",
+          "status": "unconfirmed",
+          "source": "СМИ/отзывы",
+          "n": 4,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "2. Регистрация",
+          "text": "Советуют регистрироваться без VPN и в рабочее время по Китаю (05:00–14:00 МСК).",
+          "status": "unconfirmed",
+          "source": "СМИ",
+          "n": 5,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "3. Верификация",
+          "text": "Я → Сервисы → Кошелёк. При первом платеже или добавлении карты нужна верификация личности: загранпаспорт, ФИО точно как в паспорте, телефон, адрес, профессия, фото паспорта и фото лица.",
+          "status": "confirmed",
+          "source": "https://cs.help.wechat.com/hc/en-us/articles/11975718899087-How-to-Remove-WeChat-Pay-Restrictions-and-Complete-Real-Name-Authentication",
+          "n": 6,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "3. Верификация",
+          "text": "После верификации лимиты выше: до $5 000 за операцию и $50 000 в год (без неё — $1 000 и $10 000).",
+          "status": "confirmed",
+          "source": "https://www.tencent.com/en-us/articles/2201831.html",
+          "n": 7,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "4а. Иностранная карта",
+          "text": "Кошелёк → Банковские карты → Добавить карту → «Agree» → данные паспорта → номер карты → SMS → пароль WeChat Pay → проверочное списание. Российские Visa и Mastercard не подойдут.",
+          "status": "confirmed",
+          "source": "https://cs.help.wechat.com/hc/en-us/articles/11975770896271-How-to-Set-Up-International-Cards-for-Weixin-Pay",
+          "n": 8,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "4а. UnionPay АТБ/РСХБ",
+          "text": "Привязка российской UnionPay: данные расходятся.",
+          "status": "unconfirmed",
+          "source": "СМИ/отзывы",
+          "n": 9,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "4б. Пополнение из России — Мой МТС",
+          "text": "Деньги → Переводы за рубеж → Китай → карта → валюта CNY и сумма в рублях → Способ перевода: WeChat → Продолжить → номер +7, к которому привязан WeChat. Без комиссии, 1 100 – 400 000 ₽.",
+          "status": "confirmed",
+          "source": "https://media.mts.ru/technologies/213834-kak-popolnit-wechat-i-alipay-iz-rossii",
+          "n": 10,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "4б. Пополнение из России — ВТБ",
+          "text": "ВТБ Онлайн: перевод в Китай по номеру на кошелёк, комиссия от 0%. Названия кнопок официально не опубликованы.",
+          "status": "unconfirmed",
+          "source": "https://www.vtb.ru/personal/platezhi-i-perevody/perevody-v-kitaj/",
+          "n": 11,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "4б. Куда приходят деньги",
+          "text": "Как перевод отображается в WeChat и нужно ли его принять — официально не описано.",
+          "status": "unconfirmed",
+          "source": null,
+          "n": 12,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "5. Оплата",
+          "text": "Сканировать QR продавца: «+» → Сканировать. Показать свой код: Я → Сервисы → Оплата/Получение денег.",
+          "status": "unconfirmed",
+          "source": "кнопки по общим гайдам, официальной страницы с названиями не открывал",
+          "n": 13,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "6. Комиссии",
+          "text": "С иностранной карты: 0% до ¥200, выше — 3% со всей суммы. При возврате комиссия возвращается частично.",
+          "status": "confirmed",
+          "source": "https://cs.help.wechat.com/hc/en-us/articles/11975770896271-How-to-Set-Up-International-Cards-for-Weixin-Pay",
+          "n": 14,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "6. Ограничения",
+          "text": "С иностранной картой нельзя отправлять красные конверты и делать переводы — только покупки.",
+          "status": "confirmed",
+          "source": "https://cs.help.wechat.com/hc/en-us/articles/11975770896271-How-to-Set-Up-International-Cards-for-Weixin-Pay",
+          "n": 15,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "6. Частые ошибки",
+          "text": "«Платёж ограничен» — не пройдена верификация, нажмите на уведомление и завершите её. Ошибка при добавлении карты — проверьте, что открыт кошелёк с символом ¥ (материковый), а не международный.",
+          "status": "confirmed",
+          "source": "https://cs.help.wechat.com/hc/en-us/articles/11975718899087-How-to-Remove-WeChat-Pay-Restrictions-and-Complete-Real-Name-Authentication",
+          "n": 16,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "6. Остаток",
+          "text": "Вывести пополненный баланс на российскую карту официально нельзя — пополняйте только на планируемые траты +10–15%.",
+          "status": "unconfirmed",
+          "source": "нет официального способа",
+          "n": 17,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        }
+      ]
+    },
+    "alipay": {
+      "service": "Alipay — полная настройка",
+      "countries": [
+        "china"
+      ],
+      "app": "Alipay (Alipay (Hangzhou) Technology Co., Ltd.)",
+      "provider": "Ant Group",
+      "status": "частично подтверждено",
+      "checked_at": "2026-10-13",
+      "sources": [
+        "https://nzcchk.com/Usage_of_Alipay_and_Tour_Card_in_Chinese_Mainland_6_6_2023_revised.pdf",
+        "https://english.www.gov.cn/ (гид для иностранных туристов по оплате)",
+        "https://media.mts.ru/technologies/213834-kak-popolnit-wechat-i-alipay-iz-rossii",
+        "https://24isfc.casconf.cn/static/1697415579046121472/pages/file/a7dca5ed9d2146ae9317b79e296117dc.pdf"
+      ],
+      "steps": [
+        {
+          "stage": "1. Скачать",
+          "text": "App Store/Google Play: «Alipay», разработчик Alipay (Hangzhou) Technology Co., Ltd. По СМИ есть в российском App Store, но бывает недоступен — тогда временно сменить регион Apple ID.",
+          "status": "unconfirmed",
+          "source": "СМИ",
+          "n": 1,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "2. Регистрация",
+          "text": "Sign Up → выбрать код страны +7 → номер → согласие с соглашением → код из SMS.",
+          "status": "confirmed",
+          "source": "https://nzcchk.com/Usage_of_Alipay_and_Tour_Card_in_Chinese_Mainland_6_6_2023_revised.pdf",
+          "n": 2,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "2. Регистрация",
+          "text": "Включить международную версию (International Version), если приложение предложит.",
+          "status": "unconfirmed",
+          "source": "гиды",
+          "n": 3,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "3. Верификация",
+          "text": "Me → Settings → Account Security → проверка личности → Verify now → регион → данные как в паспорте → способ: Verify Face (рекомендуется иностранцам). Без верификации платить на материке нельзя.",
+          "status": "confirmed",
+          "source": "https://nzcchk.com/Usage_of_Alipay_and_Tour_Card_in_Chinese_Mainland_6_6_2023_revised.pdf",
+          "n": 4,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "4а. Иностранная карта",
+          "text": "Me → Bank Cards → номер карты (или сканирование) → Next → подтверждение банка (SMS/3-D Secure). Поддерживаются Visa, Mastercard, JCB, Diners, Discover, UnionPay. Российские Visa и Mastercard не подойдут.",
+          "status": "confirmed",
+          "source": "https://nzcchk.com/Usage_of_Alipay_and_Tour_Card_in_Chinese_Mainland_6_6_2023_revised.pdf",
+          "n": 5,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "4а. UnionPay АТБ/РСХБ",
+          "text": "Привязка: по АТБ один отзыв, по РСХБ данные противоречат друг другу.",
+          "status": "unconfirmed",
+          "source": "отзывы",
+          "n": 6,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "4б. Пополнение из России — Мой МТС",
+          "text": "Деньги → Переводы за рубеж → Китай → карта → CNY и сумма в рублях → Способ перевода: Alipay → Продолжить → номер +7, к которому привязан Alipay. Без комиссии, 1 100 – 400 000 ₽.",
+          "status": "confirmed",
+          "source": "https://media.mts.ru/technologies/213834-kak-popolnit-wechat-i-alipay-iz-rossii",
+          "n": 7,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "4б. Пополнение из России — ВТБ",
+          "text": "ВТБ Онлайн, перевод в Китай по номеру на кошелёк, от 0%. Пошаговых экранов нет.",
+          "status": "unconfirmed",
+          "source": "https://www.vtb.ru/personal/platezhi-i-perevody/perevody-v-kitaj/",
+          "n": 8,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "4в. Tour Card",
+          "text": "Внутри Alipay: пополняется только иностранной картой. Российские не подходят.",
+          "status": "confirmed",
+          "source": "https://render.alipay.com/p/c/k2ffmmxp",
+          "n": 9,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "5. Оплата",
+          "text": "Scan — отсканировать QR продавца. Pay/Receive (Payment Code) — показать свой код кассиру. После оплаты дождаться статуса «успешно», не платить повторно.",
+          "status": "confirmed",
+          "source": "https://nzcchk.com/Usage_of_Alipay_and_Tour_Card_in_Chinese_Mainland_6_6_2023_revised.pdf",
+          "n": 10,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "6. Комиссии",
+          "text": "С иностранной карты: 0% до ¥200, выше — 3% со всей суммы.",
+          "status": "confirmed",
+          "source": "PDF-гид Alipay",
+          "n": 11,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "6. Лимиты",
+          "text": "Лимиты для иностранцев: до $5 000 за операцию и $50 000 в год (НБК, 2024); фактический лимит показывает приложение, банк карты может ограничить сильнее.",
+          "status": "unconfirmed",
+          "source": "https://english.www.gov.cn/news/202404/11/content_WS6617c858c6d0868f4e8e5f4d.html",
+          "n": 12,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "6. Частые ошибки",
+          "text": "Карта не привязывается — имя на карте и в Alipay должно совпадать, банк должен разрешить операции за рубежом и 3-D Secure.",
+          "status": "unconfirmed",
+          "source": "гид правительства Шанхая в пересказе",
+          "n": 13,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        },
+        {
+          "stage": "6. Остаток",
+          "text": "Вывести пополненный баланс на российскую карту официально нельзя — пополняйте только на планируемые траты.",
+          "status": "unconfirmed",
+          "source": null,
+          "n": 14,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        }
+      ]
+    },
+    "tbank_qr_abroad": {
+      "service": "Т-Банк — QR в Турции",
+      "countries": [
+        "turkey"
+      ],
+      "app": "Т-Банк",
+      "provider": "Т-Банк",
+      "status": "опровергнуто",
+      "checked_at": "2026-10-13",
+      "sources": [
+        "https://www.tbank.ru/bank/help/payments/make-payments/online-pay/qr-code/"
+      ],
+      "steps": [
+        {
+          "stage": "—",
+          "text": "В Турции не работает. Официальный список стран для оплаты по QR: Армения (Idram), Вьетнам (VietQR), Таджикистан, Кыргызстан (ELQR). Без комиссии, курс — кнопка «?» на экране оплаты. Нужна версия приложения 7.29+ (iOS) или 7.26+ (Android).",
+          "status": "confirmed",
+          "source": "https://www.tbank.ru/bank/help/payments/make-payments/online-pay/qr-code/",
+          "n": 1,
+          "checked_at": "2026-10-13",
+          "needs_owner_check": false,
+          "decision_needed": null,
+          "unknown_zone": null
+        }
+      ]
+    }
+  }
+}

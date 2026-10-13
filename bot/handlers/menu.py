@@ -8,14 +8,22 @@ from bot.keyboards.country_kb import (
     get_countries_keyboard,
     get_country_hub_keyboard,
     get_country_section_back_keyboard,
-    get_country_maps_keyboard,
-    get_country_proof_keyboard,
     get_country_summary_keyboard,
+    get_instruction_nav_keyboard,
+    get_section_nav_keyboard,
     get_subscription_pay_keyboard
 )
 from database.repositories.users import UserRepository
 from database.repositories.countries import CountryRepository
-from database.knowledge_base import forum_section_text, format_source_link
+from database.knowledge_base import (
+    INSTRUCTIONS,
+    NUMBER_BY_SECTION,
+    SECTION_BY_NUMBER,
+    forum_section_text,
+    instruction_has_unverified,
+    render_instruction_html,
+    render_section_html,
+)
 from texts.onboarding import STEP_5_TEXT
 from config.settings import settings
 
@@ -88,11 +96,11 @@ async def handle_country_chosen(callback: CallbackQuery, state: FSMContext):
         headline = expert_data.get("headline", "")
         
         hub_text = (
-            f"📍 **ЭКСПЕРТНЫЙ ГИД: {c_name.upper()}**\n\n"
-            f"⚡ **Коротко о главном:**\n_{headline}_\n\n"
-            "💡 _Выберите раздел ниже: наличные, карты, QR и переводы. "
-            "Там, где у факта есть статус проверки, он указан в тексте. "
-            "Сообщения с форумов в справочник не выводятся._"
+            f"📍 **{c_name}**\n\n"
+            f"{headline}\n\n"
+            "Восемь разделов ниже. В каждом по умолчанию только подтверждённые факты. "
+            "Кнопка «Показать непроверенное» добавляет неподтверждённое и устаревшее "
+            "с предупреждением и датой проверки."
         )
         await callback.message.edit_text(
             hub_text,
@@ -140,264 +148,125 @@ async def handle_country_chosen(callback: CallbackQuery, state: FSMContext):
         disable_web_page_preview=True
     )
 
-# --- SUB-SECTION HANDLERS FOR COUNTRY HUB (TURKEY & OTHERS) ---
+# --- 8-section country hub ---
 
-@menu_router.callback_query(F.data.startswith("csec_cash_"))
-async def handle_csec_cash(callback: CallbackQuery):
+_LEGACY_SECTIONS = {
+    "cash": "4",
+    "cards": "2",
+    "qr": "2",
+    "transfers": "3",
+    "lifehacks": "1",
+    "maps": "5",
+    "scams": "7",
+}
+
+
+def _parse_section_callback(data: str):
+    if data.startswith("cunv_"):
+        number, slug = data[len("cunv_"):].split("_", 1)
+        return slug, number, True
+    if data.startswith("csec_"):
+        rest = data[len("csec_"):]
+        for name, number in _LEGACY_SECTIONS.items():
+            prefix = name + "_"
+            if rest.startswith(prefix):
+                return rest[len(prefix):], number, False
+        number, slug = rest.split("_", 1)
+        if number.isdigit():
+            return slug, number, False
+    return None
+
+
+def _parse_instruction_callback(data: str):
+    show_unverified = data.startswith("cinu_")
+    if not (data.startswith("cins_") or show_unverified):
+        return None
+    body = data[5:]
+    for slug in ("hong_kong", "thailand", "turkey", "china", "uae"):
+        suffix = "_" + slug
+        if body.endswith(suffix):
+            return body[: -len(suffix)], slug, show_unverified
+    return None
+
+
+async def _show_section(callback: CallbackQuery, slug: str, number: str, show_unverified: bool):
     await callback.answer()
-    slug = callback.data.replace("csec_cash_", "")
-    await UserRepository.log_event(callback.from_user.id, "view_section_cash", {"slug": slug})
     expert_data = CountryRepository.get_expert_data(slug)
-
-    if not expert_data:
+    if not expert_data or number not in SECTION_BY_NUMBER:
         await callback.message.answer("Данные раздела обновляются...")
         return
-
-    c_info = expert_data.get("currency_info", {})
-    if "source_url" in c_info:
-        source_url = c_info.get("source_url")
-    else:
-        source_url = "https://cbr.ru/crosscut/lawacts/file/5923"
-    source_label = c_info.get("source_label", "Указ ЦБ РФ о вывозе наличных")
-    checked = c_info.get("date_verified", "13.09.2026")
-    if source_url:
-        footer = f"🔍 _Источник:_ [{source_label}]({source_url}) | _Проверено: {checked}_"
-    else:
-        footer = f"🔍 _Проверено: {checked}. {source_label}_"
-    text = (
-        f"💵 **НАЛИЧНЫЕ И ОБМЕН ВАЛЮТЫ: {expert_data['name']}**\n\n"
-        f"🏛 **Местная валюта:** {c_info.get('official_currency')}\n\n"
-        f"🇷🇺 **Наличные рубли:**\n{c_info.get('cash_rubles')}\n\n"
-        f"{c_info.get('usd_eur_rules')}\n\n"
-        f"{c_info.get('best_exchangers')}\n\n"
-        f"{footer}"
+    section_key = SECTION_BY_NUMBER[number]
+    await UserRepository.log_event(
+        callback.from_user.id,
+        "view_country_section",
+        {"slug": slug, "section": section_key, "unverified": show_unverified},
     )
+    text = render_section_html(expert_data, section_key, show_unverified=show_unverified)
     await callback.message.edit_text(
         text,
-        reply_markup=get_country_section_back_keyboard(slug),
-        parse_mode="Markdown",
-        disable_web_page_preview=True
+        reply_markup=get_section_nav_keyboard(slug, number, show_unverified=show_unverified),
+        parse_mode="HTML",
+        disable_web_page_preview=True,
     )
 
 
-@menu_router.callback_query(F.data.startswith("csec_cards_"))
-async def handle_csec_cards(callback: CallbackQuery):
-    await callback.answer()
-    slug = callback.data.replace("csec_cards_", "")
-    await UserRepository.log_event(callback.from_user.id, "view_section_cards", {"slug": slug})
-    expert_data = CountryRepository.get_expert_data(slug)
-
-    if not expert_data:
-        await callback.message.answer("Данные раздела обновляются...")
+@menu_router.callback_query(
+    F.data.startswith("cunv_")
+    | F.data.startswith("csec_1_")
+    | F.data.startswith("csec_2_")
+    | F.data.startswith("csec_3_")
+    | F.data.startswith("csec_4_")
+    | F.data.startswith("csec_5_")
+    | F.data.startswith("csec_6_")
+    | F.data.startswith("csec_7_")
+    | F.data.startswith("csec_8_")
+    | F.data.startswith("csec_cash_")
+    | F.data.startswith("csec_cards_")
+    | F.data.startswith("csec_qr_")
+    | F.data.startswith("csec_transfers_")
+    | F.data.startswith("csec_lifehacks_")
+    | F.data.startswith("csec_maps_")
+    | F.data.startswith("csec_scams_")
+)
+async def handle_country_section(callback: CallbackQuery):
+    parsed = _parse_section_callback(callback.data)
+    if not parsed:
+        await callback.answer()
         return
-
-    cards = expert_data.get("cards_and_atms", {})
-    dcc = cards.get("dcc_trap", "")
-    up_banks = cards.get("unionpay_status", [])
-    section_title = cards.get("section_title", "Как работают банкоматы с картами UnionPay (РФ):")
-
-    lines = [
-        f"💳 **КАРТЫ И БАНКОМАТЫ: {expert_data['name']}**\n",
-        dcc,
-        f"\n🏦 **{section_title}**"
-    ]
-
-    for b in up_banks:
-        map_link = f" | [На карте Google Maps ↗]({b['map_url']})" if b.get("map_url") else ""
-        fee_info = b.get("fee", "0%")
-        source_label = format_source_link(b.get("source"), b.get("source_type"), "Тарифы банка")
-        lines.append(
-            f"\n• **{b['bank']}** — статус: {b['status']}\n"
-            f"  💸 Комиссия: {fee_info}\n"
-            f"  ℹ️ {b['tips']}\n"
-            f"  🔍 _Источник:_ {source_label}{map_link} | _Дата:_ {b['verified_at']}"
-        )
-
-    lines.append("\n⚠️ _Карты Visa и Mastercard, выпущенные банками РФ, за рубежом НЕ работают нигде._")
-
-    full_text = "\n".join(lines)
-    await callback.message.edit_text(
-        full_text,
-        reply_markup=get_country_section_back_keyboard(slug),
-        parse_mode="Markdown",
-        disable_web_page_preview=True
-    )
+    slug, number, show_unverified = parsed
+    await _show_section(callback, slug, number, show_unverified)
 
 
-@menu_router.callback_query(F.data.startswith("csec_transfers_"))
-async def handle_csec_transfers(callback: CallbackQuery):
-    await callback.answer()
-    slug = callback.data.replace("csec_transfers_", "")
-    await UserRepository.log_event(callback.from_user.id, "view_section_transfers", {"slug": slug})
-    expert_data = CountryRepository.get_expert_data(slug)
-
-    if not expert_data:
-        await callback.message.answer("Данные раздела обновляются...")
+@menu_router.callback_query(F.data.startswith("cins_") | F.data.startswith("cinu_"))
+async def handle_country_instruction(callback: CallbackQuery):
+    parsed = _parse_instruction_callback(callback.data)
+    if not parsed:
+        await callback.answer()
         return
-
-    transfers = expert_data.get("transfers_and_digital", {})
-    if "source_url" in transfers:
-        source_url = transfers.get("source_url")
-    else:
-        source_url = "https://koronapay.com"
-    source_label = transfers.get("source_label", "Тарифы Золотой Короны")
-    checked = transfers.get("date_verified", "13.09.2026")
-    if source_url:
-        footer = f"🔍 _Источник:_ [{source_label}]({source_url}) | _Проверено: {checked}_"
-    else:
-        footer = f"🔍 _Проверено: {checked}. {source_label}_"
-    text = (
-        f"📲 **ПЕРЕВОДЫ И ЦИФРОВЫЕ СЕРВИСЫ: {expert_data['name']}**\n\n"
-        f"{transfers.get('koronapay')}\n\n"
-        f"{transfers.get('ininal_letim')}\n\n"
-        f"{footer}"
+    instruction_id, slug, show_unverified = parsed
+    await callback.answer()
+    if instruction_id not in INSTRUCTIONS:
+        await callback.message.answer("Инструкция обновляется...")
+        return
+    section_key = INSTRUCTIONS[instruction_id].get("section") or "2_pay_on_site"
+    number = NUMBER_BY_SECTION.get(section_key, "2")
+    await UserRepository.log_event(
+        callback.from_user.id,
+        "view_country_instruction",
+        {"slug": slug, "instruction": instruction_id, "unverified": show_unverified},
     )
+    text = render_instruction_html(instruction_id, show_unverified=show_unverified)
     await callback.message.edit_text(
         text,
-        reply_markup=get_country_section_back_keyboard(slug),
-        parse_mode="Markdown",
-        disable_web_page_preview=True
-    )
-
-
-@menu_router.callback_query(F.data.startswith("csec_qr_"))
-async def handle_csec_qr(callback: CallbackQuery):
-    await callback.answer()
-    slug = callback.data.replace("csec_qr_", "")
-    await UserRepository.log_event(callback.from_user.id, "view_section_qr", {"slug": slug})
-    expert_data = CountryRepository.get_expert_data(slug)
-
-    if not expert_data:
-        await callback.message.answer("Данные раздела обновляются...")
-        return
-
-    qr = expert_data.get("qr_payments", {})
-    lines = [
-        f"{qr.get('headline', '📱 Оплата по QR-кодам')}\n",
-        f"{qr.get('description', '')}\n",
-        "🏦 **Поддерживаемые российские банки:**"
-    ]
-
-    for b in qr.get("supported_banks", []):
-        status = b.get("status")
-        status_line = f"  🏷 _Статус:_ {status}\n" if status else ""
-        source_label = format_source_link(
-            b.get("source_url"),
-            b.get("source_type"),
-            "Официальное подтверждение",
-        )
-        lines.append(
-            f"\n• **{b['bank']}**:\n"
-            f"{status_line}"
-            f"  📲 _Как платить:_ {b['how']}\n"
-            f"  💰 _Лимиты и комиссии:_ {b['limits']}\n"
-            f"  🏪 _Где принимают:_ {b['places']}\n"
-            f"  🔍 _Источник:_ {source_label}"
-        )
-
-    lines.append(f"\n{qr.get('important_tips', '')}")
-    lines.append("\n⚠️ _Обязательно включите мобильный интернет или подключитесь к Wi-Fi для подтверждения пуша в приложении банка._")
-
-    full_text = "\n".join(lines)
-    await callback.message.edit_text(
-        full_text,
-        reply_markup=get_country_section_back_keyboard(slug),
-        parse_mode="Markdown",
-        disable_web_page_preview=True
-    )
-
-
-@menu_router.callback_query(F.data.startswith("csec_lifehacks_"))
-async def handle_csec_lifehacks(callback: CallbackQuery):
-    await callback.answer()
-    slug = callback.data.replace("csec_lifehacks_", "")
-    await UserRepository.log_event(callback.from_user.id, "view_section_lifehacks", {"slug": slug})
-    expert_data = CountryRepository.get_expert_data(slug)
-
-    if not expert_data:
-        await callback.message.answer("Данные раздела обновляются...")
-        return
-
-    lh = expert_data.get("lifehacks", {})
-    lines = [f"💡 **ЛАЙФХАКИ, ЧАЕВЫЕ И ПРАВИЛА: {expert_data['name']}**\n"]
-    for key in ("practical", "tipping", "bargaining", "nfc_apple_pay", "customs_rules", "crypto_rules"):
-        val = (lh.get(key) or "").strip()
-        if val:
-            lines.append(val)
-
-    full_text = "\n".join(lines)
-    await callback.message.edit_text(
-        full_text,
-        reply_markup=get_country_section_back_keyboard(slug),
-        parse_mode="Markdown",
-        disable_web_page_preview=True
-    )
-
-
-@menu_router.callback_query(F.data.startswith("csec_maps_"))
-async def handle_csec_maps(callback: CallbackQuery):
-    await callback.answer()
-    slug = callback.data.replace("csec_maps_", "")
-    await UserRepository.log_event(callback.from_user.id, "view_section_maps", {"slug": slug})
-    expert_data = CountryRepository.get_expert_data(slug)
-
-    if not expert_data:
-        await callback.message.answer("Данные раздела обновляются...")
-        return
-
-    maps = expert_data.get("maps", {})
-    maps_intro = (expert_data.get("maps_intro") or "").strip()
-    if maps_intro:
-        text = (
-            f"🗺 **КАРТЫ БАНКОМАТОВ И ОБМЕННИКОВ: {expert_data['name']}**\n\n"
-            f"{maps_intro}"
-        )
-    else:
-        text = (
-            f"🗺 **КАРТЫ БАНКОМАТОВ И ОБМЕННИКОВ: {expert_data['name']}**\n\n"
-            "Мы собрали для вас прямые ссылки на Google Maps с уже настроенными поисковыми фильтрами:\n\n"
-            "• **Банкоматы без комиссии (VakıfBank, Ziraat, Halkbank)** — сразу показывают ближайшие рабочие точки рядом с вашим текущим местоположением.\n"
-            "• **Обменники Гранд-Базара (Kapalıçarşı)** — точки с минимальным спредом и лучшим курсом обмена валюты в Стамбуле.\n"
-            "• **Отделения почты PTT** — официальные точки получения наличных по Золотой Короне.\n\n"
-            "👇 _Нажмите на нужную кнопку ниже, чтобы открыть маршрут в приложении карт:_"
-        )
-    await callback.message.edit_text(
-        text,
-        reply_markup=get_country_maps_keyboard(slug, maps),
-        parse_mode="Markdown",
-        disable_web_page_preview=True
-    )
-
-
-@menu_router.callback_query(F.data.startswith("csec_scams_"))
-async def handle_csec_scams(callback: CallbackQuery):
-    await callback.answer()
-    slug = callback.data.replace("csec_scams_", "")
-    await UserRepository.log_event(callback.from_user.id, "view_section_scams", {"slug": slug})
-    expert_data = CountryRepository.get_expert_data(slug)
-
-    if not expert_data:
-        await callback.message.answer("Данные раздела обновляются...")
-        return
-
-    scams = expert_data.get("scams_and_warnings", [])
-    lines = [f"⚠️ **СКАМ-СХЕМЫ И ОПАСНОСТИ: {expert_data['name']}**\n"]
-
-    for s in scams:
-        source_label = format_source_link(s.get("source"), s.get("source_type"), "Официальное предупреждение")
-        lines.append(
-            f"🚨 **{s['title']}**\n"
-            f"• **Как выглядит схема:** {s['desc']}\n"
-            f"• 🛡 **Как защититься:** {s['protection']}\n"
-            f"• 🔍 _Источник:_ {source_label}\n"
-        )
-
-    full_text = "\n".join(lines)
-    await callback.message.edit_text(
-        full_text,
-        reply_markup=get_country_section_back_keyboard(slug),
-        parse_mode="Markdown",
-        disable_web_page_preview=True
+        reply_markup=get_instruction_nav_keyboard(
+            slug,
+            instruction_id,
+            number,
+            show_unverified=show_unverified,
+            has_unverified=instruction_has_unverified(instruction_id),
+        ),
+        parse_mode="HTML",
+        disable_web_page_preview=True,
     )
 
 
@@ -406,19 +275,11 @@ async def handle_csec_forum(callback: CallbackQuery):
     await callback.answer()
     slug = callback.data.replace("csec_forum_", "").replace("csec_proof_", "")
     await UserRepository.log_event(callback.from_user.id, "view_section_forum_insights", {"slug": slug})
-    expert_data = CountryRepository.get_expert_data(slug)
-
-    if not expert_data:
-        await callback.message.answer("Данные раздела обновляются...")
-        return
-
-    # Forum posts and curated forum summaries stay internal. Do not render takeaways.
-    full_text = forum_section_text(expert_data)
+    full_text = forum_section_text()
     await callback.message.edit_text(
         full_text,
         reply_markup=get_country_section_back_keyboard(slug),
-        parse_mode="Markdown",
-        disable_web_page_preview=True
+        disable_web_page_preview=True,
     )
 
 

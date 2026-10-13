@@ -1,7 +1,13 @@
 from typing import List, Dict, Any
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from database.knowledge_base import COUNTRIES_KNOWLEDGE_BASE
+from database.knowledge_base import (
+    COUNTRIES_KNOWLEDGE_BASE,
+    INSTRUCTION_LABELS,
+    SECTION_ORDER,
+    instructions_for_section,
+    section_has_unverified,
+)
 
 def get_countries_keyboard(countries: List[Dict[str, Any]]) -> InlineKeyboardMarkup:
     """Country buttons, including guides that exist only in the knowledge base."""
@@ -36,31 +42,31 @@ def get_countries_keyboard(countries: List[Dict[str, Any]]) -> InlineKeyboardMar
     buttons.append([InlineKeyboardButton(text="« Назад в главное меню", callback_data="back_to_menu")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_country_hub_keyboard(country_slug: str) -> InlineKeyboardMarkup:
-    """Interactive Hub keyboard for a country: detailed thematic sub-sections.
+_SECTION_BUTTONS = (
+    ("1", "✅ До поездки"),
+    ("2", "💳 Оплата на месте"),
+    ("3", "👛 Кошельки и карты"),
+    ("4", "💵 Наличные и обмен"),
+    ("5", "🏧 Банкоматы"),
+    ("6", "🚇 Транспорт"),
+    ("7", "⚠️ Риски и блокировка"),
+    ("8", "🧾 Tax free"),
+)
 
-    Forum reports are internal verification only and have no button.
-    """
-    data = COUNTRIES_KNOWLEDGE_BASE.get(country_slug) or {}
-    labels = data.get("hub_labels") or {}
-    qr_label = labels.get("qr", "📱 Оплата по QR (Karekod)")
-    transfer_label = labels.get("transfers", "📲 Золотая Корона")
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="💵 Наличные и обмен ($)", callback_data=f"csec_cash_{country_slug}"),
-            InlineKeyboardButton(text="💳 Карты и банкоматы", callback_data=f"csec_cards_{country_slug}")
-        ],
-        [
-            InlineKeyboardButton(text=qr_label, callback_data=f"csec_qr_{country_slug}"),
-            InlineKeyboardButton(text=transfer_label, callback_data=f"csec_transfers_{country_slug}")
-        ],
-        [
-            InlineKeyboardButton(text="💡 Лайфхаки, чаевые и лимиты", callback_data=f"csec_lifehacks_{country_slug}"),
-            InlineKeyboardButton(text="🗺 Карты банкоматов и обменников", callback_data=f"csec_maps_{country_slug}")
-        ],
-        [
-            InlineKeyboardButton(text="⚠️ Скам и ловушка DCC", callback_data=f"csec_scams_{country_slug}")
-        ],
+def get_country_hub_keyboard(country_slug: str) -> InlineKeyboardMarkup:
+    """Eight sections from the country schema. Forum reports have no button."""
+    if len(_SECTION_BUTTONS) != len(SECTION_ORDER):
+        raise RuntimeError("Hub buttons must follow the 8-section schema.")
+    rows = []
+    pair = []
+    for number, label in _SECTION_BUTTONS:
+        pair.append(InlineKeyboardButton(text=label, callback_data=f"csec_{number}_{country_slug}"))
+        if len(pair) == 2:
+            rows.append(pair)
+            pair = []
+    if pair:
+        rows.append(pair)
+    rows.extend([
         [
             InlineKeyboardButton(text="🚨 Сообщить об ошибке", callback_data=f"report_error_{country_slug}"),
             InlineKeyboardButton(text="⭐ О подписке", callback_data="menu_subscription_info")
@@ -70,6 +76,67 @@ def get_country_hub_keyboard(country_slug: str) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="🏠 Главное меню", callback_data="back_to_menu")
         ]
     ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def get_section_nav_keyboard(
+    country_slug: str,
+    section_number: str,
+    *,
+    show_unverified: bool = False,
+) -> InlineKeyboardMarkup:
+    """Back navigation plus 'Показать непроверенное' when the section has such facts."""
+    data = COUNTRIES_KNOWLEDGE_BASE.get(country_slug) or {}
+    section_key = SECTION_ORDER[int(section_number) - 1][0]
+    buttons = []
+    if section_has_unverified(data, section_key):
+        if show_unverified:
+            buttons.append([InlineKeyboardButton(
+                text="Скрыть непроверенное",
+                callback_data=f"csec_{section_number}_{country_slug}",
+            )])
+        else:
+            buttons.append([InlineKeyboardButton(
+                text="Показать непроверенное",
+                callback_data=f"cunv_{section_number}_{country_slug}",
+            )])
+    for instruction_id in instructions_for_section(data, section_key):
+        label = INSTRUCTION_LABELS.get(instruction_id, "📋 Инструкция")
+        buttons.append([InlineKeyboardButton(
+            text=label,
+            callback_data=f"cins_{instruction_id}_{country_slug}",
+        )])
+    buttons.append([InlineKeyboardButton(text="« Назад в хаб страны", callback_data=f"country_{country_slug}")])
+    buttons.append([InlineKeyboardButton(text="🏠 В главное меню", callback_data="back_to_menu")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_instruction_nav_keyboard(
+    country_slug: str,
+    instruction_id: str,
+    section_number: str,
+    *,
+    show_unverified: bool,
+    has_unverified: bool,
+) -> InlineKeyboardMarkup:
+    buttons = []
+    if has_unverified:
+        if show_unverified:
+            buttons.append([InlineKeyboardButton(
+                text="Скрыть непроверенное",
+                callback_data=f"cins_{instruction_id}_{country_slug}",
+            )])
+        else:
+            buttons.append([InlineKeyboardButton(
+                text="Показать непроверенное",
+                callback_data=f"cinu_{instruction_id}_{country_slug}",
+            )])
+    buttons.append([InlineKeyboardButton(
+        text="« Назад в раздел",
+        callback_data=f"csec_{section_number}_{country_slug}",
+    )])
+    buttons.append([InlineKeyboardButton(text="« Назад в хаб страны", callback_data=f"country_{country_slug}")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
 
 def get_country_maps_keyboard(country_slug: str, maps_data: Dict[str, str]) -> InlineKeyboardMarkup:
     """Keyboard with direct external Google Maps links with applied filters."""
