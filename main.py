@@ -11,6 +11,7 @@ from bot.handlers.onboarding import onboarding_router
 from bot.handlers.menu import menu_router
 from bot.handlers.legal import legal_router
 from bot.handlers.stars import stars_router
+from bot.handlers.routes import routes_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,6 +31,7 @@ async def main():
     dp.include_router(onboarding_router)
     dp.include_router(legal_router)
     dp.include_router(menu_router)
+    dp.include_router(routes_router)
     dp.include_router(stars_router)
 
     try:

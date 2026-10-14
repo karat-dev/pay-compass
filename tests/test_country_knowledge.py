@@ -23,11 +23,13 @@ from database.knowledge_base import (
     forum_section_text,
     is_gap,
     iter_facts,
+    instruction_html_pages,
+    public_source_url,
     render_instruction,
-    render_instruction_html,
     render_section,
-    render_section_html,
     render_user_facing,
+    section_html_pages,
+    split_telegram_html,
     user_visible_fact,
     zone_sets,
 )
@@ -233,22 +235,28 @@ def test_unverified_button_and_eight_section_hub():
     assert _parse_section_callback("csec_qr_hong_kong") == ("hong_kong", "2", False)
     assert _parse_section_callback("cunv_8_uae") == ("uae", "8", True)
     assert _parse_section_callback("csec_3_georgia") == ("georgia", "3", False)
+    assert _parse_section_callback("csep_2_hong_kong_1") == ("hong_kong", "2", False)
+    assert _parse_section_callback("cunp_3_georgia_2") == ("georgia", "3", True)
 
     cards = get_section_nav_keyboard("georgia", "3", show_unverified=False)
     assert "📋 TBC: карта за 1–2 дня" in _button_texts(cards)
     assert "cins_tbc_georgia_georgia" in _callbacks(cards)
     assert _parse_instruction_callback("cins_tbc_georgia_georgia") == ("tbc_georgia", "georgia", False)
     assert _parse_instruction_callback("cinu_tbc_georgia_georgia") == ("tbc_georgia", "georgia", True)
+    assert _parse_instruction_callback("cipg_tbc_georgia_georgia_1") == ("tbc_georgia", "georgia", False)
+    assert _parse_instruction_callback("cipu_wechat_pay_china_2") == ("wechat_pay", "china", True)
 
     guide = render_instruction("tbc_georgia", show_unverified=False)
     hidden_guide = render_instruction("tbc_georgia", show_unverified=True)
     assert "Поставить приложение-переводчик" in guide
-    assert "Минимальная сумма — 6 000 ₽" not in guide
-    assert "Минимальная сумма — 6 000 ₽" in hidden_guide
-    html_guide = render_instruction_html("tbc_georgia", show_unverified=True)
-    assert len(html_guide) < 4096
-    assert "В России: включить роуминг данных в MyMagti." in html_guide
-    assert "…" not in html_guide
+    assert "Добавить карту в Apple Pay" not in guide
+    assert "Добавить карту в Apple Pay" in hidden_guide
+    assert "verified_by_us" not in guide and "verified_by_us" not in hidden_guide
+    pages = instruction_html_pages("tbc_georgia", show_unverified=True)
+    assert pages
+    assert all(len(page) <= 4096 for page in pages)
+    assert any("В России: включить роуминг данных в MyMagti." in page for page in pages)
+    assert all("…" not in page for page in pages)
     georgia_default = render_user_facing(GEORGIA_DATA)
     assert "Российские карты в Грузии не работают совсем" in georgia_default
     assert "Курсы обменников Тбилиси — не собраны." in georgia_default
@@ -265,14 +273,52 @@ def test_official_links_and_html_fit_telegram():
 
     for country in GUIDES.values():
         for key in SECTION_KEYS:
-            page = render_section_html(country, key, show_unverified=True)
-            assert len(page) < 4096
+            pages = section_html_pages(country, key, show_unverified=True)
+            assert pages
+            joined = "\n".join(pages)
+            assert all(len(page) <= 4096 for page in pages)
+            assert "…" not in joined
             for fact in iter_facts(country):
                 if fact.get("unknown_zone"):
-                    assert fact["unknown_zone"] not in page
+                    assert fact["unknown_zone"] not in joined
+                if fact.get("score") is not None:
+                    assert f"score: {fact['score']}" not in joined
+                    assert "score_breakdown" not in joined
     for instruction_id in INSTRUCTIONS:
         page = render_instruction(instruction_id, show_unverified=True)
         assert "needs_owner_check" not in page
+        assert "verified_by_us" not in page
+
+
+def test_scores_and_private_sources_stay_hidden():
+    long_text = "абзац\n\n".join(f"факт {index} " + ("слово " * 40) for index in range(30))
+    pages = split_telegram_html(long_text)
+    assert len(pages) > 1
+    assert all(len(page) <= 4096 for page in pages)
+    assert all(page.startswith(f"{index}/") for index, page in enumerate(pages, start=1))
+
+    hidden = {
+        "text": "Ссылка только для внутренней сверки.",
+        "type": "fact",
+        "zone": "green",
+        "source_user_facing": True,
+        "source": "https://t.me/travel_payments_news/1",
+        "source_kind": "telegram",
+        "source_type": "telegram",
+        "date_verified": None,
+    }
+    assert public_source_url(hidden) is None
+    rendered = format_fact(hidden)
+    assert "t.me" not in rendered
+    assert "Официальной ссылки нет." in rendered
+    assert "score" not in rendered
+
+    forum = dict(hidden, source="https://forum.awd.ru/viewtopic.php?t=1", source_kind="forum", source_type="форум")
+    assert public_source_url(forum) is None
+    assert "forum.awd.ru" not in format_fact(forum)
+
+    shown = dict(hidden, source="https://www.vtb.ru/personal/platezhi-i-perevody/qr/", source_kind="official", source_type="official")
+    assert public_source_url(shown) == "https://www.vtb.ru/personal/platezhi-i-perevody/qr/"
 
 
 def test_forum_copy_is_not_user_facing():

@@ -15,7 +15,9 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
-DATA_PATH = Path(__file__).with_name("data") / "countries_v2.json"
+# Generated bundle: countries plus scored step-by-step instructions.
+# A regeneration replaces this file; display thresholds stay in config/trust_config.json.
+DATA_PATH = Path(__file__).with_name("data") / "countries.json"
 
 SECTION_ORDER = (
     ("1_checklist", "Что сделать до поездки"),
@@ -218,6 +220,11 @@ def _build_instructions(raw_instructions: Dict[str, Any]) -> Dict[str, Any]:
             "checked_at": raw.get("checked_at"),
             "date_verified": _date_verified(raw.get("checked_at")),
             "sources": list(raw.get("sources") or []),
+            "prereq": [item for item in (raw.get("prereq") or []) if isinstance(item, str)],
+            "costs": raw.get("costs") if isinstance(raw.get("costs"), str) else None,
+            "limits": raw.get("limits") if isinstance(raw.get("limits"), str) else None,
+            "risks": [item for item in (raw.get("risks") or []) if isinstance(item, str)],
+            "intro": raw.get("intro") if isinstance(raw.get("intro"), str) else None,
             "steps": steps,
             "section": INSTRUCTION_SECTION.get(instruction_id),
         }
@@ -306,12 +313,39 @@ def _display_date(value: Optional[str]) -> Optional[str]:
     return value
 
 
-def _source_line(fact: Dict[str, Any]) -> str:
+_PRIVATE_SOURCE_MARKERS = (
+    "t.me/",
+    "telegram.me/",
+    "telegram.org/",
+    "forum.awd.ru",
+    "/forum",
+)
+
+
+def public_source_url(fact: Dict[str, Any]) -> Optional[str]:
+    """URL safe to show. Forum and Telegram sources stay internal even if flagged."""
     if fact.get("source_user_facing") is False:
-        return "Официальной ссылки нет."
+        return None
     source = fact.get("source")
-    if isinstance(source, str) and source.startswith("http"):
-        return f"Источник: {source}"
+    if not isinstance(source, str) or not source.startswith("http"):
+        return None
+    url = source.split()[0]
+    low = url.lower()
+    if any(marker in low for marker in _PRIVATE_SOURCE_MARKERS):
+        return None
+    kind = (fact.get("source_kind") or "").lower()
+    source_type = (fact.get("source_type") or "").lower()
+    if kind in {"telegram", "forum"}:
+        return None
+    if "telegram" in source_type or "форум" in source_type or "forum" in source_type:
+        return None
+    return url
+
+
+def _source_line(fact: Dict[str, Any]) -> str:
+    url = public_source_url(fact)
+    if url:
+        return f"Источник: {url}"
     return "Официальной ссылки нет."
 
 
@@ -386,6 +420,30 @@ def render_user_facing(country: Dict[str, Any], show_unverified: bool = False) -
     return "\n\n".join(parts)
 
 
+def _instruction_preamble(instruction: Dict[str, Any]) -> List[str]:
+    """User-facing intro and prerequisites. Internal status strings stay out."""
+    blocks: List[str] = []
+    intro = instruction.get("intro")
+    if intro:
+        blocks.append(intro)
+    prereq = instruction.get("prereq") or []
+    if prereq:
+        blocks.append("До начала:\n" + "\n".join(f"• {item}" for item in prereq))
+    return blocks
+
+
+def _instruction_footer(instruction: Dict[str, Any]) -> List[str]:
+    blocks: List[str] = []
+    if instruction.get("costs"):
+        blocks.append(f"Комиссия и курс: {instruction['costs']}")
+    if instruction.get("limits"):
+        blocks.append(f"Лимиты: {instruction['limits']}")
+    risks = instruction.get("risks") or []
+    if risks:
+        blocks.append("На что смотреть:\n" + "\n".join(f"• {item}" for item in risks))
+    return blocks
+
+
 def render_instruction(instruction_id: str, show_unverified: bool = False) -> str:
     instruction = INSTRUCTIONS[instruction_id]
     lines = [instruction["service"] or instruction_id]
@@ -396,6 +454,7 @@ def render_instruction(instruction_id: str, show_unverified: bool = False) -> st
         )
     else:
         lines.append("Зелёная и жёлтая зоны.")
+    lines.extend(_instruction_preamble(instruction))
     blocks = _render_fact_blocks(instruction.get("steps") or [], show_unverified)
     if blocks:
         lines.extend(blocks)
@@ -403,6 +462,7 @@ def render_instruction(instruction_id: str, show_unverified: bool = False) -> st
         lines.append("В зелёной и жёлтой зоне шагов нет.")
     else:
         lines.append("Дополнительных непроверенных шагов нет.")
+    lines.extend(_instruction_footer(instruction))
     return "\n\n".join(lines)
 
 
@@ -431,15 +491,13 @@ def forum_section_text(country: Optional[Dict[str, Any]] = None) -> str:
 
 
 def _html_source(fact: Dict[str, Any]) -> str:
-    if fact.get("source_user_facing") is False:
+    url = public_source_url(fact)
+    if not url:
         return "Официальной ссылки нет."
-    source = fact.get("source")
-    if isinstance(source, str) and source.startswith("http"):
-        url = source.split()[0]
-        note = html.escape(source[len(url):].strip())
-        link = f'<a href="{html.escape(url, quote=True)}">Источник</a>'
-        return f"{link} {note}".strip()
-    return "Официальной ссылки нет."
+    source = fact.get("source") or ""
+    note = html.escape(source[len(url):].strip()) if isinstance(source, str) else ""
+    link = f'<a href="{html.escape(url, quote=True)}">Источник</a>'
+    return f"{link} {note}".strip()
 
 
 def format_fact_html(fact: Dict[str, Any], *, warn: bool = False) -> str:
@@ -501,10 +559,7 @@ def render_section_html(country: Dict[str, Any], section_key: str, show_unverifi
             lines.append("В зелёной и жёлтой зоне фактов нет.")
         else:
             lines.append("Дополнительных непроверенных фактов нет.")
-    text = "\n\n".join(lines)
-    if len(text) > 4096:
-        text = text[:4000] + "\n\n…"
-    return text
+    return "\n\n".join(lines)
 
 
 def render_instruction_html(instruction_id: str, show_unverified: bool = False) -> str:
@@ -517,6 +572,8 @@ def render_instruction_html(instruction_id: str, show_unverified: bool = False) 
         )
     else:
         lines.append("Зелёная и жёлтая зоны.")
+    for block in _instruction_preamble(instruction):
+        lines.append(html.escape(block))
     blocks = _html_blocks(instruction.get("steps") or [], show_unverified)
     if blocks:
         lines.extend(blocks)
@@ -524,7 +581,65 @@ def render_instruction_html(instruction_id: str, show_unverified: bool = False) 
         lines.append("В зелёной и жёлтой зоне шагов нет.")
     else:
         lines.append("Дополнительных непроверенных шагов нет.")
-    text = "\n\n".join(lines)
-    if len(text) > 4096:
-        text = text[:4000] + "\n\n…"
-    return text
+    for block in _instruction_footer(instruction):
+        lines.append(html.escape(block))
+    return "\n\n".join(lines)
+
+
+TELEGRAM_MESSAGE_LIMIT = 4096
+
+
+def split_telegram_html(text: str, limit: int = 4000) -> List[str]:
+    """Split a message on paragraph boundaries so each part fits Telegram."""
+    if len(text) <= limit:
+        return [text or ""]
+    pages: List[str] = []
+    current = ""
+
+    def flush_piece(piece: str) -> None:
+        if piece:
+            pages.append(piece)
+
+    for part in text.split("\n\n"):
+        if not part:
+            continue
+        candidate = part if not current else f"{current}\n\n{part}"
+        if len(candidate) <= limit:
+            current = candidate
+            continue
+        flush_piece(current)
+        current = ""
+        if len(part) <= limit:
+            current = part
+            continue
+        line_buf = ""
+        for line in part.split("\n"):
+            line_candidate = line if not line_buf else f"{line_buf}\n{line}"
+            if len(line_candidate) <= limit:
+                line_buf = line_candidate
+                continue
+            flush_piece(line_buf)
+            line_buf = ""
+            while len(line) > limit:
+                flush_piece(line[:limit])
+                line = line[limit:]
+            line_buf = line
+        current = line_buf
+    flush_piece(current)
+    labeled: List[str] = []
+    total = len(pages)
+    if total <= 1:
+        return pages or [""]
+    for index, page in enumerate(pages, start=1):
+        prefix = f"{index}/{total}\n\n"
+        room = TELEGRAM_MESSAGE_LIMIT - len(prefix)
+        labeled.append(prefix + page[:room])
+    return labeled
+
+
+def section_html_pages(country: Dict[str, Any], section_key: str, show_unverified: bool = False) -> List[str]:
+    return split_telegram_html(render_section_html(country, section_key, show_unverified=show_unverified))
+
+
+def instruction_html_pages(instruction_id: str, show_unverified: bool = False) -> List[str]:
+    return split_telegram_html(render_instruction_html(instruction_id, show_unverified=show_unverified))
