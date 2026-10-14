@@ -22,8 +22,8 @@ from database.knowledge_base import (
     SECTION_BY_NUMBER,
     forum_section_text,
     instruction_has_unverified,
-    render_instruction_html,
-    render_section_html,
+    instruction_html_pages,
+    section_html_pages,
 )
 from texts.onboarding import STEP_5_TEXT
 from config.settings import settings
@@ -97,7 +97,7 @@ async def handle_country_chosen(callback: CallbackQuery, state: FSMContext):
         headline = expert_data.get("headline", "")
         
         hub_text = (
-            f"📍 **{c_name}**\n\n"
+            f"📍 **Компас оплаты: {c_name}**\n\n"
             f"{headline}\n\n"
             "Восемь разделов ниже. В каждом по умолчанию зелёная и жёлтая зоны. "
             "Кнопка «Показать непроверенное» открывает красную и чёрную."
@@ -161,7 +161,18 @@ _LEGACY_SECTIONS = {
 }
 
 
+def _section_page(data: str) -> int:
+    if data.startswith("csep_") or data.startswith("cunp_"):
+        return int(data.rsplit("_", 1)[-1])
+    return 0
+
+
 def _parse_section_callback(data: str):
+    if data.startswith("cunp_") or data.startswith("csep_"):
+        show_unverified = data.startswith("cunp_")
+        number, rest = data[5:].split("_", 1)
+        slug, _page = rest.rsplit("_", 1)
+        return slug, number, show_unverified
     if data.startswith("cunv_"):
         number, slug = data[len("cunv_"):].split("_", 1)
         return slug, number, True
@@ -177,7 +188,17 @@ def _parse_section_callback(data: str):
     return None
 
 
+def _instruction_page(data: str) -> int:
+    if data.startswith("cipg_") or data.startswith("cipu_"):
+        return int(data.rsplit("_", 1)[-1])
+    return 0
+
+
 def _parse_instruction_callback(data: str):
+    if data.startswith("cipg_") or data.startswith("cipu_"):
+        show_unverified = data.startswith("cipu_")
+        body, _page = data[5:].rsplit("_", 1)
+        data = ("cinu_" if show_unverified else "cins_") + body
     show_unverified = data.startswith("cinu_")
     if not (data.startswith("cins_") or show_unverified):
         return None
@@ -202,10 +223,17 @@ async def _show_section(callback: CallbackQuery, slug: str, number: str, show_un
         "view_country_section",
         {"slug": slug, "section": section_key, "unverified": show_unverified},
     )
-    text = render_section_html(expert_data, section_key, show_unverified=show_unverified)
+    pages = section_html_pages(expert_data, section_key, show_unverified=show_unverified)
+    page = min(_section_page(callback.data), max(len(pages) - 1, 0))
     await callback.message.edit_text(
-        text,
-        reply_markup=get_section_nav_keyboard(slug, number, show_unverified=show_unverified),
+        pages[page],
+        reply_markup=get_section_nav_keyboard(
+            slug,
+            number,
+            show_unverified=show_unverified,
+            page=page,
+            page_count=len(pages),
+        ),
         parse_mode="HTML",
         disable_web_page_preview=True,
     )
@@ -213,6 +241,8 @@ async def _show_section(callback: CallbackQuery, slug: str, number: str, show_un
 
 @menu_router.callback_query(
     F.data.startswith("cunv_")
+    | F.data.startswith("cunp_")
+    | F.data.startswith("csep_")
     | F.data.startswith("csec_1_")
     | F.data.startswith("csec_2_")
     | F.data.startswith("csec_3_")
@@ -238,7 +268,12 @@ async def handle_country_section(callback: CallbackQuery):
     await _show_section(callback, slug, number, show_unverified)
 
 
-@menu_router.callback_query(F.data.startswith("cins_") | F.data.startswith("cinu_"))
+@menu_router.callback_query(
+    F.data.startswith("cins_")
+    | F.data.startswith("cinu_")
+    | F.data.startswith("cipg_")
+    | F.data.startswith("cipu_")
+)
 async def handle_country_instruction(callback: CallbackQuery):
     parsed = _parse_instruction_callback(callback.data)
     if not parsed:
@@ -256,15 +291,18 @@ async def handle_country_instruction(callback: CallbackQuery):
         "view_country_instruction",
         {"slug": slug, "instruction": instruction_id, "unverified": show_unverified},
     )
-    text = render_instruction_html(instruction_id, show_unverified=show_unverified)
+    pages = instruction_html_pages(instruction_id, show_unverified=show_unverified)
+    page = min(_instruction_page(callback.data), max(len(pages) - 1, 0))
     await callback.message.edit_text(
-        text,
+        pages[page],
         reply_markup=get_instruction_nav_keyboard(
             slug,
             instruction_id,
             number,
             show_unverified=show_unverified,
             has_unverified=instruction_has_unverified(instruction_id),
+            page=page,
+            page_count=len(pages),
         ),
         parse_mode="HTML",
         disable_web_page_preview=True,

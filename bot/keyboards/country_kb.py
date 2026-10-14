@@ -78,16 +78,39 @@ def get_country_hub_keyboard(country_slug: str) -> InlineKeyboardMarkup:
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
+def _page_row(prefix: str, owner: str, page: int, page_count: int):
+    if page_count <= 1:
+        return None
+    row = []
+    if page > 0:
+        row.append(InlineKeyboardButton(
+            text=f"← {page}/{page_count}",
+            callback_data=f"{prefix}_{owner}_{page - 1}",
+        ))
+    if page + 1 < page_count:
+        row.append(InlineKeyboardButton(
+            text=f"{page + 2}/{page_count} →",
+            callback_data=f"{prefix}_{owner}_{page + 1}",
+        ))
+    return row
+
+
 def get_section_nav_keyboard(
     country_slug: str,
     section_number: str,
     *,
     show_unverified: bool = False,
+    page: int = 0,
+    page_count: int = 1,
 ) -> InlineKeyboardMarkup:
     """Back navigation plus 'Показать непроверенное' when the section has such facts."""
     data = COUNTRIES_KNOWLEDGE_BASE.get(country_slug) or {}
     section_key = SECTION_ORDER[int(section_number) - 1][0]
     buttons = []
+    page_prefix = "cunp" if show_unverified else "csep"
+    page_row = _page_row(page_prefix, f"{section_number}_{country_slug}", page, page_count)
+    if page_row:
+        buttons.append(page_row)
     if section_has_unverified(data, section_key):
         if show_unverified:
             buttons.append([InlineKeyboardButton(
@@ -117,8 +140,14 @@ def get_instruction_nav_keyboard(
     *,
     show_unverified: bool,
     has_unverified: bool,
+    page: int = 0,
+    page_count: int = 1,
 ) -> InlineKeyboardMarkup:
     buttons = []
+    page_prefix = "cipu" if show_unverified else "cipg"
+    page_row = _page_row(page_prefix, f"{instruction_id}_{country_slug}", page, page_count)
+    if page_row:
+        buttons.append(page_row)
     if has_unverified:
         if show_unverified:
             buttons.append([InlineKeyboardButton(

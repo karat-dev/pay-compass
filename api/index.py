@@ -21,12 +21,14 @@ def get_dispatcher():
         from bot.handlers.menu import menu_router
         from bot.handlers.legal import legal_router
         from bot.handlers.stars import stars_router
+        from bot.handlers.routes import routes_router
 
         storage = SupabaseStorage()
         _dp = Dispatcher(storage=storage)
         _dp.include_router(onboarding_router)
         _dp.include_router(legal_router)
         _dp.include_router(menu_router)
+        _dp.include_router(routes_router)
         _dp.include_router(stars_router)
     return _dp
 

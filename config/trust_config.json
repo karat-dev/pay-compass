@@ -7,16 +7,40 @@
     "internal": 0
   },
   "freshness_points": [
-    {"max_days": 30, "points": 30},
-    {"max_days": 60, "points": 15},
-    {"max_days": null, "points": 0}
+    {
+      "max_days": 30,
+      "points": 30
+    },
+    {
+      "max_days": 60,
+      "points": 15
+    },
+    {
+      "max_days": null,
+      "points": 0
+    }
   ],
-  "agreement_points": {"agree": 20, "conflict": 0},
+  "agreement_points": {
+    "agree": 20,
+    "conflict": 0
+  },
   "zones": [
-    {"name": "green", "min": 75},
-    {"name": "yellow", "min": 50},
-    {"name": "red", "min": 25},
-    {"name": "black", "min": 0}
+    {
+      "name": "green",
+      "min": 75
+    },
+    {
+      "name": "yellow",
+      "min": 50
+    },
+    {
+      "name": "red",
+      "min": 25
+    },
+    {
+      "name": "black",
+      "min": 0
+    }
   ],
   "refuted_zone": "black",
   "verified_by_us_zone": "green",
@@ -30,8 +54,14 @@
   "recent_traveler_date": "2026-10-05",
   "display": {
     "default_min": 50,
-    "extra_hidden_zones": ["advice-unsupported"],
-    "gap_zones": ["gap"],
+    "extra_hidden_zones": [
+      "advice-unsupported"
+    ],
+    "gap_zones": [
+      "gap"
+    ],
     "gap_label": "не исследовано"
-  }
+  },
+  "verified_by_us_max_days": 180,
+  "contradicted_by_own_zone": "red"
 }
