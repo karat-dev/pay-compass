@@ -547,6 +547,8 @@ app.addEventListener("change", (event) => {
   const field = event.target.dataset.field;
   if (field === "depart_date" || field === "return_date") {
     state.draft[field === "depart_date" ? "depart_date" : "return_date"] = event.target.value;
+    state.message = "";
+    draw();
   }
 });
 

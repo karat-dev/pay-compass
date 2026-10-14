@@ -7,10 +7,12 @@ import {
   hasHidden,
   icon,
   nightsBetween,
+  parseRoute,
   searchRows,
   sectionOf,
   splitName,
   stepPosition,
+  ruCount,
   ticketsUrl,
   visibleFacts,
   visibleSteps,
@@ -268,8 +270,8 @@ function countryScreen(state, screen) {
     const count = visibleFacts(section.facts, false).length
       + (section.subsections || []).reduce((sum, sub) => sum + visibleFacts(sub.facts, false).length, 0);
     const guideCount = (section.instructions || []).length;
-    let meta = section.applicable ? `${count} факт.` : "не применимо";
-    if (guideCount) meta += ` · ${guideCount} инстр.`;
+    let meta = section.applicable ? ruCount(count, "факт", "факта", "фактов") : "не применимо";
+    if (guideCount) meta += ` · ${ruCount(guideCount, "инструкция", "инструкции", "инструкций")}`;
     return `<button type="button" class="section-tile" data-action="open-section" data-slug="${esc(country.slug)}" data-key="${esc(section.key)}">
       <span class="section-index">${esc(section.key.slice(0, 1))}</span>
       <span>
@@ -307,6 +309,9 @@ function sectionScreen(state, screen) {
     const title = pool.title ? `<h3>${esc(pool.title)}</h3>` : "";
     if (pool.note) return `${title}<p class="hint">${esc(pool.note)}</p>`;
     if (!facts.length && !pool.title) {
+      const subsections = section.subsections || [];
+      const nested = subsections.some((sub) => visibleFacts(sub.facts || [], show).length || sub.note);
+      if (nested) return "";
       return `<p class="hint">${show ? "Дополнительных непроверенных фактов нет." : "В зелёной и жёлтой зоне фактов нет."}</p>`;
     }
     if (!facts.length) return `${title}<p class="hint">${show ? "Дополнительных непроверенных фактов нет." : "В зелёной и жёлтой зоне фактов нет."}</p>`;
@@ -320,8 +325,8 @@ function sectionScreen(state, screen) {
     <p class="eyebrow">${esc(splitName(country.name).title)}</p>
     <h2>${esc(section.title)}</h2>
     ${toggle}
-    ${guides}
     ${blocks}
+    ${guides}
   </section>`;
 }
 
@@ -333,7 +338,7 @@ function instructionTeaser(state, slug, id) {
   return `<button type="button" class="instruction-card" data-action="open-instruction" data-slug="${esc(slug)}" data-id="${esc(id)}">
     <span class="eyebrow">По шагам</span>
     <strong>${esc(instruction.service)}</strong>
-    <span class="hint">${done ? `сделано ${done} из ${steps.length}` : `${steps.length} шаг.`}</span>
+    <span class="hint">${done ? `сделано ${done} из ${steps.length}` : ruCount(steps.length, "шаг", "шага", "шагов")}</span>
   </button>`;
 }
 

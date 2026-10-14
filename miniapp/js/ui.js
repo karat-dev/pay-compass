@@ -240,3 +240,10 @@ export function applyTheme() {
 export function isLocalHost() {
   return location.hostname === "localhost" || location.hostname === "127.0.0.1";
 }
+
+export function ruCount(count, one, few, many) {
+  const n10 = count % 10;
+  const n100 = count % 100;
+  const word = n10 === 1 && n100 !== 11 ? one : n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14) ? few : many;
+  return `${count} ${word}`;
+}
