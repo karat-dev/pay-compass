@@ -41,20 +41,26 @@
 ```text
 .
 ├── landing/               # Статический лендинг «Умный туризм» (ex smart-travel-landing)
+├── miniapp/               # Telegram Mini App: основной интерфейс
 ├── docs/                  # MONOREPO, Supabase hosting, product brief, Grok
 ├── bot/
-│   ├── handlers/          # Онбординг, главное меню, Stars, юридические команды
-│   ├── keyboards/         # Inline клавиатуры шагов и меню
+│   ├── handlers/          # /start открывает Mini App; старые callback-и ещё живы
+│   ├── keyboards/         # Клавиатура входа и старые inline-меню
+│   ├── notifications.py   # Уведомления со ссылкой на экран Mini App
 │   ├── states.py          # OnboardingStates & MainMenuStates
 │   └── storage.py         # SupabaseStorage для FSM
 ├── config/
 │   └── settings.py        # Pydantic Settings
 ├── database/
 │   ├── client.py          # Асинхронный клиент к Supabase / PostgREST
-│   ├── migrations/        # SQL DDL (16 таблиц)
+│   ├── knowledge_base.py  # Страны, факты, инструкции
+│   ├── miniapp_catalog.py # Публичный каталог для Mini App (без оценок)
+│   ├── miniapp_store.py   # Профиль, поездка, прогресс, сообщения о неточностях
+│   ├── migrations/        # SQL DDL
 │   └── repositories/      # Users, Sources, Countries
+├── api/                   # Vercel: вебхук бота и /api/catalog, /api/miniapp/*
 ├── scrapers/              # Crawlee, Telethon, RSS fallback
-├── texts/                 # Дословные тексты онбординга и политика 152-ФЗ
+├── texts/                 # Тексты онбординга и политика 152-ФЗ
 ├── tests/                 # Модульные тесты
 ├── main.py                # Точка входа бота
 ├── run_scrapers.py        # Cron runner сбора данных
@@ -103,3 +109,54 @@ python3 -m pytest -v tests/
 ```bash
 python3 run_scrapers.py
 ```
+
+---
+
+## Telegram Mini App
+
+Основной интерфейс — Mini App (`miniapp/`). Чат бота остаётся для уведомлений со ссылкой на экран и для кнопки меню / `/start`, которая открывает приложение. Факты не копируются вручную: `/api/catalog` собирает их из `database/data/countries.json`, `config/trust_config.json` и `database/data/routes/` теми же правилами зон, что и бот. Оценки и внутренние пометки в ответ не попадают. Факты ниже `display.default_min` (50) скрыты за «Показать непроверенное».
+
+Локально, на реальных данных и без Telegram:
+
+```bash
+python3 -m miniapp
+```
+
+Откройте `http://127.0.0.1:4173/miniapp/`. Процесс включает `MINIAPP_DEV_AUTH` и пишет профиль в `miniapp/.local-data/` (файл в gitignore), пока Supabase не настроен. На Vercel этот флаг должен быть выключен.
+
+### Переменные окружения
+
+Уже нужные для бота: `BOT_TOKEN` (им проверяется подпись Telegram `initData`), `SUPABASE_URL`, `SUPABASE_KEY`.
+
+| Переменная | Где | Зачем |
+|---|---|---|
+| `MINIAPP_URL` | Vercel и бот | Публичный https-адрес приложения, со слэшем на конце. Пример: `https://<проект>.vercel.app/miniapp/` |
+| `SUPABASE_KEY` | только сервер | **service role** единого проекта. anon-ключ в браузер не кладём: RLS на таблицах Mini App без политик для anon |
+| `MINIAPP_DEV_AUTH` | только локально | `1` принимает `initData` вида `dev:<telegram id>`. На Vercel не задавать |
+| `MINIAPP_INITDATA_MAX_AGE_SECONDS` | сервер | Срок жизни `initData`, по умолчанию 86400 |
+
+Секреты только в env. В репозиторий не коммитить.
+
+### BotFather и кнопки
+
+1. Menu Button → URL = значение `MINIAPP_URL` (`https://<проект>.vercel.app/miniapp/`).
+2. После деплоя один раз откройте `https://<проект>.vercel.app/api/set_webhook`. Обработчик вешает вебхук и вызывает `setChatMenuButton` с тем же URL.
+3. `/start` шлёт кнопку «Открыть приложение». Параметр `/start guide_china` открывает Китай. Так же работают `trip`, `guide`, `sos`, `profile`, `search`, `section_china_2_pay_on_site`, `instruction_wechat_pay`.
+4. Уведомления собирайте через `bot.notifications.notification_message(text, screen)`: в чат уходит текст и кнопка на экран, не карточка справочника.
+5. Прямая ссылка `t.me/<bot>/<short_name>?startapp=guide_china` заработает после того, как Mini App получит short name в BotFather. Кнопка меню от short name не зависит.
+
+### Vercel
+
+Тот же проект, что и лендинг. `vercel.json` отдаёт `/miniapp/` как статику, `/api/*` — в `api/index.py`, остальное — лендинг. Отдельный сервер не нужен.
+
+Эндпоинты: `GET /api/catalog` (публичный), `GET /api/miniapp/config`, `POST /api/miniapp/session|onboarding|profile|trip|progress|report`. Запись требует заголовок `X-Telegram-Init-Data`.
+
+### Supabase
+
+Накатите миграцию `supabase/migrations/20261014000000_miniapp.sql` (таблицы `miniapp_profiles`, `miniapp_trips`, `miniapp_progress`, `miniapp_fact_reports`). Тот же SQL лежит в `database/migrations/002_miniapp.sql`.
+
+GitHub Actions катит `supabase/migrations/` при пуше в `main`, если заданы `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`, `SUPABASE_DB_PASSWORD`. Либо вставьте файл в SQL Editor.
+
+Команда `/delete_me` удаляет и эти строки. Сообщения о неточности пишутся в `miniapp_fact_reports` (у фактов из JSON нет UUID в `verified_facts`).
+
+Согласие по 152-ФЗ спрашивается в онбординге Mini App. В чате по-прежнему есть `/privacy`, `/my_data`, `/delete_me`.

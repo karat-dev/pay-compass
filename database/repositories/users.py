@@ -1,7 +1,10 @@
+import logging
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 from database.client import db
 from config.settings import settings
+
+logger = logging.getLogger(__name__)
 
 class UserRepository:
     """Repository for users, legal consent, country access windows, and product events."""
@@ -135,4 +138,9 @@ class UserRepository:
         await db.delete("events", {"user_id": f"eq.{telegram_id}"})
         await db.delete("subscriptions", {"user_id": f"eq.{telegram_id}"})
         await db.delete("users", {"telegram_id": f"eq.{telegram_id}"})
+        try:
+            from database.miniapp_store import delete_miniapp_user
+            await delete_miniapp_user(telegram_id)
+        except Exception as exc:
+            logger.warning("miniapp delete skipped: %s", exc)
         return True

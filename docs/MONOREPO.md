@@ -41,6 +41,7 @@ Workflow `.github/workflows/supabase_deploy.yml` накатывает мигра
 | Компонент | Куда |
 |-----------|------|
 | Бот (webhook) | Vercel → `/api/set_webhook`, polling локально `python3 main.py` |
+| Mini App | Vercel `/miniapp/`, локально `python3 -m miniapp` |
 | Лендинг | Vercel `/` или Supabase Storage в том же project ref |
 | Миграции | GitHub Actions → `supabase db push` |
 

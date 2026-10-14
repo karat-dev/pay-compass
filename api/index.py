@@ -33,7 +33,21 @@ def get_dispatcher():
     return _dp
 
 class handler(BaseHTTPRequestHandler):
+    def _serve_miniapp(self, method: str) -> bool:
+        from api.miniapp_http import READ_ROUTES, WRITE_ROUTES, dispatch, extract_route
+
+        route = extract_route(self.path)
+        if route not in READ_ROUTES and route not in WRITE_ROUTES:
+            return False
+        length = int(self.headers.get("Content-Length", 0) or 0) if method == "POST" else 0
+        body = self.rfile.read(length) if length else b""
+        status, payload = dispatch(method, route, body, dict(self.headers.items()))
+        self._send_json(status, payload)
+        return True
+
     def do_GET(self):
+        if self._serve_miniapp("GET"):
+            return
         try:
             from config.settings import settings
             token_valid = bool(settings.BOT_TOKEN and ":" in settings.BOT_TOKEN)
@@ -62,6 +76,8 @@ class handler(BaseHTTPRequestHandler):
             })
 
     def do_POST(self):
+        if self._serve_miniapp("POST"):
+            return
         try:
             from config.settings import settings
             secret_header = self.headers.get("X-Telegram-Bot-Api-Secret-Token")
@@ -93,8 +109,15 @@ class handler(BaseHTTPRequestHandler):
             secret_token=settings.WEBHOOK_SECRET,
             drop_pending_updates=True
         )
+        menu_set = False
+        try:
+            from bot.notifications import ensure_menu_button
+            await ensure_menu_button(bot)
+            menu_set = True
+        except Exception:
+            menu_set = False
         await bot.session.close()
-        return {"success": success, "webhook_url": webhook_url}
+        return {"success": success, "webhook_url": webhook_url, "menu_button": menu_set}
 
     async def _process_update(self, data, settings):
         from aiogram import Bot

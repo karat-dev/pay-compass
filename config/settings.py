@@ -41,4 +41,10 @@ class Settings(BaseSettings):
     # Stars Pricing
     STARS_PRICE_90_DAYS: int = 150
 
+    # Telegram Mini App. URL must be https in production (BotFather menu button).
+    # MINIAPP_DEV_AUTH accepts the local "dev:<id>" initData. Leave it unset on Vercel.
+    MINIAPP_URL: str = "http://127.0.0.1:4173/miniapp/"
+    MINIAPP_DEV_AUTH: bool = False
+    MINIAPP_INITDATA_MAX_AGE_SECONDS: int = 86400
+
 settings = Settings()

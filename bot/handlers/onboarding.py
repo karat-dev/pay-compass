@@ -2,7 +2,6 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from datetime import datetime, timezone, timedelta
 import logging
 
 from bot.states import OnboardingStates, MainMenuStates
@@ -10,12 +9,13 @@ from bot.keyboards.onboarding_kb import (
     get_step_1_kb, get_step_2_kb, get_step_3_kb, get_step_4_kb, get_soft_resume_kb
 )
 from bot.keyboards.menu_kb import get_main_menu_kb
+from bot.keyboards.miniapp_kb import get_start_keyboard
+from bot.notifications import MINIAPP_START_TEXT, ensure_menu_button, screen_from_start
 from texts.onboarding import (
     STEP_1_TEXT, STEP_2_TEXT, STEP_3_TEXT, STEP_4_TEXT, STEP_5_TEXT
 )
 from texts.privacy_policy import PRIVACY_POLICY_TEXT
 from database.repositories.users import UserRepository
-from bot.storage import SupabaseStorage
 
 logger = logging.getLogger(__name__)
 onboarding_router = Router(name="onboarding")
@@ -67,38 +67,21 @@ async def show_step(target_step: int, message_or_cb, state: FSMContext, user_id:
 
 @onboarding_router.message(CommandStart())
 async def handle_start(message: Message, state: FSMContext):
+    """Open the Mini App. Consent and the trip are collected inside it, not via inline buttons."""
     user_id = message.from_user.id
     username = message.from_user.username
-    await UserRepository.log_event(user_id, "/start")
-
-    user = await UserRepository.get_or_create_user(user_id, username)
-    consent_given = user.get("consent_given", False)
-
-    # If consent already given -> straight to main menu
-    if consent_given:
+    screen = screen_from_start(message.text)
+    try:
+        await UserRepository.log_event(user_id, "/start", {"screen": screen or "trip"})
+        await UserRepository.get_or_create_user(user_id, username)
+    except Exception as exc:
+        logger.warning("start user sync skipped: %s", exc)
+    try:
         await state.set_state(MainMenuStates.idle)
-        await message.answer(STEP_5_TEXT, reply_markup=get_main_menu_kb())
-        return
-
-    # Check pause duration for soft resume (> 24 hours)
-    storage: SupabaseStorage = state.storage
-    last_updated = await storage.get_updated_at(user_id) if hasattr(storage, "get_updated_at") else None
-    saved_step = user.get("onboarding_step", 1)
-
-    if last_updated and saved_step in [2, 3]:
-        now = datetime.now(timezone.utc)
-        if now - last_updated > timedelta(hours=24):
-            await state.set_state(OnboardingStates.soft_resume_prompt)
-            await UserRepository.log_event(user_id, "onboarding_paused_resumed_prompt", {"saved_step": saved_step})
-            await message.answer(
-                "С возвращением! Продолжим оформление или начнем заново?",
-                reply_markup=get_soft_resume_kb(saved_step)
-            )
-            return
-
-    # Otherwise resume exactly from current step or start at step 1
-    await UserRepository.log_event(user_id, "onboarding_resumed", {"step": saved_step})
-    await show_step(saved_step, message, state, user_id)
+    except Exception as exc:
+        logger.warning("start state skipped: %s", exc)
+    await message.answer(MINIAPP_START_TEXT, reply_markup=get_start_keyboard(screen or None))
+    await ensure_menu_button(message.bot)
 
 
 @onboarding_router.callback_query(F.data == "onboarding_next_2")
