@@ -49,8 +49,8 @@ class handler(BaseHTTPRequestHandler):
         if self._serve_miniapp("GET"):
             return
         try:
-            from config.settings import settings
-            token_valid = bool(settings.BOT_TOKEN and ":" in settings.BOT_TOKEN)
+            from config.settings import settings, telegram_bot_token_configured
+            token_valid = telegram_bot_token_configured()
 
             # Check incoming request path
             is_set_webhook = "set_webhook" in self.path or "webhook" in self.path

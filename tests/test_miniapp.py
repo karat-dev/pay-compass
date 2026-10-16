@@ -341,6 +341,15 @@ def test_partner_links_and_bot_username(monkeypatch):
     status, payload = dispatch("GET", "miniapp/config", b"")
     assert payload["bot_url"] == "https://t.me/ExampleBot"
 
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    status, payload = dispatch("GET", "miniapp/config", b"")
+    assert status == 200
+    assert payload["token_configured"] is False
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "present")
+    status, payload = dispatch("GET", "miniapp/config", b"")
+    assert payload["token_configured"] is True
+    assert "present" not in json.dumps(payload)
+
     root = Path(__file__).resolve().parents[1]
     screens = (root / "miniapp" / "js" / "screens.js").read_text(encoding="utf-8")
     assert "kiwitaxi" not in screens.lower()

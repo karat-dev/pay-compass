@@ -62,6 +62,14 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
+def telegram_bot_token_configured() -> bool:
+    """True when TELEGRAM_BOT_TOKEN is set in the environment. The value is never returned."""
+    import os
+
+    value = os.environ.get("TELEGRAM_BOT_TOKEN")
+    return isinstance(value, str) and bool(value.strip())
+
+
 def bot_username() -> str:
     return settings.BOT_USERNAME or ""
 

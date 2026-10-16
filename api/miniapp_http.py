@@ -10,7 +10,7 @@ from typing import Any, Dict, Mapping, Optional
 from urllib.parse import parse_qs, urlparse
 
 from api.telegram_auth import AuthError, validate_init_data
-from config.settings import bot_url, bot_username, settings
+from config.settings import bot_url, bot_username, settings, telegram_bot_token_configured
 from database.knowledge_base import INSTRUCTIONS, SECTION_KEYS
 from database.miniapp_catalog import (
     find_fact,
@@ -183,6 +183,7 @@ async def _handle(method: str, route: str, body: bytes, headers: Mapping[str, st
             "storage": "supabase" if _uses_supabase() else "local-file",
             "bot_username": bot_username(),
             "bot_url": bot_url(),
+            "token_configured": telegram_bot_token_configured(),
         }
     if route not in WRITE_ROUTES:
         if route in READ_ROUTES:
