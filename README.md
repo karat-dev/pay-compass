@@ -80,7 +80,7 @@ pip install -r requirements.txt
 2. Настройте конфигурацию:
 ```bash
 cp .env.example .env
-# Заполните BOT_TOKEN, SUPABASE_URL, SUPABASE_KEY
+# Заполните TELEGRAM_BOT_TOKEN, SUPABASE_URL, SUPABASE_KEY
 ```
 
 3. Примените SQL-миграции в Supabase:
@@ -126,10 +126,12 @@ python3 -m miniapp
 
 ### Переменные окружения
 
-Уже нужные для бота: `BOT_TOKEN` (им проверяется подпись Telegram `initData`), `SUPABASE_URL`, `SUPABASE_KEY`.
+Токен бота читается из `TELEGRAM_BOT_TOKEN`. Если она пустая, используется `BOT_TOKEN`. Им же проверяется подпись Telegram `initData`. Также нужны `SUPABASE_URL` и `SUPABASE_KEY`.
 
 | Переменная | Где | Зачем |
 |---|---|---|
+| `TELEGRAM_BOT_TOKEN` | Vercel, бот, GitHub Actions | Токен BotFather. Единственное имя, которое нужно задавать |
+| `BOT_TOKEN` | запасное | Старое имя. Учитывается только когда `TELEGRAM_BOT_TOKEN` пустой |
 | `BOT_USERNAME` | Vercel, бот, лендинг | Публичный username без `@`. Лендинг берёт его из `GET /api/miniapp/config` и собирает ссылки `t.me`. В коде и вёрстке username не зашит |
 | `MINIAPP_URL` | Vercel и бот | Публичный https-адрес приложения, со слэшем на конце. Пример: `https://<проект>.vercel.app/miniapp/` |
 | `SUPABASE_KEY` | только сервер | **service role** единого проекта. anon-ключ в браузер не кладём: RLS на таблицах Mini App без политик для anon |

@@ -10,7 +10,7 @@ from typing import Any, Dict, Mapping, Optional
 from urllib.parse import parse_qs, urlparse
 
 from api.telegram_auth import AuthError, validate_init_data
-from config.settings import bot_url, bot_username, settings, telegram_bot_token_configured
+from config.settings import bot_token, bot_url, bot_username, settings, telegram_bot_token_configured
 from database.knowledge_base import INSTRUCTIONS, SECTION_KEYS
 from database.miniapp_catalog import (
     find_fact,
@@ -120,7 +120,7 @@ def _identity(headers: Mapping[str, str], body: Mapping[str, Any]) -> Dict[str, 
     init_data = header_map.get("x-telegram-init-data") or body.get("init_data") or ""
     return validate_init_data(
         str(init_data),
-        bot_token=settings.BOT_TOKEN,
+        bot_token=bot_token(),
         dev_auth=bool(settings.MINIAPP_DEV_AUTH),
         max_age_seconds=int(settings.MINIAPP_INITDATA_MAX_AGE_SECONDS),
     )

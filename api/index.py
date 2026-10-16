@@ -99,7 +99,8 @@ class handler(BaseHTTPRequestHandler):
 
     async def _set_webhook(self, settings):
         from aiogram import Bot
-        bot = Bot(token=settings.BOT_TOKEN)
+        from config.settings import bot_token
+        bot = Bot(token=bot_token())
         host = self.headers.get("x-forwarded-host") or self.headers.get("host")
         if host:
             host = f"https://{host}"
@@ -123,7 +124,8 @@ class handler(BaseHTTPRequestHandler):
         from aiogram import Bot
         from aiogram.types import Update
 
-        bot = Bot(token=settings.BOT_TOKEN)
+        from config.settings import bot_token
+        bot = Bot(token=bot_token())
         dp = get_dispatcher()
 
         try:

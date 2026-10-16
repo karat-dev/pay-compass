@@ -341,14 +341,28 @@ def test_partner_links_and_bot_username(monkeypatch):
     status, payload = dispatch("GET", "miniapp/config", b"")
     assert payload["bot_url"] == "https://t.me/ExampleBot"
 
+    from config.settings import bot_token
+
     monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("BOT_TOKEN", raising=False)
+    monkeypatch.setattr(settings, "TELEGRAM_BOT_TOKEN", "")
+    monkeypatch.setattr(settings, "BOT_TOKEN", "mock_token_for_dev")
     status, payload = dispatch("GET", "miniapp/config", b"")
     assert status == 200
     assert payload["token_configured"] is False
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "present")
+    assert bot_token() == "mock_token_for_dev"
+
+    monkeypatch.setenv("BOT_TOKEN", "fallback-token")
+    assert bot_token() == "fallback-token"
     status, payload = dispatch("GET", "miniapp/config", b"")
     assert payload["token_configured"] is True
-    assert "present" not in json.dumps(payload)
+    assert "fallback-token" not in json.dumps(payload)
+
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "primary-token")
+    assert bot_token() == "primary-token"
+    status, payload = dispatch("GET", "miniapp/config", b"")
+    assert payload["token_configured"] is True
+    assert "primary-token" not in json.dumps(payload)
 
     root = Path(__file__).resolve().parents[1]
     screens = (root / "miniapp" / "js" / "screens.js").read_text(encoding="utf-8")

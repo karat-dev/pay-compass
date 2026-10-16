@@ -5,7 +5,8 @@ from typing import Optional, Union, Any
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    # Telegram Bot
+    # Telegram Bot. TELEGRAM_BOT_TOKEN is the name to set. BOT_TOKEN is only a fallback.
+    TELEGRAM_BOT_TOKEN: str = ""
     BOT_TOKEN: str = "mock_token_for_dev"
     ADMIN_TELEGRAM_ID: int = 303653591
     BOT_NAME: str = "TravelPayBot"
@@ -62,12 +63,29 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
-def telegram_bot_token_configured() -> bool:
-    """True when TELEGRAM_BOT_TOKEN is set in the environment. The value is never returned."""
+_MOCK_BOT_TOKEN = "mock_token_for_dev"
+
+
+def _clean_token(value: Any) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    return ""
+
+
+def bot_token() -> str:
+    """Bot token from TELEGRAM_BOT_TOKEN, then BOT_TOKEN. Never log the result."""
     import os
 
-    value = os.environ.get("TELEGRAM_BOT_TOKEN")
-    return isinstance(value, str) and bool(value.strip())
+    primary = _clean_token(os.environ.get("TELEGRAM_BOT_TOKEN")) or _clean_token(settings.TELEGRAM_BOT_TOKEN)
+    if primary:
+        return primary
+    return _clean_token(os.environ.get("BOT_TOKEN")) or _clean_token(settings.BOT_TOKEN)
+
+
+def telegram_bot_token_configured() -> bool:
+    """True when a token is set under either name. The mock default does not count. The value is never returned."""
+    token = bot_token()
+    return bool(token) and token != _MOCK_BOT_TOKEN
 
 
 def bot_username() -> str:
