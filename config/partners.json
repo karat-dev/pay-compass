@@ -1,0 +1,30 @@
+{
+  "marker": "765617",
+  "project_id": "PLACEHOLDER_TRAVELPAYOUTS_PROJECT_ID",
+  "partners": {
+    "kiwitaxi": {
+      "label": "KiwiTaxi",
+      "token": "{KIWITAXI_LINK}",
+      "status": "ready",
+      "url_template": "https://c1.travelpayouts.com/click?shmarker={marker}&promo_id=647&source_type=customlink&type=click&custom_url={destination}",
+      "destination": "https://kiwitaxi.com/",
+      "note": "Custom-link с публичной страницы оффера Kiwitaxi на Travelpayouts: promo_id 647, shmarker — маркер партнёра. Проверено 16.10.2026."
+    },
+    "welcome_pickups": {
+      "label": "Welcome Pickups",
+      "token": "{WELCOME_PICKUPS_LINK}",
+      "status": "placeholder",
+      "url_template": "PLACEHOLDER_WELCOME_PICKUPS_TRAVELPAYOUTS_LINK",
+      "destination": "",
+      "note": "PLACEHOLDER: на странице оффера Welcome Pickups есть виджет content?promo_id=8951, но шаблон кликовой партнёрской ссылки не опубликован. Вставьте готовую ссылку из кабинета Travelpayouts (Tools) вместо url_template и поставьте status ready."
+    },
+    "airalo": {
+      "label": "Airalo",
+      "token": "{AIRALO_LINK}",
+      "status": "needs_project_id",
+      "url_template": "https://tp.media/r?marker={marker}&trs={project_id}&p=8310&u={destination}&campaign_id=541",
+      "destination": "https://www.airalo.com/",
+      "note": "Шаблон подтверждён справкой Travelpayouts «Data from Airalo» и страницей оффера: p=8310, campaign_id=541. trs — id проекта в кабинете (project_id). Пока project_id — заглушка, ссылка в интерфейс не попадает."
+    }
+  }
+}

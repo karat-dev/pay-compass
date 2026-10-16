@@ -61,6 +61,7 @@ def test_route_card_loads_from_json():
         assert body.strip()
         assert "{KIWITAXI_LINK}" not in body
         assert "{AIRALO_LINK}" not in body
+        assert "{WELCOME_PICKUPS_LINK}" not in body
         assert all(len(page) <= TELEGRAM_MESSAGE_LIMIT for page in split_telegram_html(body))
 
 
@@ -81,9 +82,18 @@ def test_route_keyboard_and_menu_entry():
     assert "country_hong_kong" in _callbacks(payment)
     assert "route_open:mow_hkg_via_pek" in _callbacks(payment)
     transfer = get_route("mow_hkg_via_pek")["callback_replies"]["route:mow_hkg_via_pek:1"]
-    assert "kiwitaxi.com" in transfer
+    assert "c1.travelpayouts.com/click" in transfer
+    assert f"shmarker={AVIASALES_MARKER}" in transfer
+    assert "promo_id=647" in transfer
+    assert 'href="https://kiwitaxi.com' not in transfer
+    assert "Welcome Pickups" in transfer
+    assert "{WELCOME_PICKUPS_LINK}" not in transfer
+    assert "PLACEHOLDER" not in transfer
     link = get_route("mow_hkg_via_pek")["callback_replies"]["route:mow_hkg_via_pek:2"]
-    assert "airalo.com" in link
+    assert "Airalo" in link
+    assert "{AIRALO_LINK}" not in link
+    assert "tp.media" not in link
+    assert 'href="https://www.airalo.com' not in link
     pay = get_route("mow_hkg_via_pek")["callback_replies"]["route:mow_hkg_via_pek:5"]
     assert "Компас оплаты → Китай" in pay
     assert "Гонконг" in pay

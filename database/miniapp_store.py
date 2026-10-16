@@ -42,10 +42,9 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def profile_row(telegram_id: int, username: Optional[str], fields: Dict[str, Any]) -> Dict[str, Any]:
+def profile_row(telegram_id: int, fields: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "telegram_id": telegram_id,
-        "username": username,
         "bank_id": fields["bank_id"],
         "departure_city_id": fields["departure_city_id"],
         "favorite_countries": list(fields.get("favorite_countries") or []),
@@ -219,8 +218,8 @@ class SupabaseMiniappStore:
             "progress": public_progress(progress),
         }
 
-    async def save_profile(self, telegram_id: int, username: Optional[str], fields: Dict[str, Any]) -> Dict[str, Any]:
-        row = profile_row(telegram_id, username, fields)
+    async def save_profile(self, telegram_id: int, fields: Dict[str, Any]) -> Dict[str, Any]:
+        row = profile_row(telegram_id, fields)
         saved = await self.rest.upsert("miniapp_profiles", row, "telegram_id")
         return public_profile(saved) or public_profile(row)
 
@@ -284,8 +283,8 @@ class FileMiniappStore:
             "progress": public_progress(list((data["progress"].get(key) or {}).values())),
         }
 
-    async def save_profile(self, telegram_id: int, username: Optional[str], fields: Dict[str, Any]) -> Dict[str, Any]:
-        row = profile_row(telegram_id, username, fields)
+    async def save_profile(self, telegram_id: int, fields: Dict[str, Any]) -> Dict[str, Any]:
+        row = profile_row(telegram_id, fields)
         key = str(telegram_id)
         with self._lock:
             data = self._read()

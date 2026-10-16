@@ -18,24 +18,23 @@ class UserRepository:
         return telegram_id in admin_ids
 
     @staticmethod
-    async def get_or_create_user(telegram_id: int, username: Optional[str] = None) -> Dict[str, Any]:
+    async def get_or_create_user(telegram_id: int) -> Dict[str, Any]:
         users = await db.select("users", {"telegram_id": f"eq.{telegram_id}"})
         is_adm = UserRepository.is_admin(telegram_id)
         if users:
-            # Update last_seen_at
             now = datetime.now(timezone.utc).isoformat()
-            update_data: Dict[str, Any] = {"last_seen_at": now, "username": username}
+            update_data: Dict[str, Any] = {"last_seen_at": now}
             if is_adm:
                 update_data["subscription_status"] = "premium"
             await db.update("users", update_data, {"telegram_id": f"eq.{telegram_id}"})
             user = users[0]
+            user.pop("username", None)
             if is_adm:
                 user["subscription_status"] = "premium"
             return user
         
         created = await db.insert("users", {
             "telegram_id": telegram_id,
-            "username": username,
             "consent_given": False,
             "onboarding_step": 1,
             "subscription_status": "premium" if is_adm else "free"
@@ -49,6 +48,7 @@ class UserRepository:
         users = await db.select("users", {"telegram_id": f"eq.{telegram_id}"})
         if users:
             user = users[0]
+            user.pop("username", None)
             if UserRepository.is_admin(telegram_id):
                 user["subscription_status"] = "premium"
             return user

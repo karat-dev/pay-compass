@@ -1,4 +1,3 @@
-from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List
 from database.client import db
 from database.knowledge_base import COUNTRIES_KNOWLEDGE_BASE
@@ -47,42 +46,8 @@ class CountryRepository:
 
     @staticmethod
     async def check_user_access(user_id: int, country_id: str, is_premium: bool) -> Dict[str, Any]:
-        """
-        Enforces rule:
-        - Admin or Premium: unlimited countries
-        - Free: 1 country per 7 days
-        """
-        from database.repositories.users import UserRepository
-        if is_premium or UserRepository.is_admin(user_id):
-            return {"allowed": True, "reason": "admin_or_premium"}
-
-        now = datetime.now(timezone.utc)
-        records = await db.select("user_country_access", {
-            "user_id": f"eq.{user_id}",
-            "expires_at": f"gt.{now.isoformat()}"
-        })
-
-        if not records:
-            # Grant access to this country for 7 days
-            expires_at = now + timedelta(days=7)
-            await db.insert("user_country_access", {
-                "user_id": user_id,
-                "country_id": country_id,
-                "expires_at": expires_at.isoformat()
-            })
-            return {"allowed": True, "reason": "first_free_country", "expires_at": expires_at}
-
-        # Check if requested country is the currently active unlocked country
-        active = records[0]
-        if str(active.get("country_id")) == str(country_id):
-            return {"allowed": True, "reason": "currently_unlocked", "expires_at": active.get("expires_at")}
-
-        return {
-            "allowed": False,
-            "reason": "limit_reached",
-            "active_country_id": active.get("country_id"),
-            "expires_at": active.get("expires_at")
-        }
+        """Launch is free: every country is open. The 7-day limit is not applied."""
+        return {"allowed": True, "reason": "launch_free", "country_id": country_id}
 
     @staticmethod
     async def get_country_summary(country_id: str, slug: str) -> Dict[str, Any]:

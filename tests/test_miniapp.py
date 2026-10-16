@@ -99,10 +99,18 @@ def test_banks_come_from_guides_and_route_card_has_no_price():
         "Пересадка", "Трансфер", "Связь", "Ввоз и вывоз", "Штампы и отметки", "Оплата",
     ]
     transfer = route["sections"][1]
-    assert any("kiwitaxi.com" in link["url"] for link in transfer["links"])
+    assert any(
+        "c1.travelpayouts.com/click" in link["url"] and f"shmarker={AVIASALES_MARKER}" in link["url"]
+        for link in transfer["links"]
+    )
+    assert "Welcome Pickups" in transfer["text"]
+    assert not any("PLACEHOLDER" in link["url"] for link in transfer["links"])
     internet = route["sections"][2]
-    assert any("airalo.com" in link["url"] for link in internet["links"])
+    assert "Airalo" in internet["text"]
+    assert internet["links"] == []
     assert "example.com" not in internet["text"]
+    assert "тестовый этап" in catalog["privacy"]
+    assert "[" not in catalog["privacy"]
 
 
 def test_init_data_signature_and_dev_switch():
@@ -111,9 +119,11 @@ def test_init_data_signature_and_dev_switch():
     raw = sign_init_data(fields, "test-token")
     identity = validate_init_data(raw, bot_token="test-token", max_age_seconds=1000)
     assert identity["telegram_id"] == 42
-    assert identity["username"] == "traveler"
     assert identity["start_param"] == "guide_china"
     assert identity["dev"] is False
+    assert "username" not in identity
+    assert "first_name" not in identity
+    assert "traveler" not in json.dumps(identity)
 
     tampered = raw.replace("guide_china", "guide_turkey")
     with pytest.raises(AuthError):
@@ -194,6 +204,11 @@ def test_onboarding_progress_and_report_roundtrip(local_store):
     assert payload["profile"]["bank_id"] == "tbank"
     assert payload["trip"]["destination_slug"] == "hong_kong"
     assert payload["profile"]["notify_trip"] is False
+    stored = json.loads(local_store.path.read_text(encoding="utf-8"))
+    profile_row = stored["profiles"]["1001"]
+    assert "username" not in profile_row
+    assert "phone" not in profile_row
+    assert "first_name" not in profile_row
 
     status, denied = dispatch("POST", "miniapp/session", b"{}", {})
     assert status == 401
@@ -264,7 +279,7 @@ def test_supabase_store_uses_service_tables():
     store = SupabaseMiniappStore(rest)
 
     async def run():
-        await store.save_profile(7, "s", {
+        await store.save_profile(7, {
             "bank_id": "sber",
             "departure_city_id": "kzn",
             "favorite_countries": ["turkey"],
@@ -286,11 +301,56 @@ def test_supabase_store_uses_service_tables():
     import asyncio
     asyncio.run(run())
     assert ("upsert", "miniapp_profiles", "telegram_id") == tuple(rest.calls[0][:3])
+    stored_profile = rest.calls[0][3]
+    assert "username" not in stored_profile
+    assert "phone" not in stored_profile
+    assert "first_name" not in stored_profile
     assert ("upsert", "miniapp_trips", "telegram_id") == tuple(rest.calls[1][:3])
     assert rest.calls[2][1] == "miniapp_fact_reports"
     assert {call[1] for call in rest.calls if call[0] == "delete"} == {
         "miniapp_profiles", "miniapp_trips", "miniapp_progress", "miniapp_fact_reports",
     }
+
+
+def test_partner_links_and_bot_username(monkeypatch):
+    from pathlib import Path
+
+    from database.partners import partner_href
+
+    kiwi = partner_href("kiwitaxi")
+    assert kiwi is not None
+    assert kiwi.startswith("https://c1.travelpayouts.com/click?")
+    assert "shmarker=765617" in kiwi
+    assert "promo_id=647" in kiwi
+    assert partner_href("welcome_pickups") is None
+    assert partner_href("airalo") is None
+    airalo = partner_href("airalo", project_id="4242")
+    assert airalo is not None
+    assert airalo.startswith("https://tp.media/r?")
+    assert "marker=765617" in airalo
+    assert "trs=4242" in airalo
+    assert "p=8310" in airalo
+    assert "campaign_id=541" in airalo
+
+    monkeypatch.setattr(settings, "BOT_USERNAME", "")
+    status, payload = dispatch("GET", "miniapp/config", b"")
+    assert status == 200
+    assert payload["bot_username"] == ""
+    assert payload["bot_url"] is None
+    monkeypatch.setattr(settings, "BOT_USERNAME", "ExampleBot")
+    status, payload = dispatch("GET", "miniapp/config", b"")
+    assert payload["bot_url"] == "https://t.me/ExampleBot"
+
+    root = Path(__file__).resolve().parents[1]
+    screens = (root / "miniapp" / "js" / "screens.js").read_text(encoding="utf-8")
+    assert "kiwitaxi" not in screens.lower()
+    assert "airalo" not in screens.lower()
+    assert "tp.media" not in screens
+    landing = (root / "landing" / "index.html").read_text(encoding="utf-8")
+    assert "smarttttravel" not in landing
+    assert "TravelPaymentsGuideBot" not in landing
+    example = (root / ".env.example").read_text(encoding="utf-8")
+    assert "BOT_USERNAME=" in example
 
 
 def test_supabase_flag_ignores_placeholders(monkeypatch):

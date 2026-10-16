@@ -11,7 +11,6 @@ from bot.keyboards.country_kb import (
     get_country_summary_keyboard,
     get_instruction_nav_keyboard,
     get_section_nav_keyboard,
-    get_subscription_pay_keyboard
 )
 from database.repositories.users import UserRepository
 from database.repositories.countries import CountryRepository
@@ -26,7 +25,6 @@ from database.knowledge_base import (
     section_html_pages,
 )
 from texts.onboarding import STEP_5_TEXT
-from config.settings import settings
 
 logger = logging.getLogger(__name__)
 menu_router = Router(name="main_menu")
@@ -43,10 +41,7 @@ async def handle_select_country(callback: CallbackQuery, state: FSMContext):
     await UserRepository.log_event(user_id, "select_country_clicked")
 
     countries = await CountryRepository.get_all_countries()
-    text = (
-        "🌍 **Выберите страну для получения верифицированной сводки:**\n\n"
-        "🆓 _Напоминаем: в бесплатном тарифе доступна 1 страна в 7 дней с проверенными фактами и источниками._"
-    )
+    text = "🌍 **Выберите страну для получения верифицированной сводки:**"
     await callback.message.edit_text(text, reply_markup=get_countries_keyboard(countries), parse_mode="Markdown")
 
 @menu_router.callback_query(F.data.startswith("country_"))
@@ -60,34 +55,6 @@ async def handle_country_chosen(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer("Страна не найдена.")
         return
 
-    user = await UserRepository.get_user(user_id) or {}
-    is_premium = user.get("subscription_status") == "premium" or UserRepository.is_admin(user_id)
-    if UserRepository.is_admin(user_id):
-        try:
-            await UserRepository.reset_country_limits(user_id)
-        except Exception:
-            pass
-
-    country_id = str(country.get("id") or slug)
-    access = await CountryRepository.check_user_access(user_id, country_id, is_premium)
-
-    if not access["allowed"]:
-        expires_at = access.get("expires_at", "скоро")
-        await UserRepository.log_event(user_id, "free_limit_hit", {"slug": slug})
-        text = (
-            "🔒 **Лимит бесплатного тарифа**\n\n"
-            "Вы уже открыли 1 бесплатную страну на этой неделе.\n"
-            f"Следующая бесплатная страна станет доступна после: `{expires_at[:10]}`.\n\n"
-            "⭐ **Оформите подписку**, чтобы разблокировать все страны без ограничений и получать оперативные алерты!"
-        )
-        await callback.message.edit_text(
-            text,
-            reply_markup=get_subscription_pay_keyboard(settings.STARS_PRICE_90_DAYS),
-            parse_mode="Markdown"
-        )
-        return
-
-    # User has access: show summary / interactive hub
     await UserRepository.log_event(user_id, "view_country_summary", {"slug": slug})
     expert_data = CountryRepository.get_expert_data(slug)
 
@@ -336,11 +303,11 @@ async def handle_scam_warnings(callback: CallbackQuery):
         "2. **Виртуальные карты от ботов без лицензий:**\n"
         "Массовые блокировки эмитентами карт из США и ЕС без возврата остатка средств на балансе.\n"
         "🔍 _Источник: Banki.ru | Проверено: 10.09.2026_\n\n"
-        "⭐ _Подписчикам доступны мгновенные алерты о новых схемах за последние 7 дней._"
+        "Все страны справочника открыты бесплатно."
     )
     await callback.message.edit_text(
         text,
-        reply_markup=get_subscription_pay_keyboard(settings.STARS_PRICE_90_DAYS),
+        reply_markup=get_main_menu_kb(),
         parse_mode="Markdown"
     )
 

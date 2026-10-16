@@ -67,10 +67,7 @@ def get_country_hub_keyboard(country_slug: str) -> InlineKeyboardMarkup:
     if pair:
         rows.append(pair)
     rows.extend([
-        [
-            InlineKeyboardButton(text="🚨 Сообщить об ошибке", callback_data=f"report_error_{country_slug}"),
-            InlineKeyboardButton(text="⭐ О подписке", callback_data="menu_subscription_info")
-        ],
+        [InlineKeyboardButton(text="🚨 Сообщить об ошибке", callback_data=f"report_error_{country_slug}")],
         [
             InlineKeyboardButton(text="« К списку стран", callback_data="menu_select_country"),
             InlineKeyboardButton(text="🏠 Главное меню", callback_data="back_to_menu")
@@ -209,12 +206,12 @@ def get_country_proof_keyboard(country_slug: str, proofs: List[Dict[str, Any]]) 
 def get_country_summary_keyboard(country_slug: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🚨 Сообщить об ошибке", callback_data=f"report_error_{country_slug}")],
-        [InlineKeyboardButton(text="⭐ Оформить подписку", callback_data="menu_subscription_info")],
         [InlineKeyboardButton(text="« К выбору стран", callback_data="menu_select_country")],
         [InlineKeyboardButton(text="🏠 Главное меню", callback_data="back_to_menu")]
     ])
 
 def get_subscription_pay_keyboard(stars_price: int) -> InlineKeyboardMarkup:
+    """Kept for the keyboard unit test. Launch does not attach this keyboard."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=f"⭐ Купить доступ на 90 дней ({stars_price} Stars)", callback_data="pay_stars_90_days")],
         [InlineKeyboardButton(text="« Назад в меню", callback_data="back_to_menu")]

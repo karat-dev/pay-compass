@@ -131,7 +131,7 @@ function onboarding(state) {
       </div>
       <button type="button" class="consent${draft.consent ? " is-on" : ""}" data-action="consent" aria-pressed="${draft.consent ? "true" : "false"}">
         <span class="tick">${draft.consent ? icon("check") : ""}</span>
-        <span>Согласен на обработку Telegram ID, банка, города вылета и поездки. Паспорт и карту не спрашиваем.</span>
+        <span>Согласен на обработку Telegram ID и настроек: банк, город вылета, поездка. Имя, username и телефон не сохраняем.</span>
       </button>
       <button type="button" class="text-btn" data-action="privacy">Политика конфиденциальности</button>`;
   }
@@ -193,7 +193,7 @@ function routeCard(state, route, matches) {
   }).join("");
   const current = route.sections.find((section) => section.id === open);
   const links = current
-    ? current.links.filter((link) => !link.placeholder).map((link) => `<a href="${esc(link.url)}" data-action="link" data-url="${esc(link.url)}">${esc(link.label)}</a>`).join("")
+    ? current.links.filter((link) => !link.placeholder && /^https:\/\//.test(link.url)).map((link) => `<a href="${esc(link.url)}" data-action="link" data-url="${esc(link.url)}">${esc(link.label)}</a>`).join("")
     : "";
   const url = ticketsUrl(route, state.trip && state.trip.depart_date);
   return `<article class="ticket">
@@ -424,7 +424,7 @@ function profileScreen(state) {
     <p class="hint">Бот пришлёт сообщение со ссылкой в приложение. Расписание уведомлений включим после запуска.</p>
     <div class="stack">${notifies}</div>
     <button type="button" class="text-btn" data-action="privacy">Политика конфиденциальности</button>
-    <p class="hint">Удалить данные можно командой /delete_me в чате с ботом.</p>
+    <p class="hint">Храним только Telegram ID и настройки. Удаление — команда /delete_me в чате с ботом.</p>
     ${state.message ? `<p class="form-error">${esc(state.message)}</p>` : ""}
   </section>`;
 }

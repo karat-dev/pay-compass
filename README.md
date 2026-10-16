@@ -25,9 +25,9 @@
    - Состояния и контекст сохраняются в таблице `user_states`.
    - Мягкое возобновление: при паузе > 24 часов бот предлагает продолжить или начать заново.
 
-3. **Модель монетизации и лимитов**:
-   - **Бесплатный уровень**: 1 страна в 7 дней (таблица `user_country_access`), базовые верифицированные факты.
-   - **Премиум-доступ**: покупка через **Telegram Stars (XTR)** на **90 дней** без рекуррентных рисков. Все страны, алерты реального времени.
+3. **Запуск бесплатный**:
+   - Все 6 стран открыты. Лимит «1 страна / 7 дней» не применяется, счёт Telegram Stars не выставляется.
+   - Старые кнопки оплаты отвечают, что доступ бесплатный, и не создают инвойс.
 
 4. **Мультиисточниковый сбор с отказоустойчивостью**:
    - Официальные источники (РСХБ, АТБ) через `Crawlee` с экспоненциальным backoff (5 попыток) и записью инцидентов в `source_health`.
@@ -130,6 +130,7 @@ python3 -m miniapp
 
 | Переменная | Где | Зачем |
 |---|---|---|
+| `BOT_USERNAME` | Vercel, бот, лендинг | Публичный username без `@`. Лендинг берёт его из `GET /api/miniapp/config` и собирает ссылки `t.me`. В коде и вёрстке username не зашит |
 | `MINIAPP_URL` | Vercel и бот | Публичный https-адрес приложения, со слэшем на конце. Пример: `https://<проект>.vercel.app/miniapp/` |
 | `SUPABASE_KEY` | только сервер | **service role** единого проекта. anon-ключ в браузер не кладём: RLS на таблицах Mini App без политик для anon |
 | `MINIAPP_DEV_AUTH` | только локально | `1` принимает `initData` вида `dev:<telegram id>`. На Vercel не задавать |
@@ -153,7 +154,11 @@ python3 -m miniapp
 
 ### Supabase
 
-Накатите миграцию `supabase/migrations/20261014000000_miniapp.sql` (таблицы `miniapp_profiles`, `miniapp_trips`, `miniapp_progress`, `miniapp_fact_reports`). Тот же SQL лежит в `database/migrations/002_miniapp.sql`.
+Накатите `supabase/migrations/20261014000000_miniapp.sql` (таблицы `miniapp_profiles`, `miniapp_trips`, `miniapp_progress`, `miniapp_fact_reports`) и `supabase/migrations/20261016000000_drop_username.sql` (из `users` и профиля убирается username). Те же файлы лежат в `database/migrations/002_miniapp.sql` и `003_drop_username.sql`.
+
+Профиль хранит Telegram ID и настройки. Имя, username и телефон не пишутся. Удаление — `/delete_me` или `/delete_account`.
+
+Партнёрские ссылки трансфера и eSIM собираются из `config/partners.json` (маркер Travelpayouts `765617`). В интерфейсе URL не зашиты.
 
 GitHub Actions катит `supabase/migrations/` при пуше в `main`, если заданы `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`, `SUPABASE_DB_PASSWORD`. Либо вставьте файл в SQL Editor.
 

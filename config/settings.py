@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     BOT_TOKEN: str = "mock_token_for_dev"
     ADMIN_TELEGRAM_ID: int = 303653591
     BOT_NAME: str = "TravelPayBot"
+    # Public @username without @. Empty until set. Never hard-code a live username in links.
+    BOT_USERNAME: str = ""
     WEBHOOK_SECRET: str = "travelpay_webhook_secret"
     VERCEL_URL: Optional[str] = None
 
@@ -35,6 +37,16 @@ class Settings(BaseSettings):
             return None
         return v
 
+    @field_validator("BOT_USERNAME", mode="before")
+    @classmethod
+    def strip_bot_username(cls, v: Any) -> str:
+        if v is None:
+            return ""
+        name = str(v).strip()
+        if name.startswith("@"):
+            name = name[1:]
+        return name
+
     # Scrapers
     RSHB_UNIONPAY_URL: str = "https://www.rshb.ru/natural/cards/tariffs/unionpay"
 
@@ -48,3 +60,20 @@ class Settings(BaseSettings):
     MINIAPP_INITDATA_MAX_AGE_SECONDS: int = 86400
 
 settings = Settings()
+
+
+def bot_username() -> str:
+    return settings.BOT_USERNAME or ""
+
+
+def bot_url(text: Optional[str] = None) -> Optional[str]:
+    """t.me link for the product bot. None until BOT_USERNAME is set."""
+    name = bot_username()
+    if not name:
+        return None
+    from urllib.parse import quote
+
+    url = f"https://t.me/{name}"
+    if text:
+        url = f"{url}?text={quote(text)}"
+    return url

@@ -10,7 +10,7 @@ from typing import Any, Dict, Mapping, Optional
 from urllib.parse import parse_qs, urlparse
 
 from api.telegram_auth import AuthError, validate_init_data
-from config.settings import settings
+from config.settings import bot_url, bot_username, settings
 from database.knowledge_base import INSTRUCTIONS, SECTION_KEYS
 from database.miniapp_catalog import (
     find_fact,
@@ -157,7 +157,7 @@ async def _remember_user(identity: Dict[str, Any]) -> None:
     try:
         from database.repositories.users import UserRepository
 
-        await UserRepository.get_or_create_user(identity["telegram_id"], identity.get("username"))
+        await UserRepository.get_or_create_user(identity["telegram_id"])
     except Exception as exc:
         logger.warning("miniapp user sync skipped: %s", exc)
 
@@ -181,6 +181,8 @@ async def _handle(method: str, route: str, body: bytes, headers: Mapping[str, st
             "dev_auth": bool(settings.MINIAPP_DEV_AUTH),
             "miniapp_url": settings.MINIAPP_URL,
             "storage": "supabase" if _uses_supabase() else "local-file",
+            "bot_username": bot_username(),
+            "bot_url": bot_url(),
         }
     if route not in WRITE_ROUTES:
         if route in READ_ROUTES:
@@ -214,7 +216,7 @@ async def _handle(method: str, route: str, body: bytes, headers: Mapping[str, st
             return 200, bundle
         if route == "miniapp/profile":
             fields = _clean_profile(payload, require_complete=True)
-            profile = await store.save_profile(telegram_id, identity.get("username"), fields)
+            profile = await store.save_profile(telegram_id, fields)
             await _mark_consent(identity, profile)
             return 200, {"profile": profile}
         if route == "miniapp/trip":
@@ -230,7 +232,7 @@ async def _handle(method: str, route: str, body: bytes, headers: Mapping[str, st
             if profile_fields["departure_city_id"] and not trip_fields.get("departure_city_id"):
                 trip_fields["departure_city_id"] = profile_fields["departure_city_id"]
             trip = await store.save_trip(telegram_id, trip_fields)
-            profile = await store.save_profile(telegram_id, identity.get("username"), profile_fields)
+            profile = await store.save_profile(telegram_id, profile_fields)
             await _mark_consent(identity, profile)
             return 200, {"profile": profile, "trip": trip}
         if route == "miniapp/progress":

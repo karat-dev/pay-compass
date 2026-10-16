@@ -61,7 +61,6 @@ def validate_init_data(
             raise AuthError(401, "Некорректный локальный пользователь.")
         return {
             "telegram_id": telegram_id,
-            "username": "dev",
             "start_param": None,
             "dev": True,
         }
@@ -93,10 +92,8 @@ def validate_init_data(
         raise AuthError(401, "Не удалось подтвердить Telegram.")
 
     start_param = pairs.get("start_param") or None
-    username = user.get("username")
     return {
         "telegram_id": int(user["id"]),
-        "username": username if isinstance(username, str) else None,
         "start_param": start_param,
         "dev": False,
     }

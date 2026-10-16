@@ -6,7 +6,7 @@
 
 | Было | Роль | Сейчас |
 |------|------|--------|
-| `smart-travel-landing` | Лендинг «Умный туризм», Telegram @smarttttravel | `landing/` |
+| `smart-travel-landing` | Лендинг «Умный туризм», ссылка на бота из `BOT_USERNAME` | `landing/` |
 | `pay-compass` | Telegram-бот справочника по оплате за границей + БД | корень репо (`bot/`, `database/`, …) |
 | `flight-navigator` | Оболочка продукта (авиа, калькуляторы, контент) | этот репозиторий |
 

@@ -3,7 +3,6 @@
 
 CREATE TABLE IF NOT EXISTS miniapp_profiles (
     telegram_id BIGINT PRIMARY KEY,
-    username TEXT,
     bank_id TEXT,
     departure_city_id TEXT,
     favorite_countries JSONB NOT NULL DEFAULT '[]'::jsonb,

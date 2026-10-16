@@ -69,11 +69,10 @@ async def show_step(target_step: int, message_or_cb, state: FSMContext, user_id:
 async def handle_start(message: Message, state: FSMContext):
     """Open the Mini App. Consent and the trip are collected inside it, not via inline buttons."""
     user_id = message.from_user.id
-    username = message.from_user.username
     screen = screen_from_start(message.text)
     try:
         await UserRepository.log_event(user_id, "/start", {"screen": screen or "trip"})
-        await UserRepository.get_or_create_user(user_id, username)
+        await UserRepository.get_or_create_user(user_id)
     except Exception as exc:
         logger.warning("start user sync skipped: %s", exc)
     try:
