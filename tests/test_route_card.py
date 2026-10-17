@@ -94,6 +94,7 @@ def test_route_keyboard_and_menu_entry():
     assert "{AIRALO_LINK}" not in link
     assert "tp.media" not in link
     assert 'href="https://www.airalo.com' not in link
+    assert 'href="https://airalo.tpk.lv/WJxbG8Hh?erid=2VtzqwXiejf"' in link
     pay = get_route("mow_hkg_via_pek")["callback_replies"]["route:mow_hkg_via_pek:5"]
     assert "Компас оплаты → Китай" in pay
     assert "Гонконг" in pay

@@ -16,15 +16,14 @@
       "status": "placeholder",
       "url_template": "PLACEHOLDER_WELCOME_PICKUPS_TRAVELPAYOUTS_LINK",
       "destination": "",
-      "note": "PLACEHOLDER: на странице оффера Welcome Pickups есть виджет content?promo_id=8951, но шаблон кликовой партнёрской ссылки не опубликован. Вставьте готовую ссылку из кабинета Travelpayouts (Tools) вместо url_template и поставьте status ready."
+      "note": "PLACEHOLDER: на странице оффера Welcome Pickups есть виджет content?promo_id=8951, но шаблон кликовой партнёрской ссылки не опубликован. Вставьте готовую ссылку из кабинета Travelpayouts в поле url и поставьте status ready."
     },
     "airalo": {
       "label": "Airalo",
       "token": "{AIRALO_LINK}",
-      "status": "needs_project_id",
-      "url_template": "https://tp.media/r?marker={marker}&trs={project_id}&p=8310&u={destination}&campaign_id=541",
-      "destination": "https://www.airalo.com/",
-      "note": "Шаблон подтверждён справкой Travelpayouts «Data from Airalo» и страницей оффера: p=8310, campaign_id=541. trs — id проекта в кабинете (project_id). Пока project_id — заглушка, ссылка в интерфейс не попадает."
+      "status": "ready",
+      "url": "https://airalo.tpk.lv/WJxbG8Hh?erid=2VtzqwXiejf",
+      "note": "Готовая короткая ссылка Travelpayouts. Параметр erid — обязательный токен маркировки рекламы, его нужно сохранять."
     }
   }
 }

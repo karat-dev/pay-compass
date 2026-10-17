@@ -107,7 +107,11 @@ def test_banks_come_from_guides_and_route_card_has_no_price():
     assert not any("PLACEHOLDER" in link["url"] for link in transfer["links"])
     internet = route["sections"][2]
     assert "Airalo" in internet["text"]
-    assert internet["links"] == []
+    assert internet["links"] == [{
+        "label": "Airalo",
+        "url": "https://airalo.tpk.lv/WJxbG8Hh?erid=2VtzqwXiejf",
+        "placeholder": False,
+    }]
     assert "example.com" not in internet["text"]
     assert "тестовый этап" in catalog["privacy"]
     assert "[" not in catalog["privacy"]
@@ -323,14 +327,10 @@ def test_partner_links_and_bot_username(monkeypatch):
     assert "shmarker=765617" in kiwi
     assert "promo_id=647" in kiwi
     assert partner_href("welcome_pickups") is None
-    assert partner_href("airalo") is None
-    airalo = partner_href("airalo", project_id="4242")
-    assert airalo is not None
-    assert airalo.startswith("https://tp.media/r?")
-    assert "marker=765617" in airalo
-    assert "trs=4242" in airalo
-    assert "p=8310" in airalo
-    assert "campaign_id=541" in airalo
+    airalo = partner_href("airalo")
+    assert airalo == "https://airalo.tpk.lv/WJxbG8Hh?erid=2VtzqwXiejf"
+    assert "erid=2VtzqwXiejf" in airalo
+    assert partner_href("airalo", project_id="4242") == airalo
 
     monkeypatch.setattr(settings, "BOT_USERNAME", "")
     status, payload = dispatch("GET", "miniapp/config", b"")
