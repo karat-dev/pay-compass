@@ -306,6 +306,15 @@ assert(tripCountdown(0) === "Вылет сегодня", "chosen today");
     assert result.returncode == 0, result.stderr
     screens = (root / "miniapp" / "js" / "screens.js").read_text(encoding="utf-8")
     main = (root / "miniapp" / "js" / "main.js").read_text(encoding="utf-8")
+    intro = screens.split("function introScreen", 1)[1].split("function dateFields", 1)[0]
+    assert "Платите за границей без сюрпризов" in intro
+    assert "Всё к поездке в одном месте" in intro
+    assert "Без лишнего" in intro
+    assert "Ссылки на eSIM, страховку и трансфер — партнёрские." in intro
+    assert ">скоро<" in intro
+    assert "Пропустить" in intro
+    assert "Справочник" not in intro
+    assert "Гонконг" not in intro
     assert "Подобрать под поездку" in screens
     assert "Дата не выбрана" in screens
     assert "Подбор под поездку" in screens
