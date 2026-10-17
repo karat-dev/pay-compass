@@ -1,0 +1,47 @@
+{
+  "marker": "765617",
+  "project_id": "PLACEHOLDER_TRAVELPAYOUTS_PROJECT_ID",
+  "disclosure": "партнёрская ссылка",
+  "partners": {
+    "kiwitaxi": {
+      "label": "KiwiTaxi",
+      "token": "{KIWITAXI_LINK}",
+      "status": "ready",
+      "placement": "transfer",
+      "url": "https://kiwitaxi.tpk.lv/SYHLlog7?erid=2VtzqwJNmCZ",
+      "note": "Короткая ссылка проекта Telegram в Travelpayouts. Параметр erid — обязательный токен маркировки рекламы, его нужно сохранять."
+    },
+    "gettransfer": {
+      "label": "GetTransfer",
+      "token": "{GETTRANSFER_LINK}",
+      "status": "ready",
+      "placement": "transfer",
+      "url": "https://gettransfer.tpk.lv/ZfIWEo1o?erid=2VtzqwTGgtd",
+      "note": "Короткая ссылка проекта Telegram. Параметр erid сохраняется."
+    },
+    "airalo": {
+      "label": "Airalo",
+      "token": "{AIRALO_LINK}",
+      "status": "ready",
+      "placement": "sim",
+      "url": "https://airalo.tpk.lv/NK1pNs4y?erid=2VtzqwXiejf",
+      "note": "Короткая ссылка проекта Telegram. Заменяет ссылку сайт-проекта. Параметр erid сохраняется."
+    },
+    "yesim": {
+      "label": "Yesim",
+      "token": "{YESIM_LINK}",
+      "status": "ready",
+      "placement": "sim",
+      "url": "https://yesim.tpk.lv/acVRMvIx?erid=2VtzqwNpj3b",
+      "note": "Короткая ссылка проекта Telegram. Параметр erid сохраняется."
+    },
+    "cherehapa": {
+      "label": "Оформить страховку",
+      "token": "{CHEREHAPA_LINK}",
+      "status": "ready",
+      "placement": "checklist",
+      "url": "https://cherehapa.tpk.lv/gacNF5aA?erid=2VtzqwQJiKw",
+      "note": "Черехапа, страхование путешествий. Короткая ссылка проекта Telegram. Параметр erid сохраняется."
+    }
+  }
+}

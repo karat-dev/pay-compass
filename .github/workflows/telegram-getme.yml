@@ -1,0 +1,54 @@
+name: Telegram getMe
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - cursor/telegram-mini-app-cd01
+
+permissions:
+  contents: read
+
+jobs:
+  getme:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Telegram getMe
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          token = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip()
+          if not token:
+              print("ok=false")
+              print("username=")
+              raise SystemExit(1)
+
+          request = urllib.request.Request(
+              "https://api.telegram.org/bot" + token + "/getMe",
+              method="GET",
+          )
+          try:
+              with urllib.request.urlopen(request, timeout=20) as response:
+                  payload = json.load(response)
+          except Exception:
+              print("ok=false")
+              print("username=")
+              raise SystemExit(1)
+
+          ok = bool(payload.get("ok")) if isinstance(payload, dict) else False
+          username = ""
+          result = payload.get("result") if isinstance(payload, dict) else None
+          if ok and isinstance(result, dict):
+              raw = result.get("username")
+              if isinstance(raw, str) and raw.replace("_", "").isalnum():
+                  username = raw
+          print("ok=" + ("true" if ok else "false"))
+          print("username=" + username)
+          if not ok:
+              raise SystemExit(1)
+          PY

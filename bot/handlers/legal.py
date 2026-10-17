@@ -44,14 +44,19 @@ async def cmd_my_data(message: Message):
         return
 
     data_summary = {
-        "telegram_id": user.get("telegram_id"),
-        "username": user.get("username"),
-        "created_at": user.get("created_at"),
+        "telegram_id": user_id,
         "consent_given": user.get("consent_given"),
         "consent_date": user.get("consent_date"),
-        "subscription_status": user.get("subscription_status"),
-        "subscription_expires_at": user.get("subscription_expires_at")
     }
+    try:
+        from database.miniapp_store import get_store
+
+        bundle = await get_store().get_bundle(user_id)
+        data_summary["settings"] = bundle.get("profile")
+        data_summary["trip"] = bundle.get("trip")
+        data_summary["progress"] = bundle.get("progress")
+    except Exception as exc:
+        logger.warning("my_data miniapp read skipped: %s", exc)
 
     formatted = json.dumps(data_summary, indent=2, ensure_ascii=False)
     await message.answer(
@@ -79,15 +84,11 @@ async def cmd_admin(message: Message):
     """Admin command to verify privileges and clear country access restrictions."""
     user_id = message.from_user.id
     if UserRepository.is_admin(user_id):
-        from database.client import db
         await UserRepository.reset_country_limits(user_id)
-        await db.update("users", {"subscription_status": "premium"}, {"telegram_id": f"eq.{user_id}"})
         await message.answer(
-            f"👑 **Режим Администратора активирован!**\n\n"
-            f"• Telegram ID: `{user_id}`\n"
-            f"• Статус: **Premium (полный безлимитный доступ)**\n"
-            f"• Лимит на 1 страну: **Сброшен**\n\n"
-            "Вам открыт доступ ко всем странам, разделам и экспертным хабам без ограничений.",
+            f"Режим администратора.\n\n"
+            f"Telegram ID: `{user_id}`\n"
+            "Все страны открыты бесплатно, лимит не применяется.",
             parse_mode="Markdown"
         )
     else:

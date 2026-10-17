@@ -1,9 +1,20 @@
 {
   "version": 2,
+  "redirects": [
+    {
+      "source": "/miniapp",
+      "destination": "/miniapp/",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
-      "source": "/(.*)",
-      "destination": "/api/index.py?path=$1"
+      "source": "/api/:path*",
+      "destination": "/api/index.py?path=:path*"
+    },
+    {
+      "source": "/((?!api/|miniapp/).*)",
+      "destination": "/landing/index.html"
     }
   ]
 }

@@ -5,12 +5,13 @@ import sys
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 
-from config.settings import settings
+from config.settings import bot_token
 from bot.storage import SupabaseStorage
 from bot.handlers.onboarding import onboarding_router
 from bot.handlers.menu import menu_router
 from bot.handlers.legal import legal_router
 from bot.handlers.stars import stars_router
+from bot.handlers.routes import routes_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 async def main():
     logger.info("Initializing Independent Travel Payments Bot...")
 
-    bot = Bot(token=settings.BOT_TOKEN)
+    bot = Bot(token=bot_token())
     storage = SupabaseStorage()
     dp = Dispatcher(storage=storage)
 
@@ -30,6 +31,7 @@ async def main():
     dp.include_router(onboarding_router)
     dp.include_router(legal_router)
     dp.include_router(menu_router)
+    dp.include_router(routes_router)
     dp.include_router(stars_router)
 
     try:
