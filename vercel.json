@@ -1,5 +1,11 @@
 {
   "version": 2,
+  "framework": null,
+  "functions": {
+    "api/index.py": {
+      "includeFiles": "{miniapp/**,landing/index.html}"
+    }
+  },
   "redirects": [
     {
       "source": "/miniapp",
