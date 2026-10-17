@@ -246,11 +246,11 @@
           <span id="calc-savings" class="font-display text-3xl text-brassLight tabular-nums transition-all duration-300">0 ₽</span>
         </div>
 
-        <a id="calc-cta" href="https://t.me/smarttttravel" target="_blank" rel="noopener" class="mt-5 w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-brass text-pine-deep font-medium rounded-lg px-7 py-3.5 hover:bg-brassLight transition-colors">
+        <a id="calc-cta" href="#" data-bot-link target="_blank" rel="noopener" class="mt-5 w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-brass text-pine-deep font-medium rounded-lg px-7 py-3.5 hover:bg-brassLight transition-colors">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="shrink-0"><path d="M21.05 3.51a1.4 1.4 0 0 0-1.45-.16L2.7 10.42c-.84.35-1.03 1.03-.15 1.4l4.42 1.42 1.7 5.44c.23.6.4.83.82.83.28 0 .42-.13.6-.31l1.7-1.62 4.06 3.03c.85.5 1.35.24 1.55-.65l3.04-14.2c.24-1.02-.13-1.48-.4-1.85ZM8.98 13.62l8.98-5.85c.42-.27.8-.12.49.18l-7.63 6.94-.3 3.24-1.54-4.51Z"/></svg>
           <span>Заказать этот или подобрать другой выгодный маршрут</span>
         </a>
-        <p class="text-xs text-paper/40 mt-2.5">Кнопка откроет чат в Telegram с <span class="text-paper/60">@smarttttravel</span></p>
+        <p class="text-xs text-paper/40 mt-2.5">Кнопка откроет чат в Telegram с <span class="text-paper/60" data-bot-mention>ботом</span></p>
 
         <p class="text-xs text-paper/30 mt-4">Расчёт условный, на основе усреднённых надбавок агрегаторов и прямых NDC-тарифов на маршруте. Точная цена зависит от даты, перевозчика и наличия мест по льготному классу бронирования.</p>
       </div>
@@ -520,10 +520,10 @@
       <p class="text-lg leading-relaxed text-ink/80 max-w-xl mb-2">Мы отвечаем только в Telegram — так быстрее, и вы сразу можете прислать даты и маршрут.</p>
 
       <div class="mb-4">
-        <a href="https://t.me/smarttttravel" target="_blank" rel="noopener"
+        <a href="#" data-bot-link target="_blank" rel="noopener"
            class="inline-flex items-center gap-2.5 text-lg text-pine-deep font-medium hover:text-brass transition-colors">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="#28402F" class="shrink-0"><path d="M21.05 3.51a1.4 1.4 0 0 0-1.45-.16L2.7 10.42c-.84.35-1.03 1.03-.15 1.4l4.42 1.42 1.7 5.44c.23.6.4.83.82.83.28 0 .42-.13.6-.31l1.7-1.62 4.06 3.03c.85.5 1.35.24 1.55-.65l3.04-14.2c.24-1.02-.13-1.48-.4-1.85ZM8.98 13.62l8.98-5.85c.42-.27.8-.12.49.18l-7.63 6.94-.3 3.24-1.54-4.51Z"/></svg>
-          @smarttttravel
+          <span data-bot-mention>бот</span>
         </a>
         <p class="text-sm text-ink/50 mt-1">Обычно отвечаем в течение пары часов в будни</p>
       </div>
@@ -625,6 +625,28 @@
   </footer>
 
 <script>
+  window.paintBotLinks = function paintBotLinks() {
+    const name = window.__botUsername || "";
+    document.querySelectorAll("[data-bot-link]").forEach((el) => {
+      const text = el.getAttribute("data-bot-text") || "";
+      if (!name) {
+        el.setAttribute("href", "#");
+        return;
+      }
+      el.setAttribute("href", text ? `https://t.me/${name}?text=${encodeURIComponent(text)}` : `https://t.me/${name}`);
+    });
+    document.querySelectorAll("[data-bot-mention]").forEach((el) => {
+      if (name) el.textContent = `@${name}`;
+    });
+  };
+  fetch("/api/miniapp/config")
+    .then((response) => response.json())
+    .then((data) => {
+      window.__botUsername = String(data.bot_username || "").replace(/^@/, "");
+      window.paintBotLinks();
+    })
+    .catch(() => window.paintBotLinks());
+
   // Fee calculator: 3 routes, tabs, dynamic dates, auto-run on load
   (function () {
     const routeEl = document.getElementById('calc-route');
@@ -713,7 +735,8 @@
 
       if (ctaEl) {
         const prefill = `Здравствуйте! Хочу обсудить маршрут «${route.label}» (вылет ${departure1}) — по расчёту экономия около ${formatRub(savings)}.`;
-        ctaEl.href = `https://t.me/smarttttravel?text=${encodeURIComponent(prefill)}`;
+        ctaEl.setAttribute("data-bot-text", prefill);
+        if (window.paintBotLinks) window.paintBotLinks();
       }
     }
 

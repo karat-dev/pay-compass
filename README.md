@@ -25,9 +25,9 @@
    - Состояния и контекст сохраняются в таблице `user_states`.
    - Мягкое возобновление: при паузе > 24 часов бот предлагает продолжить или начать заново.
 
-3. **Модель монетизации и лимитов**:
-   - **Бесплатный уровень**: 1 страна в 7 дней (таблица `user_country_access`), базовые верифицированные факты.
-   - **Премиум-доступ**: покупка через **Telegram Stars (XTR)** на **90 дней** без рекуррентных рисков. Все страны, алерты реального времени.
+3. **Запуск бесплатный**:
+   - Все 6 стран открыты. Лимит «1 страна / 7 дней» не применяется, счёт Telegram Stars не выставляется.
+   - Старые кнопки оплаты отвечают, что доступ бесплатный, и не создают инвойс.
 
 4. **Мультиисточниковый сбор с отказоустойчивостью**:
    - Официальные источники (РСХБ, АТБ) через `Crawlee` с экспоненциальным backoff (5 попыток) и записью инцидентов в `source_health`.
@@ -41,20 +41,26 @@
 ```text
 .
 ├── landing/               # Статический лендинг «Умный туризм» (ex smart-travel-landing)
+├── miniapp/               # Telegram Mini App: основной интерфейс
 ├── docs/                  # MONOREPO, Supabase hosting, product brief, Grok
 ├── bot/
-│   ├── handlers/          # Онбординг, главное меню, Stars, юридические команды
-│   ├── keyboards/         # Inline клавиатуры шагов и меню
+│   ├── handlers/          # /start открывает Mini App; старые callback-и ещё живы
+│   ├── keyboards/         # Клавиатура входа и старые inline-меню
+│   ├── notifications.py   # Уведомления со ссылкой на экран Mini App
 │   ├── states.py          # OnboardingStates & MainMenuStates
 │   └── storage.py         # SupabaseStorage для FSM
 ├── config/
 │   └── settings.py        # Pydantic Settings
 ├── database/
 │   ├── client.py          # Асинхронный клиент к Supabase / PostgREST
-│   ├── migrations/        # SQL DDL (16 таблиц)
+│   ├── knowledge_base.py  # Страны, факты, инструкции
+│   ├── miniapp_catalog.py # Публичный каталог для Mini App (без оценок)
+│   ├── miniapp_store.py   # Профиль, поездка, прогресс, сообщения о неточностях
+│   ├── migrations/        # SQL DDL
 │   └── repositories/      # Users, Sources, Countries
+├── api/                   # Vercel: вебхук бота и /api/catalog, /api/miniapp/*
 ├── scrapers/              # Crawlee, Telethon, RSS fallback
-├── texts/                 # Дословные тексты онбординга и политика 152-ФЗ
+├── texts/                 # Тексты онбординга и политика 152-ФЗ
 ├── tests/                 # Модульные тесты
 ├── main.py                # Точка входа бота
 ├── run_scrapers.py        # Cron runner сбора данных
@@ -74,7 +80,7 @@ pip install -r requirements.txt
 2. Настройте конфигурацию:
 ```bash
 cp .env.example .env
-# Заполните BOT_TOKEN, SUPABASE_URL, SUPABASE_KEY
+# Заполните TELEGRAM_BOT_TOKEN, SUPABASE_URL, SUPABASE_KEY
 ```
 
 3. Примените SQL-миграции в Supabase:
@@ -103,3 +109,61 @@ python3 -m pytest -v tests/
 ```bash
 python3 run_scrapers.py
 ```
+
+---
+
+## Telegram Mini App
+
+Основной интерфейс — Mini App (`miniapp/`). Чат бота остаётся для уведомлений со ссылкой на экран и для кнопки меню / `/start`, которая открывает приложение. Факты не копируются вручную: `/api/catalog` собирает их из `database/data/countries.json`, `config/trust_config.json` и `database/data/routes/` теми же правилами зон, что и бот. Оценки и внутренние пометки в ответ не попадают. Факты ниже `display.default_min` (50) скрыты за «Показать непроверенное».
+
+Локально, на реальных данных и без Telegram:
+
+```bash
+python3 -m miniapp
+```
+
+Откройте `http://127.0.0.1:4173/miniapp/`. Процесс включает `MINIAPP_DEV_AUTH` и пишет профиль в `miniapp/.local-data/` (файл в gitignore), пока Supabase не настроен. На Vercel этот флаг должен быть выключен.
+
+### Переменные окружения
+
+Токен бота читается из `TELEGRAM_BOT_TOKEN`. Если она пустая, используется `BOT_TOKEN`. Им же проверяется подпись Telegram `initData`. Также нужны `SUPABASE_URL` и `SUPABASE_KEY`.
+
+| Переменная | Где | Зачем |
+|---|---|---|
+| `TELEGRAM_BOT_TOKEN` | Vercel, бот, GitHub Actions | Токен BotFather. Единственное имя, которое нужно задавать |
+| `BOT_TOKEN` | запасное | Старое имя. Учитывается только когда `TELEGRAM_BOT_TOKEN` пустой |
+| `BOT_USERNAME` | Vercel, бот, лендинг | Публичный username без `@`. Лендинг берёт его из `GET /api/miniapp/config` и собирает ссылки `t.me`. В коде и вёрстке username не зашит |
+| `MINIAPP_URL` | Vercel и бот | Публичный https-адрес приложения, со слэшем на конце. Пример: `https://<проект>.vercel.app/miniapp/` |
+| `SUPABASE_KEY` | только сервер | **service role** единого проекта. anon-ключ в браузер не кладём: RLS на таблицах Mini App без политик для anon |
+| `MINIAPP_DEV_AUTH` | только локально | `1` принимает `initData` вида `dev:<telegram id>`. На Vercel не задавать |
+| `MINIAPP_INITDATA_MAX_AGE_SECONDS` | сервер | Срок жизни `initData`, по умолчанию 86400 |
+
+Секреты только в env. В репозиторий не коммитить.
+
+### BotFather и кнопки
+
+1. Menu Button → URL = значение `MINIAPP_URL` (`https://<проект>.vercel.app/miniapp/`).
+2. После деплоя один раз откройте `https://<проект>.vercel.app/api/set_webhook`. Обработчик вешает вебхук и вызывает `setChatMenuButton` с тем же URL.
+3. `/start` шлёт кнопку «Открыть приложение». Параметр `/start guide_china` открывает Китай. Так же работают `trip`, `guide`, `sos`, `profile`, `search`, `section_china_2_pay_on_site`, `instruction_wechat_pay`.
+4. Уведомления собирайте через `bot.notifications.notification_message(text, screen)`: в чат уходит текст и кнопка на экран, не карточка справочника.
+5. Прямая ссылка `t.me/<bot>/<short_name>?startapp=guide_china` заработает после того, как Mini App получит short name в BotFather. Кнопка меню от short name не зависит.
+
+### Vercel
+
+Тот же проект, что и лендинг. `vercel.json` отдаёт `/miniapp/` как статику, `/api/*` — в `api/index.py`, остальное — лендинг. Отдельный сервер не нужен.
+
+Эндпоинты: `GET /api/catalog` (публичный), `GET /api/miniapp/config`, `POST /api/miniapp/session|onboarding|profile|trip|progress|report`. Запись требует заголовок `X-Telegram-Init-Data`.
+
+### Supabase
+
+Накатите `supabase/migrations/20261014000000_miniapp.sql` (таблицы `miniapp_profiles`, `miniapp_trips`, `miniapp_progress`, `miniapp_fact_reports`) и `supabase/migrations/20261016000000_drop_username.sql` (из `users` и профиля убирается username). Те же файлы лежат в `database/migrations/002_miniapp.sql` и `003_drop_username.sql`.
+
+Профиль хранит Telegram ID и настройки. Имя, username и телефон не пишутся. Удаление — `/delete_me` или `/delete_account`.
+
+Партнёрские ссылки трансфера, eSIM и страховки собираются из `config/partners.json` (маркер Travelpayouts `765617`). Готовая короткая ссылка задаётся полем `url` и подставляется как есть, вместе с параметром `erid`. Рядом с ней показывается пометка «партнёрская ссылка». В интерфейсе URL не зашиты.
+
+GitHub Actions катит `supabase/migrations/` при пуше в `main`, если заданы `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`, `SUPABASE_DB_PASSWORD`. Workflow `.github/workflows/supabase-miniapp.yml` на этой ветке использует секрет `SUPABASE_DB_URL`: проверяет `SELECT 1`, печатает только имена таблиц `public` и накатывает миграции Mini App. Прямой хост `db.<project>.supabase.co` с GitHub Actions уходит на session pooler `eu-central-1`, потому что у раннера нет IPv6. Уже применённая начальная схема в историю записывается без повторного выполнения. Либо вставьте файл в SQL Editor.
+
+Команда `/delete_me` удаляет и эти строки. Сообщения о неточности пишутся в `miniapp_fact_reports` (у фактов из JSON нет UUID в `verified_facts`).
+
+Согласие по 152-ФЗ спрашивается в онбординге Mini App. В чате по-прежнему есть `/privacy`, `/my_data`, `/delete_me`.

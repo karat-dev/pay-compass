@@ -6,7 +6,7 @@
 
 | Было | Роль | Сейчас |
 |------|------|--------|
-| `smart-travel-landing` | Лендинг «Умный туризм», Telegram @smarttttravel | `landing/` |
+| `smart-travel-landing` | Лендинг «Умный туризм», ссылка на бота из `BOT_USERNAME` | `landing/` |
 | `pay-compass` | Telegram-бот справочника по оплате за границей + БД | корень репо (`bot/`, `database/`, …) |
 | `flight-navigator` | Оболочка продукта (авиа, калькуляторы, контент) | этот репозиторий |
 
@@ -41,6 +41,7 @@ Workflow `.github/workflows/supabase_deploy.yml` накатывает мигра
 | Компонент | Куда |
 |-----------|------|
 | Бот (webhook) | Vercel → `/api/set_webhook`, polling локально `python3 main.py` |
+| Mini App | Vercel `/miniapp/`, локально `python3 -m miniapp` |
 | Лендинг | Vercel `/` или Supabase Storage в том же project ref |
 | Миграции | GitHub Actions → `supabase db push` |
 

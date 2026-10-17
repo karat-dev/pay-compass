@@ -6,14 +6,10 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-ROUTES_DIR = Path(__file__).with_name("data") / "routes"
-AVIASALES_MARKER = "765617"
+from database.partners import disclosure, link_replacements, marker
 
-# Placeholders in the generated card. Real affiliate links can replace these URLs later.
-PLACEHOLDER_LINKS = {
-    "{KIWITAXI_LINK}": '<a href="https://kiwitaxi.com/">KiwiTaxi</a>',
-    "{AIRALO_LINK}": '<a href="https://www.airalo.com/">Airalo</a>',
-}
+ROUTES_DIR = Path(__file__).with_name("data") / "routes"
+AVIASALES_MARKER = marker()
 
 
 def _load_raw_routes() -> List[Dict[str, Any]]:
@@ -29,9 +25,9 @@ def _load_raw_routes() -> List[Dict[str, Any]]:
 
 
 def substitute_placeholders(text: str) -> str:
-    for token, replacement in PLACEHOLDER_LINKS.items():
+    for token, replacement in link_replacements().items():
         text = text.replace(token, replacement)
-    return text
+    return text.replace("{PARTNER_NOTE}", disclosure())
 
 
 def route_id_from_callback(callback_data: str) -> Optional[str]:
