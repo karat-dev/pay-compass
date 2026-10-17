@@ -1,0 +1,45 @@
+name: Reset Mini App intro for one user
+
+on:
+  workflow_dispatch:
+    inputs:
+      telegram_id:
+        description: Telegram ID of the single profile whose intro should play again
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clear intro_seen for that Telegram ID only
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          TELEGRAM_ID: ${{ inputs.telegram_id }}
+        run: |
+          set +x
+          set -euo pipefail
+          if ! [[ "$TELEGRAM_ID" =~ ^[1-9][0-9]{0,15}$ ]]; then
+            echo "telegram_id must be a positive integer"
+            exit 1
+          fi
+          if [[ -z "${SUPABASE_DB_URL:-}" ]]; then
+            echo "SUPABASE_DB_URL is not configured"
+            exit 1
+          fi
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+          updated=$(psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -tA -v tid="$TELEGRAM_ID" <<'SQL'
+          UPDATE public.miniapp_profiles
+          SET intro_seen = false
+          WHERE telegram_id = :'tid'::bigint
+          RETURNING telegram_id;
+          SQL
+          )
+          if [[ -z "$updated" ]]; then
+            echo "No profile row for that Telegram ID. Nothing else was changed."
+            exit 0
+          fi
+          echo "intro_seen cleared for telegram_id ${updated}"

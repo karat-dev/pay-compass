@@ -548,6 +548,7 @@ function profileScreen(state) {
     <h2>Уведомления</h2>
     <p class="hint">Бот пришлёт сообщение со ссылкой в приложение. Расписание уведомлений включим после запуска.</p>
     <div class="stack">${notifies}</div>
+    <button type="button" class="ghost wide" data-action="replay-intro">Показать знакомство снова</button>
     <button type="button" class="text-btn" data-action="privacy">Политика конфиденциальности</button>
     <p class="hint">Храним только Telegram ID и настройки. Удаление — команда /delete_me в чате с ботом.</p>
     ${state.message ? `<p class="form-error">${esc(state.message)}</p>` : ""}
