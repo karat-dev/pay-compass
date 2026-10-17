@@ -53,6 +53,7 @@ def profile_row(telegram_id: int, fields: Dict[str, Any]) -> Dict[str, Any]:
         "notify_alerts": bool(fields.get("notify_alerts", False)),
         "consent_given": bool(fields.get("consent_given")),
         "onboarding_completed": bool(fields.get("onboarding_completed")),
+        "intro_seen": bool(fields.get("intro_seen")),
         "updated_at": _now(),
     }
 
@@ -97,6 +98,7 @@ def public_profile(row: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         "notify_alerts": bool(row.get("notify_alerts", False)),
         "consent_given": bool(row.get("consent_given")),
         "onboarding_completed": bool(row.get("onboarding_completed")),
+        "intro_seen": bool(row.get("intro_seen")),
     }
 
 
@@ -212,16 +214,44 @@ class SupabaseMiniappStore:
         profiles = await self.rest.select("miniapp_profiles", eq)
         trips = await self.rest.select("miniapp_trips", eq)
         progress = await self.rest.select("miniapp_progress", eq)
+        profile = public_profile(profiles[0] if profiles else None)
         return {
-            "profile": public_profile(profiles[0] if profiles else None),
+            "profile": profile,
             "trip": public_trip(trips[0] if trips else None),
             "progress": public_progress(progress),
+            "intro_seen": bool(profile and profile.get("intro_seen")),
         }
 
     async def save_profile(self, telegram_id: int, fields: Dict[str, Any]) -> Dict[str, Any]:
+        fields = dict(fields)
+        existing = await self.rest.select("miniapp_profiles", {"telegram_id": f"eq.{telegram_id}"})
+        if existing and existing[0].get("intro_seen"):
+            fields["intro_seen"] = True
         row = profile_row(telegram_id, fields)
         saved = await self.rest.upsert("miniapp_profiles", row, "telegram_id")
         return public_profile(saved) or public_profile(row)
+
+    async def mark_intro_seen(self, telegram_id: int) -> Dict[str, Any]:
+        existing = await self.rest.select("miniapp_profiles", {"telegram_id": f"eq.{telegram_id}"})
+        if existing:
+            fields = dict(existing[0])
+            fields["intro_seen"] = True
+        else:
+            fields = {
+                "bank_id": None,
+                "departure_city_id": None,
+                "favorite_countries": [],
+                "notify_checklist": True,
+                "notify_trip": True,
+                "notify_alerts": False,
+                "consent_given": False,
+                "onboarding_completed": False,
+                "intro_seen": True,
+            }
+        row = profile_row(telegram_id, fields)
+        saved = await self.rest.upsert("miniapp_profiles", row, "telegram_id")
+        profile = public_profile(saved) or public_profile(row)
+        return {"intro_seen": True, "profile": profile}
 
     async def save_trip(self, telegram_id: int, fields: Dict[str, Any]) -> Dict[str, Any]:
         row = trip_row(telegram_id, fields)
@@ -277,20 +307,48 @@ class FileMiniappStore:
         key = str(telegram_id)
         with self._lock:
             data = self._read()
+        profile = public_profile(data["profiles"].get(key))
         return {
-            "profile": public_profile(data["profiles"].get(key)),
+            "profile": profile,
             "trip": public_trip(data["trips"].get(key)),
             "progress": public_progress(list((data["progress"].get(key) or {}).values())),
+            "intro_seen": bool(profile and profile.get("intro_seen")),
         }
 
     async def save_profile(self, telegram_id: int, fields: Dict[str, Any]) -> Dict[str, Any]:
-        row = profile_row(telegram_id, fields)
+        fields = dict(fields)
         key = str(telegram_id)
         with self._lock:
             data = self._read()
+            previous = data["profiles"].get(key) or {}
+            if previous.get("intro_seen"):
+                fields["intro_seen"] = True
+            row = profile_row(telegram_id, fields)
             data["profiles"][key] = row
             self._write(data)
         return public_profile(row)
+
+    async def mark_intro_seen(self, telegram_id: int) -> Dict[str, Any]:
+        key = str(telegram_id)
+        with self._lock:
+            data = self._read()
+            previous = data["profiles"].get(key)
+            if previous:
+                previous["intro_seen"] = True
+                previous["updated_at"] = _now()
+                row = previous
+            else:
+                row = profile_row(telegram_id, {
+                    "bank_id": None,
+                    "departure_city_id": None,
+                    "favorite_countries": [],
+                    "consent_given": False,
+                    "onboarding_completed": False,
+                    "intro_seen": True,
+                })
+            data["profiles"][key] = row
+            self._write(data)
+        return {"intro_seen": True, "profile": public_profile(row)}
 
     async def save_trip(self, telegram_id: int, fields: Dict[str, Any]) -> Dict[str, Any]:
         row = trip_row(telegram_id, fields)

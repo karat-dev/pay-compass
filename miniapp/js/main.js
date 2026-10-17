@@ -1,3 +1,4 @@
+import { afterPick, bootTarget, introExit } from "./flow.js";
 import { render, parseRoute } from "./screens.js";
 import {
   applyTheme,
@@ -34,9 +35,11 @@ const state = {
   message: "",
   failed: "",
   failedTitle: "",
+  introSeen: false,
+  introStep: 0,
   preview: false,
   returnTo: "/trip",
-  after: "/trip",
+  after: "",
   saveTimer: 0,
   toastTimer: 0,
   scrolledFact: "",
@@ -95,15 +98,29 @@ function showToast(text) {
   }, 2400);
 }
 
+function emptyProfile(introSeen) {
+  return {
+    bank_id: "",
+    departure_city_id: "",
+    favorite_countries: [],
+    notify_checklist: true,
+    notify_trip: true,
+    notify_alerts: false,
+    consent_given: false,
+    onboarding_completed: false,
+    intro_seen: Boolean(introSeen),
+  };
+}
+
 function applySession(session) {
-  state.profile = session.profile;
+  state.introSeen = Boolean(session.intro_seen || (session.profile && session.profile.intro_seen));
+  state.profile = session.profile || emptyProfile(state.introSeen);
+  state.profile.intro_seen = state.introSeen;
   state.trip = session.trip;
   state.progress = {};
   for (const item of session.progress || []) state.progress[item.item_id] = item;
-  if (state.profile) {
-    state.draft.bank_id = state.profile.bank_id || "";
-    state.draft.departure_city_id = state.profile.departure_city_id || "";
-  }
+  if (state.profile.bank_id) state.draft.bank_id = state.profile.bank_id;
+  if (state.profile.departure_city_id) state.draft.departure_city_id = state.profile.departure_city_id;
   if (state.trip) {
     state.draft.destination_slug = state.trip.destination_slug || "";
     state.draft.depart_date = state.trip.depart_date || "";
@@ -148,27 +165,10 @@ function navigate(hash) {
   else location.hash = next;
 }
 
-function readDates() {
-  const depart = document.getElementById("depart-date");
-  const back = document.getElementById("return-date");
-  if (depart) state.draft.depart_date = depart.value;
-  if (back) state.draft.return_date = back.value;
-}
-
-function completed() {
-  return Boolean(state.profile && state.profile.onboarding_completed);
-}
-
 function guard() {
   const screen = parseRoute(location.hash);
   if (state.failed || !state.catalog) return;
-  if (!completed() && screen.name !== "onboarding") {
-    navigate("/onboarding");
-    return;
-  }
-  if (completed() && screen.name === "onboarding" && !state.preview) {
-    navigate(state.after || "/trip");
-  }
+  if (!state.introSeen && screen.name !== "intro") navigate("/intro");
 }
 
 function syncDeepFact() {
@@ -214,28 +214,36 @@ function draw() {
 
 function seedPreview(name) {
   state.preview = true;
+  const intro = name === "intro" || name === "intro-sources" || name === "intro-privacy";
+  const bare = intro || name === "empty";
+  const nodate = name === "nodate";
+  state.introStep = name === "intro-sources" ? 1 : name === "intro-privacy" ? 2 : 0;
+  state.introSeen = !intro;
+  const named = new URLSearchParams(location.search).get("startapp") || "";
+  state.after = named ? (mapStart(state.catalog, named) || "/trip") : "";
   state.profile = {
-    bank_id: "tbank",
-    departure_city_id: "mow",
-    favorite_countries: ["china", "hong_kong"],
+    bank_id: bare ? "" : "tbank",
+    departure_city_id: bare ? "" : "mow",
+    favorite_countries: bare ? [] : ["china", "hong_kong"],
     notify_checklist: true,
     notify_trip: true,
     notify_alerts: false,
-    consent_given: true,
-    onboarding_completed: name !== "onboarding",
+    consent_given: !bare,
+    onboarding_completed: !bare && name !== "pick" && name !== "onboarding",
+    intro_seen: !intro,
   };
-  state.trip = {
+  state.trip = bare ? null : {
     destination_slug: "hong_kong",
     departure_city_id: "mow",
-    depart_date: "2026-11-12",
-    return_date: "2026-11-20",
+    depart_date: nodate ? null : "2026-11-12",
+    return_date: nodate ? null : "2026-11-20",
   };
   state.draft = {
-    bank_id: "tbank",
-    departure_city_id: "mow",
-    destination_slug: "hong_kong",
-    depart_date: "2026-11-12",
-    return_date: "2026-11-20",
+    bank_id: state.profile.bank_id,
+    departure_city_id: state.profile.departure_city_id,
+    destination_slug: bare ? "" : "hong_kong",
+    depart_date: nodate || bare ? "" : "2026-11-12",
+    return_date: nodate || bare ? "" : "2026-11-20",
     consent: false,
   };
   state.step = 0;
@@ -254,7 +262,13 @@ function seedPreview(name) {
 
 function previewTarget(name) {
   return {
-    onboarding: "/onboarding",
+    intro: "/intro",
+    "intro-sources": "/intro",
+    "intro-privacy": "/intro",
+    empty: "/trip",
+    nodate: "/trip",
+    pick: "/pick",
+    onboarding: "/pick",
     trip: "/trip",
     country: "/guide/china",
     section: "/guide/china/3_local_wallets_cards",
@@ -306,13 +320,17 @@ function queueProfileSave() {
   }, 250);
 }
 
-async function finishOnboarding() {
-  readDates();
-  if (!state.draft.depart_date) {
-    state.message = "Укажите дату вылета.";
-    draw();
-    return;
-  }
+async function markIntro() {
+  state.introSeen = true;
+  if (!state.profile) state.profile = emptyProfile(true);
+  state.profile.intro_seen = true;
+  if (state.preview) return;
+  const payload = await postJSON("/api/miniapp/intro", {});
+  if (payload.profile) state.profile = payload.profile;
+  state.introSeen = true;
+}
+
+async function finishPick() {
   if (!state.draft.consent) {
     state.message = "Нужно согласие на обработку данных.";
     draw();
@@ -322,34 +340,50 @@ async function finishOnboarding() {
     bank_id: state.draft.bank_id,
     departure_city_id: state.draft.departure_city_id,
     favorite_countries: [state.draft.destination_slug],
-    notify_checklist: true,
-    notify_trip: true,
-    notify_alerts: false,
+    notify_checklist: state.profile ? state.profile.notify_checklist !== false : true,
+    notify_trip: state.profile ? state.profile.notify_trip !== false : true,
+    notify_alerts: Boolean(state.profile && state.profile.notify_alerts),
     consent_given: true,
     onboarding_completed: true,
+    intro_seen: true,
   };
   const trip = {
     destination_slug: state.draft.destination_slug,
     departure_city_id: state.draft.departure_city_id,
-    depart_date: state.draft.depart_date,
+    depart_date: state.draft.depart_date || null,
     return_date: state.draft.return_date || null,
   };
+  const next = afterPick({ deepLink: state.after });
   if (state.preview) {
     state.profile = profile;
     state.trip = trip;
-    navigate(state.after || "/trip");
+    state.introSeen = true;
+    navigate(next);
     return;
   }
   try {
     const payload = await postJSON("/api/miniapp/onboarding", { profile, trip });
     state.profile = payload.profile;
     state.trip = payload.trip;
+    state.introSeen = true;
     state.message = "";
-    navigate(state.after || "/trip");
+    navigate(next);
   } catch (error) {
     state.message = error.message;
     draw();
   }
+}
+
+function openPick() {
+  state.step = 0;
+  state.message = "";
+  state.draft.bank_id = (state.profile && state.profile.bank_id) || "";
+  state.draft.departure_city_id = (state.trip && state.trip.departure_city_id) || (state.profile && state.profile.departure_city_id) || "";
+  state.draft.destination_slug = (state.trip && state.trip.destination_slug) || "";
+  state.draft.depart_date = (state.trip && state.trip.depart_date) || "";
+  state.draft.return_date = (state.trip && state.trip.return_date) || "";
+  state.draft.consent = Boolean(state.profile && state.profile.consent_given);
+  navigate("/pick");
 }
 
 function openExternal(url) {
@@ -399,21 +433,38 @@ app.addEventListener("click", (event) => {
     draw();
     return;
   }
-  if (action === "onboard-back") {
+  if (action === "intro-next") {
+    state.introStep = Math.min(2, (state.introStep || 0) + 1);
+    draw();
+    return;
+  }
+  if (action === "intro-pick" || action === "intro-skip") {
+    const choice = action === "intro-pick" ? "pick" : "skip";
+    const next = introExit({ action: choice, deepLink: state.after });
+    markIntro().then(() => navigate(next)).catch((error) => {
+      state.message = error.message;
+      draw();
+    });
+    return;
+  }
+  if (action === "start-pick") {
+    openPick();
+    return;
+  }
+  if (action === "pick-back") {
     state.step = Math.max(0, state.step - 1);
     state.message = "";
     draw();
     return;
   }
-  if (action === "onboard-next") {
-    readDates();
+  if (action === "pick-next") {
     if (state.step < 2) {
       state.step += 1;
       state.message = "";
       draw();
       return;
     }
-    finishOnboarding();
+    finishPick();
     return;
   }
   if (action === "consent") {
@@ -436,7 +487,6 @@ app.addEventListener("click", (event) => {
     return;
   }
   if (action === "save-trip") {
-    readDates();
     const trip = {
       destination_slug: state.draft.destination_slug,
       departure_city_id: state.profile.departure_city_id,
@@ -609,23 +659,28 @@ async function boot() {
     draw();
     return;
   }
+  let serverScreen = "";
   try {
-    applySession(await postJSON("/api/miniapp/session", {}));
+    const session = await postJSON("/api/miniapp/session", {});
+    applySession(session);
+    serverScreen = session.screen || "";
   } catch (error) {
     state.failedTitle = "Не удалось войти";
     state.failed = error.message;
     draw();
     return;
   }
-  const start = mapStart(state.catalog, params.get("startapp") || params.get("tgWebAppStartParam") || "");
-  if (start) state.after = start;
-  if (!location.hash || location.hash === "#") {
-    navigate(completed() ? (start || "/trip") : "/onboarding");
-    return;
+  const named = params.get("startapp") || params.get("tgWebAppStartParam") || "";
+  if (named || serverScreen) state.after = mapStart(state.catalog, named || serverScreen) || "/trip";
+  else if (location.hash.startsWith("#/")) {
+    const screen = parseRoute(location.hash);
+    if (screen.name !== "intro" && screen.name !== "pick") state.after = location.hash.slice(1);
   }
-  syncDeepFact();
-  guard();
-  draw();
+  navigate(bootTarget({
+    introSeen: state.introSeen,
+    deepLink: state.after,
+    hash: location.hash,
+  }));
 }
 
 boot();
