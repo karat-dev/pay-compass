@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from database.partners import link_replacements, marker
+from database.partners import disclosure, link_replacements, marker
 
 ROUTES_DIR = Path(__file__).with_name("data") / "routes"
 AVIASALES_MARKER = marker()
@@ -27,7 +27,7 @@ def _load_raw_routes() -> List[Dict[str, Any]]:
 def substitute_placeholders(text: str) -> str:
     for token, replacement in link_replacements().items():
         text = text.replace(token, replacement)
-    return text
+    return text.replace("{PARTNER_NOTE}", disclosure())
 
 
 def route_id_from_callback(callback_data: str) -> Optional[str]:

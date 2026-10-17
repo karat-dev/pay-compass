@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import html
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "config" / "partners.json"
@@ -22,6 +23,11 @@ def marker() -> str:
     return str(load_partner_config()["marker"])
 
 
+def disclosure() -> str:
+    text = str(load_partner_config().get("disclosure") or "").strip()
+    return text or "партнёрская ссылка"
+
+
 def _live_https(url: str) -> Optional[str]:
     if not url.startswith("https://") or "PLACEHOLDER" in url:
         return None
@@ -32,8 +38,8 @@ def partner_href(partner_id: str, *, project_id: Optional[str] = None) -> Option
     """Return a live partner URL, or None while a config placeholder is still in place.
 
     A ready-made ``url`` is returned unchanged, query string included. That keeps
-    the Airalo ``erid`` ad-marking token intact. ``url_template`` is filled only
-    when no ready link is set.
+    the ``erid`` ad-marking token intact. ``url_template`` is filled only when
+    no ready link is set.
     """
     data = load_partner_config()
     partner = data["partners"][partner_id]
@@ -66,7 +72,48 @@ def link_replacements() -> Dict[str, str]:
         href = partner_href(partner_id)
         if href:
             safe = href.replace("&", "&amp;").replace('"', "%22")
-            replacements[token] = f'<a href="{safe}">{label}</a>'
+            replacements[token] = f'<a href="{safe}">{html.escape(label)}</a>'
         else:
-            replacements[token] = label
+            replacements[token] = html.escape(label)
     return replacements
+
+
+def public_offers() -> List[Dict[str, str]]:
+    """Live partner links safe to show in the Mini App catalog."""
+    data = load_partner_config()
+    offers: List[Dict[str, str]] = []
+    for partner_id, partner in data["partners"].items():
+        href = partner_href(partner_id)
+        if not href:
+            continue
+        offers.append({
+            "id": partner_id,
+            "placement": str(partner.get("placement") or ""),
+            "label": str(partner["label"]),
+            "url": href,
+        })
+    return offers
+
+
+def _offers_for(placement: str) -> List[Dict[str, str]]:
+    return [offer for offer in public_offers() if offer["placement"] == placement]
+
+
+def checklist_offer_text() -> str:
+    offers = _offers_for("checklist")
+    if not offers:
+        return ""
+    lines = [f"{offer['label']}: {offer['url']}" for offer in offers]
+    lines.append(disclosure())
+    return "\n".join(lines)
+
+
+def checklist_offer_html() -> str:
+    offers = _offers_for("checklist")
+    if not offers:
+        return ""
+    anchors = []
+    for offer in offers:
+        safe = offer["url"].replace("&", "&amp;").replace('"', "%22")
+        anchors.append(f'<a href="{safe}">{html.escape(offer["label"])}</a>')
+    return " · ".join(anchors) + f"\n<i>{html.escape(disclosure())}</i>"

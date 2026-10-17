@@ -388,7 +388,7 @@ def render_section(country: Dict[str, Any], section_key: str, show_unverified: b
 
     if not section["applicable"]:
         lines.append(f"Раздел не применим: {section['reason']}")
-        return "\n\n".join(lines)
+        return _with_checklist_offer(section_key, "\n\n".join(lines), as_html=False)
 
     blocks = _render_fact_blocks(section.get("facts") or [], show_unverified)
     if blocks:
@@ -410,7 +410,7 @@ def render_section(country: Dict[str, Any], section_key: str, show_unverified: b
         else:
             lines.append("Дополнительных непроверенных фактов нет.")
 
-    return "\n\n".join(lines)
+    return _with_checklist_offer(section_key, "\n\n".join(lines), as_html=False)
 
 
 def render_user_facing(country: Dict[str, Any], show_unverified: bool = False) -> str:
@@ -537,7 +537,7 @@ def render_section_html(country: Dict[str, Any], section_key: str, show_unverifi
         lines.append("Зелёная и жёлтая зоны. Пробелы подписаны «не исследовано».")
     if not section["applicable"]:
         lines.append(f"Раздел не применим: {html.escape(section['reason'] or '')}")
-        return "\n\n".join(lines)
+        return _with_checklist_offer(section_key, "\n\n".join(lines), as_html=True)
     blocks = _html_blocks(section.get("facts") or [], show_unverified)
     if blocks:
         lines.extend(blocks)
@@ -559,7 +559,19 @@ def render_section_html(country: Dict[str, Any], section_key: str, show_unverifi
             lines.append("В зелёной и жёлтой зоне фактов нет.")
         else:
             lines.append("Дополнительных непроверенных фактов нет.")
-    return "\n\n".join(lines)
+    return _with_checklist_offer(section_key, "\n\n".join(lines), as_html=True)
+
+
+def _with_checklist_offer(section_key: str, text: str, *, as_html: bool) -> str:
+    """Travel insurance is a partner offer, not a verified country fact."""
+    if section_key != "1_checklist":
+        return text
+    from database.partners import checklist_offer_html, checklist_offer_text
+
+    extra = checklist_offer_html() if as_html else checklist_offer_text()
+    if not extra:
+        return text
+    return f"{text}\n\n{extra}"
 
 
 def render_instruction_html(instruction_id: str, show_unverified: bool = False) -> str:

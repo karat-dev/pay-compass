@@ -30,6 +30,7 @@ from database.knowledge_base import (
     public_source_url,
     user_visible_fact,
 )
+from database.partners import disclosure, public_offers
 from database.routes import AVIASALES_MARKER, get_route, lead_lines, section_buttons, tickets_url
 from texts.privacy_policy import PRIVACY_POLICY_TEXT
 
@@ -270,6 +271,7 @@ def _public_instructions() -> Dict[str, Any]:
 
 def _public_route(route_id: str = "mow_hkg_via_pek") -> Dict[str, Any]:
     route = get_route(route_id)
+    partner_urls = {offer["url"] for offer in public_offers()}
     plain, links = html_to_plain(route.get("text") or "")
     airlines = []
     for link in links:
@@ -299,6 +301,7 @@ def _public_route(route_id: str = "mow_hkg_via_pek") -> Dict[str, Any]:
                     "label": link["label"],
                     "url": link["url"],
                     "placeholder": _is_placeholder_url(link["url"]),
+                    "partner": link["url"] in partner_urls,
                 }
                 for link in section_links
             ],
@@ -395,6 +398,8 @@ def build_catalog() -> Dict[str, Any]:
         "instructions": instructions,
         "routes": [_public_route()],
         "section_keys": list(SECTION_KEYS),
+        "partner_note": disclosure(),
+        "offers": public_offers(),
     }
     _assert_public(catalog)
     return catalog

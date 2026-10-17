@@ -160,7 +160,7 @@ python3 -m miniapp
 
 Профиль хранит Telegram ID и настройки. Имя, username и телефон не пишутся. Удаление — `/delete_me` или `/delete_account`.
 
-Партнёрские ссылки трансфера и eSIM собираются из `config/partners.json` (маркер Travelpayouts `765617`). Готовая короткая ссылка задаётся полем `url` и подставляется как есть, вместе с параметром `erid`. В интерфейсе URL не зашиты.
+Партнёрские ссылки трансфера, eSIM и страховки собираются из `config/partners.json` (маркер Travelpayouts `765617`). Готовая короткая ссылка задаётся полем `url` и подставляется как есть, вместе с параметром `erid`. Рядом с ней показывается пометка «партнёрская ссылка». В интерфейсе URL не зашиты.
 
 GitHub Actions катит `supabase/migrations/` при пуше в `main`, если заданы `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`, `SUPABASE_DB_PASSWORD`. Либо вставьте файл в SQL Editor.
 

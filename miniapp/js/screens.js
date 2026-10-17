@@ -192,9 +192,6 @@ function routeCard(state, route, matches) {
     return `<button type="button" class="chip${on ? " is-on" : ""}" data-action="route-section" data-id="${esc(section.id)}" aria-expanded="${on ? "true" : "false"}">${esc(section.title)}</button>`;
   }).join("");
   const current = route.sections.find((section) => section.id === open);
-  const links = current
-    ? current.links.filter((link) => !link.placeholder && /^https:\/\//.test(link.url)).map((link) => `<a href="${esc(link.url)}" data-action="link" data-url="${esc(link.url)}">${esc(link.label)}</a>`).join("")
-    : "";
   const url = ticketsUrl(route, state.trip && state.trip.depart_date);
   return `<article class="ticket">
     <p class="eyebrow">Разбор маршрута</p>
@@ -206,17 +203,53 @@ function routeCard(state, route, matches) {
     ${placeholder}
     <a class="primary tickets" href="${esc(url)}" data-action="link" data-url="${esc(url)}">Найти билеты</a>
     <div class="chip-row">${chips}</div>
-    ${current ? `<div class="route-copy"><p>${esc(current.text)}</p>${links ? `<p class="source">${links}</p>` : ""}</div>` : ""}
+    ${current ? routeCopy(state, current) : ""}
     ${note}
   </article>`;
+}
+
+function partnerNote(state) {
+  const note = state.catalog.partner_note || "";
+  return note ? `<span class="partner-note">${esc(note)}</span>` : "";
+}
+
+function liveLinks(links) {
+  return (links || []).filter((link) => !link.placeholder && /^https:\/\//.test(link.url));
+}
+
+function routeCopy(state, current) {
+  const note = state.catalog.partner_note || "";
+  const links = liveLinks(current.links);
+  const anchors = links.map((link) => `<a href="${esc(link.url)}" data-action="link" data-url="${esc(link.url)}">${esc(link.label)}</a>`).join("");
+  let text = current.text || "";
+  let tail = "";
+  if (note && text.includes(note)) {
+    const at = text.indexOf(note);
+    tail = text.slice(at + note.length).trim();
+    text = text.slice(0, at).trim();
+  }
+  const disclosure = links.some((link) => link.partner) ? `<p class="partner-line">${partnerNote(state)}</p>` : "";
+  return `<div class="route-copy"><p>${esc(text)}</p>${anchors ? `<p class="source">${anchors}</p>` : ""}${disclosure}${tail ? `<p>${esc(tail)}</p>` : ""}</div>`;
+}
+
+function checklistOffers(state) {
+  return (state.catalog.offers || []).filter((offer) => offer.placement === "checklist" && /^https:\/\//.test(offer.url || ""));
+}
+
+function checklistOfferRow(state) {
+  const offers = checklistOffers(state);
+  if (!offers.length) return "";
+  const links = offers.map((offer) => `<a href="${esc(offer.url)}" data-action="link" data-url="${esc(offer.url)}">${esc(offer.label)}</a>`).join("");
+  return `<div class="partner-row">${links}${partnerNote(state)}</div>`;
 }
 
 function checklist(state, country) {
   if (!country) return "";
   const section = sectionOf(country, "1_checklist");
   if (!section) return "";
+  const offer = checklistOfferRow(state);
   if (!section.applicable) {
-    return `<section class="block"><h2>Чек-лист до вылета</h2><p>${esc(section.note || "Раздел не применим.")}</p></section>`;
+    return `<section class="block"><h2>Чек-лист до вылета</h2><p>${esc(section.note || "Раздел не применим.")}</p>${offer}</section>`;
   }
   const show = Boolean(state.unverified.checklist);
   const facts = section.facts || [];
@@ -239,6 +272,7 @@ function checklist(state, country) {
       <p class="hint">${done} из ${tasks.length}</p>
     </div>
     ${rows || `<p class="hint">В зелёной и жёлтой зоне пунктов нет.</p>`}
+    ${offer}
     ${gaps.map((fact) => factCard(fact)).join("")}
     ${toggle}
   </section>`;
@@ -293,8 +327,9 @@ function sectionScreen(state, screen) {
   if (!section) return missing();
   const scope = `${country.slug}/${section.key}`;
   const show = Boolean(state.unverified[scope]);
+  const offer = section.key === "1_checklist" ? checklistOfferRow(state) : "";
   if (!section.applicable) {
-    return `<section class="screen"><h2>${esc(section.title)}</h2><p class="lead">Раздел не применим: ${esc(section.note || "")}</p></section>`;
+    return `<section class="screen"><h2>${esc(section.title)}</h2><p class="lead">Раздел не применим: ${esc(section.note || "")}</p>${offer}</section>`;
   }
   const pools = [{ title: "", facts: section.facts || [], note: "" }].concat(
     (section.subsections || []).map((sub) => ({
@@ -326,6 +361,7 @@ function sectionScreen(state, screen) {
     <h2>${esc(section.title)}</h2>
     ${toggle}
     ${blocks}
+    ${offer}
     ${guides}
   </section>`;
 }

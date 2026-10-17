@@ -99,20 +99,51 @@ def test_banks_come_from_guides_and_route_card_has_no_price():
         "Пересадка", "Трансфер", "Связь", "Ввоз и вывоз", "Штампы и отметки", "Оплата",
     ]
     transfer = route["sections"][1]
-    assert any(
-        "c1.travelpayouts.com/click" in link["url"] and f"shmarker={AVIASALES_MARKER}" in link["url"]
-        for link in transfer["links"]
-    )
-    assert "Welcome Pickups" in transfer["text"]
+    assert transfer["links"] == [
+        {
+            "label": "KiwiTaxi",
+            "url": "https://kiwitaxi.tpk.lv/SYHLlog7?erid=2VtzqwJNmCZ",
+            "placeholder": False,
+            "partner": True,
+        },
+        {
+            "label": "GetTransfer",
+            "url": "https://gettransfer.tpk.lv/ZfIWEo1o?erid=2VtzqwTGgtd",
+            "placeholder": False,
+            "partner": True,
+        },
+    ]
+    assert "Welcome Pickups" not in transfer["text"]
+    assert "партнёрская ссылка" in transfer["text"]
     assert not any("PLACEHOLDER" in link["url"] for link in transfer["links"])
     internet = route["sections"][2]
     assert "Airalo" in internet["text"]
-    assert internet["links"] == [{
-        "label": "Airalo",
-        "url": "https://airalo.tpk.lv/WJxbG8Hh?erid=2VtzqwXiejf",
-        "placeholder": False,
-    }]
+    assert "Yesim" in internet["text"]
+    assert internet["links"] == [
+        {
+            "label": "Airalo",
+            "url": "https://airalo.tpk.lv/NK1pNs4y?erid=2VtzqwXiejf",
+            "placeholder": False,
+            "partner": True,
+        },
+        {
+            "label": "Yesim",
+            "url": "https://yesim.tpk.lv/acVRMvIx?erid=2VtzqwNpj3b",
+            "placeholder": False,
+            "partner": True,
+        },
+    ]
+    assert "партнёрская ссылка" in internet["text"]
     assert "example.com" not in internet["text"]
+    offers = {offer["id"]: offer for offer in catalog["offers"]}
+    assert catalog["partner_note"] == "партнёрская ссылка"
+    assert offers["cherehapa"] == {
+        "id": "cherehapa",
+        "placement": "checklist",
+        "label": "Оформить страховку",
+        "url": "https://cherehapa.tpk.lv/gacNF5aA?erid=2VtzqwQJiKw",
+    }
+    assert "welcome_pickups" not in offers
     assert "тестовый этап" in catalog["privacy"]
     assert "[" not in catalog["privacy"]
 
@@ -322,15 +353,17 @@ def test_partner_links_and_bot_username(monkeypatch):
     from database.partners import partner_href
 
     kiwi = partner_href("kiwitaxi")
-    assert kiwi is not None
-    assert kiwi.startswith("https://c1.travelpayouts.com/click?")
-    assert "shmarker=765617" in kiwi
-    assert "promo_id=647" in kiwi
-    assert partner_href("welcome_pickups") is None
+    assert kiwi == "https://kiwitaxi.tpk.lv/SYHLlog7?erid=2VtzqwJNmCZ"
+    assert partner_href("kiwitaxi", project_id="4242") == kiwi
+    assert partner_href("gettransfer") == "https://gettransfer.tpk.lv/ZfIWEo1o?erid=2VtzqwTGgtd"
     airalo = partner_href("airalo")
-    assert airalo == "https://airalo.tpk.lv/WJxbG8Hh?erid=2VtzqwXiejf"
+    assert airalo == "https://airalo.tpk.lv/NK1pNs4y?erid=2VtzqwXiejf"
     assert "erid=2VtzqwXiejf" in airalo
     assert partner_href("airalo", project_id="4242") == airalo
+    assert partner_href("yesim") == "https://yesim.tpk.lv/acVRMvIx?erid=2VtzqwNpj3b"
+    assert partner_href("cherehapa") == "https://cherehapa.tpk.lv/gacNF5aA?erid=2VtzqwQJiKw"
+    from database.partners import load_partner_config
+    assert "welcome_pickups" not in load_partner_config()["partners"]
 
     monkeypatch.setattr(settings, "BOT_USERNAME", "")
     status, payload = dispatch("GET", "miniapp/config", b"")
@@ -368,7 +401,13 @@ def test_partner_links_and_bot_username(monkeypatch):
     screens = (root / "miniapp" / "js" / "screens.js").read_text(encoding="utf-8")
     assert "kiwitaxi" not in screens.lower()
     assert "airalo" not in screens.lower()
+    assert "yesim" not in screens.lower()
+    assert "gettransfer" not in screens.lower()
+    assert "cherehapa" not in screens.lower()
     assert "tp.media" not in screens
+    assert "tpk.lv" not in screens
+    assert "partner_note" in screens
+    assert "checklist" in screens and "placement" in screens
     landing = (root / "landing" / "index.html").read_text(encoding="utf-8")
     assert "smarttttravel" not in landing
     assert "TravelPaymentsGuideBot" not in landing

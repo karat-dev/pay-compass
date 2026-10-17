@@ -271,6 +271,15 @@ def test_official_links_and_html_fit_telegram():
     assert "https://www.octopus.com.hk/" in render_user_facing(HONG_KONG_DATA)
     assert "https://www.true.th/en/help/mobile/setting/faq-mobile-banking-authen" in render_user_facing(THAILAND_DATA)
 
+    checklist = "\n".join(section_html_pages(HONG_KONG_DATA, "1_checklist"))
+    assert 'href="https://cherehapa.tpk.lv/gacNF5aA?erid=2VtzqwQJiKw"' in checklist
+    assert "Оформить страховку" in checklist
+    assert "<i>партнёрская ссылка</i>" in checklist
+    assert "Welcome Pickups" not in checklist
+    plain = render_section(HONG_KONG_DATA, "1_checklist")
+    assert "Оформить страховку: https://cherehapa.tpk.lv/gacNF5aA?erid=2VtzqwQJiKw" in plain
+    assert "партнёрская ссылка" in plain
+
     for country in GUIDES.values():
         for key in SECTION_KEYS:
             pages = section_html_pages(country, key, show_unverified=True)

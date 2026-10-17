@@ -314,6 +314,25 @@ textarea { width: 100%; min-height: 110px; resize: vertical; }
 .zone-name { color: var(--zone, var(--text)); }
 .fact-text { margin: 0 0 8px; }
 .source { margin: 0; font-size: 13px; }
+.source a + a { margin-left: 10px; }
+.partner-line { margin: 4px 0 0; }
+.partner-note {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--hint);
+}
+.partner-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  align-items: baseline;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.partner-row a { font-weight: 700; }
 .check { display: flex; gap: 10px; align-items: flex-start; margin: 8px 0; }
 .check .fact { flex: 1; margin: 0; box-shadow: none; }
 .check.is-done .fact-text { opacity: 0.72; }
