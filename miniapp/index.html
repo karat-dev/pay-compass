@@ -9,12 +9,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script>
     (function () {
       var theme = new URLSearchParams(location.search).get("theme");
       if (!theme) return;
       var dark = theme === "dark";
       document.documentElement.dataset.theme = dark ? "dark" : "light";
+      var live = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData;
+      if (live) return;
       var lightParams = {
         bg_color: "#ffffff",
         secondary_bg_color: "#f4f4f5",
