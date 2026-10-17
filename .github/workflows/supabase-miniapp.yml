@@ -22,7 +22,7 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: 2.48.3
+          version: 2.121.0
 
       - name: Check connectivity and apply Mini App migrations
         env:

@@ -103,6 +103,35 @@ def supabase(*args: str, url: str) -> subprocess.CompletedProcess:
     )
 
 
+def record_applied(url: str, version: str) -> None:
+    if not version.isdigit():
+        emit("result=failed")
+        emit("error=invalid migration version")
+        raise SystemExit(1)
+    names = {
+        "20260913000000": "initial_schema",
+        "20261014000000": "miniapp",
+        "20261016000000": "drop_username",
+    }
+    name = names.get(version, "migration")
+    sql = f"""
+    CREATE SCHEMA IF NOT EXISTS supabase_migrations;
+    CREATE TABLE IF NOT EXISTS supabase_migrations.schema_migrations (
+        version text PRIMARY KEY
+    );
+    ALTER TABLE supabase_migrations.schema_migrations ADD COLUMN IF NOT EXISTS name text;
+    ALTER TABLE supabase_migrations.schema_migrations ADD COLUMN IF NOT EXISTS statements text[];
+    INSERT INTO supabase_migrations.schema_migrations (version, name)
+    VALUES ('{version}', '{name}')
+    ON CONFLICT (version) DO NOTHING;
+    """
+    result = psql(url, sql)
+    if result.returncode != 0:
+        emit("error=" + " ".join((result.stderr or result.stdout or "migration record failed").split()))
+        emit("result=failed")
+        raise SystemExit(result.returncode or 1)
+
+
 def apply_with_psql(url: str, versions: list) -> None:
     for version in versions:
         path = FILES[version]
@@ -114,14 +143,7 @@ def apply_with_psql(url: str, versions: list) -> None:
             emit("error=" + " ".join((result.stderr or result.stdout or "psql failed").split()))
             emit("result=failed")
             raise SystemExit(result.returncode or 1)
-        repaired = supabase(
-            "migration", "repair", version, "--status", "applied",
-            url=url,
-        )
-        if repaired.returncode != 0:
-            emit("error=" + " ".join((repaired.stderr or repaired.stdout or "repair failed").split()))
-            emit("result=failed")
-            raise SystemExit(repaired.returncode or 1)
+        record_applied(url, version)
         emit("applied=" + version)
 
 
@@ -162,14 +184,7 @@ def main() -> None:
 
     plan = migration_plan(history, tables)
     for version in plan["repair"]:
-        repaired = supabase(
-            "migration", "repair", version, "--status", "applied",
-            url=url,
-        )
-        if repaired.returncode != 0:
-            emit("error=" + " ".join((repaired.stderr or repaired.stdout or "baseline repair failed").split()))
-            emit("result=failed")
-            raise SystemExit(repaired.returncode or 1)
+        record_applied(url, version)
         emit("repaired=" + version)
 
     recorded = list_history(url)
