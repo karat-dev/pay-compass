@@ -8,7 +8,8 @@ as pending.
 from __future__ import annotations
 
 import re
-from typing import Dict, Iterable, List, Sequence, Set
+from typing import Dict, Iterable, List, Optional, Sequence, Set
+from urllib.parse import quote, urlparse, urlunparse
 
 BASELINE_VERSION = "20260913000000"
 MINIAPP_VERSIONS = ("20261014000000", "20261016000000")
@@ -16,6 +17,11 @@ BASELINE_TABLES = frozenset({"users", "countries"})
 
 _URL_RE = re.compile(r"postgres(?:ql)?://\S+", re.IGNORECASE)
 _PASSWORD_RE = re.compile(r"(password|pwd)\s*=\s*\S+", re.IGNORECASE)
+_SUPABASE_HOST_RE = re.compile(
+    r"\b(?:db\.[a-z0-9]+\.supabase\.co|aws-\d+-[a-z0-9-]+\.pooler\.supabase\.com)\b",
+    re.IGNORECASE,
+)
+_DIRECT_HOST_RE = re.compile(r"^db\.([a-z0-9]+)\.supabase\.co$", re.IGNORECASE)
 _VERSION_FILE_RE = re.compile(r"\b(20\d{12})(?:_[A-Za-z0-9_]+)?\.sql\b")
 _VERSION_BULLET_RE = re.compile(r"(?m)^\s*[•*\-]\s*(20\d{12})\b")
 
@@ -54,8 +60,42 @@ def redact_text(text: str, secret: str = "") -> str:
     if secret:
         cleaned = cleaned.replace(secret, "[redacted]")
     cleaned = _URL_RE.sub("[redacted-url]", cleaned)
+    cleaned = _SUPABASE_HOST_RE.sub("[redacted-host]", cleaned)
     cleaned = _PASSWORD_RE.sub("password=[redacted]", cleaned)
     return cleaned
+
+
+def session_pooler_url(url: str, region: str = "eu-central-1") -> Optional[str]:
+    """Rewrite a direct db host to the IPv4 session pooler. Pooler URLs pass through."""
+    parsed = urlparse(url)
+    host = parsed.hostname or ""
+    if "pooler.supabase.com" in host:
+        return url
+    match = _DIRECT_HOST_RE.match(host)
+    if not match or not region:
+        return None
+    project_ref = match.group(1)
+    user = parsed.username or "postgres"
+    if user == "postgres":
+        user = f"postgres.{project_ref}"
+    password = quote(parsed.password or "", safe="")
+    auth = quote(user, safe=".")
+    if password:
+        auth = f"{auth}:{password}"
+    query = parsed.query
+    if "sslmode=" not in query:
+        query = f"{query}&sslmode=require" if query else "sslmode=require"
+    netloc = f"{auth}@aws-0-{region}.pooler.supabase.com:5432"
+    path = parsed.path or "/postgres"
+    return urlunparse((parsed.scheme or "postgresql", netloc, path, "", query, ""))
+
+
+def connection_candidates(url: str, region: str = "eu-central-1") -> List[str]:
+    """Prefer the session pooler when the secret points at the IPv6-only direct host."""
+    pooler = session_pooler_url(url, region)
+    if pooler and pooler != url:
+        return [pooler, url]
+    return [url]
 
 
 def pending_local_versions(local_versions: Sequence[str], applied: Iterable[str], repair: Iterable[str]) -> List[str]:

@@ -19,6 +19,7 @@ if str(ROOT) not in sys.path:
 from database.miniapp_migrate import (  # noqa: E402
     BASELINE_VERSION,
     MINIAPP_VERSIONS,
+    connection_candidates,
     migration_plan,
     parse_dry_run,
     pending_local_versions,
@@ -125,19 +126,29 @@ def apply_with_psql(url: str, versions: list) -> None:
 
 
 def main() -> None:
-    url = (os.environ.get("SUPABASE_DB_URL") or "").strip()
-    if not url:
+    secret = (os.environ.get("SUPABASE_DB_URL") or "").strip()
+    if not secret:
         emit("connectivity=false")
         emit("error=SUPABASE_DB_URL is empty")
         raise SystemExit(1)
+    region = (os.environ.get("SUPABASE_POOLER_REGION") or "eu-central-1").strip()
 
-    probe = psql(url, "SELECT 1")
-    if probe.returncode != 0 or (probe.stdout or "").strip() != "1":
-        emit("connectivity=false")
+    url = ""
+    errors = []
+    for candidate in connection_candidates(secret, region):
+        probe = psql(candidate, "SELECT 1")
+        if probe.returncode == 0 and (probe.stdout or "").strip() == "1":
+            url = candidate
+            break
         detail = (probe.stderr or probe.stdout or "SELECT 1 failed").strip()
-        emit("error=" + " ".join(detail.split()))
-        raise SystemExit(probe.returncode or 1)
+        errors.append(" ".join(detail.split()))
+    if not url:
+        emit("connectivity=false")
+        emit("error=" + " | ".join(errors))
+        raise SystemExit(1)
+    via = "session_pooler" if "pooler.supabase.com" in url else "direct"
     emit("connectivity=true")
+    emit("connect_via=" + via)
 
     tables = list_tables(url)
     for name in tables:

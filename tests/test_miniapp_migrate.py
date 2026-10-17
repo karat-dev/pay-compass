@@ -2,11 +2,13 @@
 
 from database.miniapp_migrate import (
     BASELINE_VERSION,
+    connection_candidates,
     migration_plan,
     parse_dry_run,
     pending_local_versions,
     push_allowed,
     redact_text,
+    session_pooler_url,
 )
 
 
@@ -49,4 +51,15 @@ def test_dry_run_parser_and_redaction():
     cleaned = redact_text("failed " + secret + " password=s3cret", secret)
     assert secret not in cleaned
     assert "s3cret" not in cleaned
+    assert "pooler.supabase.com" not in cleaned
     assert "[redacted]" in cleaned
+
+    direct = "postgresql://postgres:s3cret@db.abcproject.supabase.co:5432/postgres"
+    pooled = session_pooler_url(direct, "eu-central-1")
+    assert pooled is not None
+    assert "db.abcproject.supabase.co" not in pooled
+    assert "@aws-0-eu-central-1.pooler.supabase.com:5432/" in pooled
+    assert "postgres.abcproject:s3cret@" in pooled
+    assert "sslmode=require" in pooled
+    assert connection_candidates(direct)[0] == pooled
+    assert connection_candidates(pooled) == [pooled]
