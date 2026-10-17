@@ -1,4 +1,4 @@
-import { tripCountdown, tripWhen } from "./flow.js";
+import { routeForTrip, searchTicketsUrl, tripCountdown, tripWhen } from "./flow.js";
 import {
   countryBySlug,
   daysUntil,
@@ -106,7 +106,11 @@ function nav(screen) {
 }
 
 function introDots(step) {
-  return `<p class="intro-dots" aria-hidden="true">${[0, 1, 2].map((index) => `<span class="${index === step ? "is-on" : ""}"></span>`).join("")}</p>`;
+  return `<p class="intro-dots" aria-hidden="true">${[0, 1, 2, 3].map((index) => `<span class="${index === step ? "is-on" : ""}"></span>`).join("")}</p>`;
+}
+
+function zoneMarks(zones) {
+  return `<span class="zone-marks" aria-hidden="true">${zones.map((zone) => `<span class="zone-dot" data-zone="${esc(zone)}"></span>`).join("")}</span>`;
 }
 
 function introScreen(state) {
@@ -116,6 +120,14 @@ function introScreen(state) {
     body = `<h2>Платите за границей без сюрпризов</h2>
       <p class="lead">Подскажем, как платить в стране поездки именно вам: что работает с вашим банком, где нужна зарубежная карта или наличные, как перевести деньги. У каждого факта — дата проверки и источник.</p>`;
   } else if (step === 1) {
+    body = `<h2>Мы честно показываем, насколько уверены</h2>
+      <ul class="intro-zones">
+        <li>${zoneMarks(["green"])}<span>Зелёный — подтверждено официальным источником или нашим личным опытом, проверено недавно.</span></li>
+        <li>${zoneMarks(["yellow"])}<span>Жёлтый — скорее всего верно, но источник слабее или проверка давняя.</span></li>
+        <li>${zoneMarks(["red", "black"])}<span>Красный и чёрный — мало подтверждений, устарело или опровергнуто. Скрыты, открываются кнопкой «Показать непроверенное».</span></li>
+      </ul>
+      <p class="intro-fine">Рядом с каждым фактом — дата проверки. Где данных нет, честно пишем «не исследовано».</p>`;
+  } else if (step === 2) {
     body = `<h2>Всё к поездке в одном месте</h2>
       <ul class="intro-list">
         <li>Чек-лист: что сделать до вылета и на месте</li>
@@ -132,7 +144,7 @@ function introScreen(state) {
         <button type="button" class="ghost" data-action="intro-skip">Пропустить</button>
       </div>`;
   }
-  const forward = step < 2
+  const forward = step < 3
     ? `<div class="onboard-actions"><button type="button" class="primary" data-action="intro-next">Дальше</button></div>`
     : "";
   return `<section class="screen onboard">${introDots(step)}${body}${forward}</section>`;
@@ -209,8 +221,7 @@ function tripScreen(state) {
     if (nights) when += ` · ${nights} дн.`;
   }
   const countdown = tripCountdown(daysUntil(trip.depart_date));
-  const route = state.catalog.routes[0];
-  const matches = trip.departure_city_id === "mow" && trip.destination_slug === "hong_kong";
+  const route = routeForTrip(state.catalog.routes, trip);
   const dateNote = trip.depart_date
     ? ""
     : `<p class="hint">Дата не выбрана — отсчёта до вылета нет. Чек-лист ниже без привязки ко дню.</p>`;
@@ -223,16 +234,33 @@ function tripScreen(state) {
       <button type="button" class="text-btn" data-action="start-pick">Подобрать под поездку</button>
     </article>
     ${dateNote}
-    ${routeCard(state, route, matches)}
+    ${route ? routeCard(state, route) : unmatchedRoute(state, trip)}
     ${checklist(state, country)}
   </section>`;
 }
 
-function routeCard(state, route, matches) {
+function unmatchedRoute(state, trip) {
+  const city = state.catalog.cities.find((item) => item.id === trip.departure_city_id);
+  const country = countryBySlug(state.catalog, trip.destination_slug);
+  const url = searchTicketsUrl({
+    origin: city && city.iata,
+    destination: country && country.ticket_iata,
+    depart: trip.depart_date,
+    marker: state.catalog.tickets_marker,
+  });
+  const link = url
+    ? `<a class="primary tickets" href="${esc(url)}" data-action="link" data-url="${esc(url)}">Найти билеты</a>`
+    : "";
+  return `<article class="ticket">
+    <p class="eyebrow">Разбор маршрута</p>
+    <h2>Разбор этого маршрута пока не готов</h2>
+    <p class="lead">Чек-лист ниже — по стране поездки.</p>
+    ${link}
+  </article>`;
+}
+
+function routeCard(state, route) {
   if (!route) return "";
-  const note = matches
-    ? ""
-    : `<p class="hint">Подробный разбор пока есть только для Москва → Гонконг через Пекин. Чек-лист ниже — по вашей стране.</p>`;
   const names = route.airlines.map((item) => `<span>${esc(item.name)}</span>`).join('<span class="dot">·</span>');
   const placeholder = route.airlines.some((item) => item.placeholder)
     ? `<p class="hint">Страницы авиакомпаний ещё не подключены — пока только названия.</p>`
@@ -244,18 +272,21 @@ function routeCard(state, route, matches) {
   }).join("");
   const current = route.sections.find((section) => section.id === open);
   const url = ticketsUrl(route, state.trip && state.trip.depart_date);
+  const iata = route.iata ? `<p class="iata">${esc(route.iata)}</p>` : "";
+  const link = url
+    ? `<a class="primary tickets" href="${esc(url)}" data-action="link" data-url="${esc(url)}">Найти билеты</a>`
+    : "";
   return `<article class="ticket">
     <p class="eyebrow">Разбор маршрута</p>
     <h2>${esc(route.title)}</h2>
-    <p class="iata">MOW · PEK · HKG</p>
+    ${iata}
     <div class="ticket-rule"></div>
     ${route.summary.map((paragraph) => `<p class="ticket-copy">${esc(paragraph)}</p>`).join("")}
     <div class="airline-row">${names}</div>
     ${placeholder}
-    <a class="primary tickets" href="${esc(url)}" data-action="link" data-url="${esc(url)}">Найти билеты</a>
+    ${link}
     <div class="chip-row">${chips}</div>
     ${current ? routeCopy(state, current) : ""}
-    ${note}
   </article>`;
 }
 
@@ -359,7 +390,7 @@ function countryScreen(state, screen) {
     if (guideCount) meta += ` · ${ruCount(guideCount, "инструкция", "инструкции", "инструкций")}`;
     return `<button type="button" class="section-tile" data-action="open-section" data-slug="${esc(country.slug)}" data-key="${esc(section.key)}">
       <span class="section-index">${esc(section.key.slice(0, 1))}</span>
-      <span>
+      <span class="section-copy">
         <strong>${esc(section.short_title)}</strong>
         <span class="hint">${esc(meta)}</span>
       </span>

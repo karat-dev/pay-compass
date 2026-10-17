@@ -214,10 +214,12 @@ function draw() {
 
 function seedPreview(name) {
   state.preview = true;
-  const intro = name === "intro" || name === "intro-sources" || name === "intro-privacy";
+  const introSteps = { intro: 0, "intro-trust": 1, "intro-sources": 2, "intro-privacy": 3 };
+  const intro = Object.prototype.hasOwnProperty.call(introSteps, name);
   const bare = intro || name === "empty";
   const nodate = name === "nodate";
-  state.introStep = name === "intro-sources" ? 1 : name === "intro-privacy" ? 2 : 0;
+  const china = name === "china";
+  state.introStep = intro ? introSteps[name] : 0;
   state.introSeen = !intro;
   const named = new URLSearchParams(location.search).get("startapp") || "";
   state.after = named ? (mapStart(state.catalog, named) || "/trip") : "";
@@ -233,17 +235,17 @@ function seedPreview(name) {
     intro_seen: !intro,
   };
   state.trip = bare ? null : {
-    destination_slug: "hong_kong",
+    destination_slug: china ? "china" : "hong_kong",
     departure_city_id: "mow",
-    depart_date: nodate ? null : "2026-11-12",
-    return_date: nodate ? null : "2026-11-20",
+    depart_date: china ? "2026-10-31" : nodate ? null : "2026-11-12",
+    return_date: china ? "2026-11-14" : nodate ? null : "2026-11-20",
   };
   state.draft = {
     bank_id: state.profile.bank_id,
     departure_city_id: state.profile.departure_city_id,
-    destination_slug: bare ? "" : "hong_kong",
-    depart_date: nodate || bare ? "" : "2026-11-12",
-    return_date: nodate || bare ? "" : "2026-11-20",
+    destination_slug: bare ? "" : (china ? "china" : "hong_kong"),
+    depart_date: china ? "2026-10-31" : nodate || bare ? "" : "2026-11-12",
+    return_date: china ? "2026-11-14" : nodate || bare ? "" : "2026-11-20",
     consent: false,
   };
   state.step = 0;
@@ -263,10 +265,12 @@ function seedPreview(name) {
 function previewTarget(name) {
   return {
     intro: "/intro",
+    "intro-trust": "/intro",
     "intro-sources": "/intro",
     "intro-privacy": "/intro",
     empty: "/trip",
     nodate: "/trip",
+    china: "/trip",
     pick: "/pick",
     onboarding: "/pick",
     trip: "/trip",
@@ -434,7 +438,7 @@ app.addEventListener("click", (event) => {
     return;
   }
   if (action === "intro-next") {
-    state.introStep = Math.min(2, (state.introStep || 0) + 1);
+    state.introStep = Math.min(3, (state.introStep || 0) + 1);
     draw();
     return;
   }

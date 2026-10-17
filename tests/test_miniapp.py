@@ -84,8 +84,16 @@ def test_banks_come_from_guides_and_route_card_has_no_price():
 
     route = catalog["routes"][0]
     assert route["title"] == "Москва → Гонконг через Пекин"
+    assert route["departure_city_id"] == "mow"
+    assert route["destination_slug"] == "hong_kong"
+    assert route["iata"] == "MOW · PEK · HKG"
     assert route["marker"] == AVIASALES_MARKER
+    assert catalog["tickets_marker"] == AVIASALES_MARKER
     assert f"marker={AVIASALES_MARKER}" in route["tickets_url"]
+    assert "HKG" in route["tickets_url"]
+    china = next(country for country in catalog["countries"] if country["slug"] == "china")
+    assert china["ticket_iata"] == "BJS"
+    assert "HKG" not in china["ticket_iata"]
     assert "price" not in route
     assert "prices" not in route
     assert "₽" not in "\n".join(route["summary"])
@@ -280,7 +288,8 @@ def test_client_flow_keeps_intro_ahead_of_deep_links():
 
     root = Path(__file__).resolve().parents[1]
     script = """
-import { afterPick, bootTarget, introExit, tripCountdown, tripWhen } from "./miniapp/js/flow.js";
+import { afterPick, bootTarget, introExit, routeForTrip, searchTicketsUrl, tripCountdown, tripWhen } from "./miniapp/js/flow.js";
+import { ticketsUrl } from "./miniapp/js/ui.js";
 const assert = (ok, message) => { if (!ok) { console.error(message); process.exit(1); } };
 assert(bootTarget({ introSeen: false, deepLink: "/guide/china", hash: "#/sos" }) === "/intro", "intro first");
 assert(bootTarget({ introSeen: true, deepLink: "/guide/china", hash: "" }) === "/guide/china", "then deep link");
@@ -295,6 +304,22 @@ assert(tripWhen("") === "Дата не выбрана", "missing date");
 assert(tripWhen(null) === "Дата не выбрана", "null date");
 assert(tripCountdown(null) === "", "no countdown");
 assert(tripCountdown(0) === "Вылет сегодня", "chosen today");
+const hkg = {
+  id: "mow_hkg_via_pek",
+  departure_city_id: "mow",
+  destination_slug: "hong_kong",
+  tickets_url: "https://www.aviasales.ru/search/MOW{DDMM}HKG1?marker=765617",
+};
+const routes = [hkg];
+assert(routeForTrip(routes, { departure_city_id: "mow", destination_slug: "china" }) === null, "china has no hkg card");
+assert(routeForTrip(routes, { departure_city_id: "led", destination_slug: "hong_kong" }) === null, "other origin");
+assert(routeForTrip(routes, { departure_city_id: "mow", destination_slug: "hong_kong" }) === hkg, "moscow hong kong");
+const chinaUrl = searchTicketsUrl({ origin: "MOW", destination: "BJS", depart: "2026-10-31", marker: "765617" });
+assert(chinaUrl === "https://www.aviasales.ru/search/MOW3110BJS1?marker=765617", chinaUrl);
+assert(!chinaUrl.includes("HKG"), "china link is not hong kong");
+assert(searchTicketsUrl({ origin: "MOW", destination: "", depart: "2026-10-31", marker: "765617" }) === "", "hide a link we cannot build");
+const hkgUrl = ticketsUrl(hkg, "2026-11-12");
+assert(hkgUrl.includes("MOW1211HKG1") && hkgUrl.includes("marker=765617"), hkgUrl);
 """
     result = subprocess.run(
         ["node", "--input-type=module", "-e", script],
@@ -308,6 +333,9 @@ assert(tripCountdown(0) === "Вылет сегодня", "chosen today");
     main = (root / "miniapp" / "js" / "main.js").read_text(encoding="utf-8")
     intro = screens.split("function introScreen", 1)[1].split("function dateFields", 1)[0]
     assert "Платите за границей без сюрпризов" in intro
+    assert "Мы честно показываем, насколько уверены" in intro
+    assert "Показать непроверенное" in intro
+    assert "не исследовано" in intro
     assert "Всё к поездке в одном месте" in intro
     assert "Без лишнего" in intro
     assert "Ссылки на eSIM, страховку и трансфер — партнёрские." in intro
@@ -315,12 +343,21 @@ assert(tripCountdown(0) === "Вылет сегодня", "chosen today");
     assert "Пропустить" in intro
     assert "Справочник" not in intro
     assert "Гонконг" not in intro
+    assert "[0, 1, 2, 3]" in screens
+    assert "catalog.routes[0]" not in screens
+    assert "MOW · PEK · HKG" not in screens
+    assert "routeForTrip" in screens
+    assert "Разбор этого маршрута пока не готов" in screens
     assert "Подобрать под поездку" in screens
     assert "Дата не выбрана" in screens
     assert "Подбор под поездку" in screens
     assert "Сообщить о неточности" in screens
     assert "Укажите дату вылета" not in main
     assert "intro_seen" in main
+    assert "Math.min(3" in main
+    css = (root / "miniapp" / "styles.css").read_text(encoding="utf-8")
+    assert ".section-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }" in css
+    assert "overflow-wrap: anywhere" in css
     settings_source = (root / "config" / "settings.py").read_text(encoding="utf-8")
     assert "MINIAPP_DEV_AUTH: bool = False" in settings_source
 

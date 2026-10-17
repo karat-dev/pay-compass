@@ -48,6 +48,26 @@ SHORT_SECTION_TITLES = {
 
 COUNTRY_ORDER = ("china", "hong_kong", "thailand", "uae", "turkey", "georgia")
 
+# Aviasales city codes for the main city of a destination. A missing code hides
+# the ticket button instead of guessing an airport.
+DESTINATION_IATA = {
+    "china": "BJS",
+    "hong_kong": "HKG",
+    "thailand": "BKK",
+    "uae": "DXB",
+    "turkey": "IST",
+    "georgia": "TBS",
+}
+
+# The only published breakdown. It is shown only for this origin and country.
+ROUTE_FOR_TRIP = {
+    "mow_hkg_via_pek": {
+        "departure_city_id": "mow",
+        "destination_slug": "hong_kong",
+        "iata": "MOW · PEK · HKG",
+    },
+}
+
 # Departure cities are a product choice for onboarding, not facts from the guides.
 DEPARTURE_CITIES = (
     {"id": "mow", "name": "Москва", "iata": "MOW"},
@@ -307,6 +327,7 @@ def _public_route(route_id: str = "mow_hkg_via_pek") -> Dict[str, Any]:
             ],
         })
     lines = lead_lines(route.get("text") or "")
+    match = ROUTE_FOR_TRIP.get(route["id"]) or {}
     return {
         "id": route["id"],
         "title": lines[0] if lines else route["id"],
@@ -314,6 +335,9 @@ def _public_route(route_id: str = "mow_hkg_via_pek") -> Dict[str, Any]:
         "airlines": airlines,
         "tickets_url": tickets_url(route),
         "marker": AVIASALES_MARKER,
+        "departure_city_id": match.get("departure_city_id") or "",
+        "destination_slug": match.get("destination_slug") or "",
+        "iata": match.get("iata") or "",
         "sections": sections,
     }
 
@@ -376,6 +400,7 @@ def build_catalog() -> Dict[str, Any]:
             "slug": slug,
             "name": raw["name"],
             "headline": raw.get("headline") or "",
+            "ticket_iata": DESTINATION_IATA.get(slug) or "",
             "sections": sections,
         })
 
@@ -397,6 +422,7 @@ def build_catalog() -> Dict[str, Any]:
         "countries": countries,
         "instructions": instructions,
         "routes": [_public_route()],
+        "tickets_marker": AVIASALES_MARKER,
         "section_keys": list(SECTION_KEYS),
         "partner_note": disclosure(),
         "offers": public_offers(),
