@@ -31,6 +31,7 @@ WRITE_ROUTES = {
     "miniapp/progress",
     "miniapp/report",
     "miniapp/onboarding",
+    "miniapp/intro",
 }
 MAX_BODY = 100_000
 
@@ -93,6 +94,7 @@ def _clean_profile(payload: Mapping[str, Any], *, require_complete: bool) -> Dic
         "notify_alerts": bool(payload.get("notify_alerts", False)),
         "consent_given": consent,
         "onboarding_completed": completed,
+        "intro_seen": bool(payload.get("intro_seen")),
     }
 
 
@@ -212,9 +214,13 @@ async def _handle(method: str, route: str, body: bytes, headers: Mapping[str, st
         if route == "miniapp/session":
             bundle = await store.get_bundle(telegram_id)
             bundle["telegram_id"] = telegram_id
+            bundle["intro_seen"] = bool(bundle.get("intro_seen"))
             raw_screen = identity.get("start_param") or payload.get("screen") or ""
             bundle["screen"] = normalize_screen(raw_screen) if raw_screen else None
             return 200, bundle
+        if route == "miniapp/intro":
+            marked = await store.mark_intro_seen(telegram_id)
+            return 200, marked
         if route == "miniapp/profile":
             fields = _clean_profile(payload, require_complete=True)
             profile = await store.save_profile(telegram_id, fields)
@@ -228,8 +234,6 @@ async def _handle(method: str, route: str, body: bytes, headers: Mapping[str, st
             if not profile_fields["consent_given"] or not profile_fields["onboarding_completed"]:
                 raise ValueError("Нужно согласие на обработку данных.")
             trip_fields = _clean_trip(payload.get("trip") or {}, profile_fields["departure_city_id"])
-            if not trip_fields.get("depart_date"):
-                raise ValueError("Укажите дату вылета.")
             if profile_fields["departure_city_id"] and not trip_fields.get("departure_city_id"):
                 trip_fields["departure_city_id"] = profile_fields["departure_city_id"]
             trip = await store.save_trip(telegram_id, trip_fields)
