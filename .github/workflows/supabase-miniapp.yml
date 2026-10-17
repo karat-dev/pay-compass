@@ -1,0 +1,30 @@
+name: Apply Mini App database migrations
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - cursor/telegram-mini-app-cd01
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.48.3
+
+      - name: Check connectivity and apply Mini App migrations
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python3 scripts/apply_miniapp_migrations.py

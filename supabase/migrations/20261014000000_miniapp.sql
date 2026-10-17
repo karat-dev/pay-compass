@@ -1,4 +1,6 @@
 -- Mini App state: profile, one active trip, instruction/checklist progress, inaccuracy reports.
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- Facts themselves stay in database/data/countries.json. Reports point at a stable fact id
 -- because those facts are not rows in verified_facts.
 -- The browser must not use the anon key for these tables. The Vercel function uses the

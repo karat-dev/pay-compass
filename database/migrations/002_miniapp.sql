@@ -1,4 +1,6 @@
 -- Same migration as supabase/migrations/20261014000000_miniapp.sql.
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- Prefer the supabase/migrations copy: GitHub Actions applies that folder.
 
 CREATE TABLE IF NOT EXISTS miniapp_profiles (

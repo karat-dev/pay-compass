@@ -162,7 +162,7 @@ python3 -m miniapp
 
 Партнёрские ссылки трансфера, eSIM и страховки собираются из `config/partners.json` (маркер Travelpayouts `765617`). Готовая короткая ссылка задаётся полем `url` и подставляется как есть, вместе с параметром `erid`. Рядом с ней показывается пометка «партнёрская ссылка». В интерфейсе URL не зашиты.
 
-GitHub Actions катит `supabase/migrations/` при пуше в `main`, если заданы `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`, `SUPABASE_DB_PASSWORD`. Либо вставьте файл в SQL Editor.
+GitHub Actions катит `supabase/migrations/` при пуше в `main`, если заданы `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`, `SUPABASE_DB_PASSWORD`. Workflow `.github/workflows/supabase-miniapp.yml` на этой ветке использует секрет `SUPABASE_DB_URL` (session pooler): проверяет `SELECT 1`, печатает только имена таблиц `public` и накатывает миграции Mini App. Уже применённая начальная схема в историю записывается без повторного выполнения. Либо вставьте файл в SQL Editor.
 
 Команда `/delete_me` удаляет и эти строки. Сообщения о неточности пишутся в `miniapp_fact_reports` (у фактов из JSON нет UUID в `verified_facts`).
 
