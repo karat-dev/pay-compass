@@ -1,4 +1,4 @@
-import { afterPick, bootTarget, introExit } from "./flow.js";
+import { afterPick, beginIntroReplay, bootTarget, introExit } from "./flow.js";
 import { render, parseRoute } from "./screens.js";
 import {
   applyTheme,
@@ -440,6 +440,10 @@ app.addEventListener("click", (event) => {
   if (action === "intro-next") {
     state.introStep = Math.min(3, (state.introStep || 0) + 1);
     draw();
+    return;
+  }
+  if (action === "replay-intro") {
+    navigate(beginIntroReplay(state));
     return;
   }
   if (action === "intro-pick" || action === "intro-skip") {

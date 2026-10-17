@@ -47,3 +47,8 @@ export function searchTicketsUrl({ origin, destination, depart, marker }) {
   }
   return `https://www.aviasales.ru/search/${origin}${date}${destination}1?marker=${marker}`;
 }
+
+export function beginIntroReplay(state) {
+  state.introStep = 0;
+  return "/intro";
+}
