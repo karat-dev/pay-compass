@@ -1,3 +1,4 @@
+import { tripCountdown, tripWhen } from "./flow.js";
 import {
   countryBySlug,
   daysUntil,
@@ -53,7 +54,8 @@ function header(state, screen) {
     sos: "SOS",
     profile: "Профиль",
     search: "Поиск",
-    onboarding: "Умный туризм",
+    intro: "Умный туризм",
+    pick: "Подбор под поездку",
   };
   let title = titles[screen.name] || "Умный туризм";
   if (screen.name === "country") {
@@ -68,11 +70,11 @@ function header(state, screen) {
     const instruction = state.catalog.instructions[screen.instructionId];
     title = instruction ? instruction.service : title;
   }
-  const nested = !["trip", "guide", "sos", "profile", "onboarding"].includes(screen.name);
+  const nested = !["trip", "guide", "sos", "profile", "intro", "pick"].includes(screen.name);
   const back = nested
     ? `<button type="button" class="icon-btn" data-action="back" aria-label="Назад">${icon("back")}</button>`
     : "";
-  const search = screen.name === "onboarding" || screen.name === "search"
+  const search = screen.name === "intro" || screen.name === "pick" || screen.name === "search"
     ? ""
     : `<button type="button" class="icon-btn" data-action="search" aria-label="Поиск">${icon("search")}</button>`;
   if (screen.name === "search") {
@@ -103,75 +105,122 @@ function nav(screen) {
   }).join("")}</nav>`;
 }
 
-function onboarding(state) {
+function introDots(step) {
+  return `<p class="intro-dots" aria-hidden="true">${[0, 1, 2].map((index) => `<span class="${index === step ? "is-on" : ""}"></span>`).join("")}</p>`;
+}
+
+function introScreen(state) {
+  const step = state.introStep || 0;
+  let body = "";
+  if (step === 0) {
+    body = `<p class="eyebrow">Умный туризм</p>
+      <h2>Как платить в поездке</h2>
+      <p class="lead">Справочник для карт и банков РФ: шесть стран, что обычно проходит, что проверить до вылета и какие есть запасные способы. Это не гарантия, что ваша карта сработает.</p>`;
+  } else if (step === 1) {
+    body = `<p class="eyebrow">Источники</p>
+      <h2>Даты проверки и один маршрут</h2>
+      <p class="lead">У пунктов есть дата проверки и ссылка на источник. Если на месте иначе — «Сообщить о неточности». Разбор стыковки и рисков есть для Москва → Гонконг через Пекин. Цены билетов не обещаем.</p>`;
+  } else {
+    const skipLabel = state.after ? "Пропустить" : "Справочник";
+    body = `<p class="eyebrow">Данные</p>
+      <h2>Что сохраняем</h2>
+      <p class="lead">Только Telegram ID и настройки: банк, город вылета, поездка, отметки в чек-листе. Имя, username и телефон не храним.</p>
+      <div class="onboard-actions intro-actions">
+        <button type="button" class="primary" data-action="intro-pick">Подобрать под поездку</button>
+        <button type="button" class="ghost" data-action="intro-skip">${esc(skipLabel)}</button>
+      </div>`;
+  }
+  const forward = step < 2
+    ? `<div class="onboard-actions"><button type="button" class="primary" data-action="intro-next">Дальше</button></div>`
+    : "";
+  return `<section class="screen onboard">${introDots(step)}${body}${forward}</section>`;
+}
+
+function dateFields(draft) {
+  return `<div class="dates">
+      <label>Вылет<span class="hint"> необязательно</span><input id="depart-date" type="date" value="${esc(draft.depart_date || "")}" data-field="depart_date"></label>
+      <label>Обратно<span class="hint"> необязательно</span><input id="return-date" type="date" value="${esc(draft.return_date || "")}" data-field="return_date"></label>
+    </div>
+    <p class="hint">Пустая дата так и остаётся пустой: в карточке будет «Дата не выбрана», без «Вылет сегодня».</p>`;
+}
+
+function pickScreen(state) {
   const step = state.step || 0;
   const draft = state.draft;
   let body = "";
   if (step === 0) {
-    body = `<p class="eyebrow">Шаг 1 из 3</p>
+    body = `<p class="eyebrow">Подбор под поездку · шаг 1 из 3</p>
       <h2>Какой банк берёте в поездку?</h2>
       <p class="lead">Подскажем QR и переводы, которые относятся к нему. Номер карты не нужен.</p>
       <div class="stack">${state.catalog.banks.map((bank) => choice("bank", bank.id, bank.label, draft.bank_id === bank.id)).join("")}</div>`;
   } else if (step === 1) {
-    body = `<p class="eyebrow">Шаг 2 из 3</p>
+    body = `<p class="eyebrow">Подбор под поездку · шаг 2 из 3</p>
       <h2>Откуда вылет?</h2>
       <p class="lead">Город нужен для чек-листа и ссылки на билеты.</p>
       <div class="stack">${state.catalog.cities.map((city) => choice("city", city.id, city.name, draft.departure_city_id === city.id, city.iata)).join("")}</div>`;
   } else {
-    body = `<p class="eyebrow">Шаг 3 из 3</p>
+    body = `<p class="eyebrow">Подбор под поездку · шаг 3 из 3</p>
       <h2>Куда и когда?</h2>
-      <p class="lead">Соберём чек-лист по стране. Разбор маршрута с ценами билетов не показываем.</p>
+      <p class="lead">Страна собирает чек-лист. Дата вылета необязательна. Разбор маршрута с ценами билетов не показываем.</p>
       <div class="stack">${state.catalog.countries.map((country) => {
         const place = splitName(country.name);
         return choice("country", country.slug, place.title, draft.destination_slug === country.slug, place.flag);
       }).join("")}</div>
-      <div class="dates">
-        <label>Вылет<input id="depart-date" type="date" value="${esc(draft.depart_date || "")}" data-field="depart_date"></label>
-        <label>Обратно<input id="return-date" type="date" value="${esc(draft.return_date || "")}" data-field="return_date"></label>
-      </div>
+      ${dateFields(draft)}
       <button type="button" class="consent${draft.consent ? " is-on" : ""}" data-action="consent" aria-pressed="${draft.consent ? "true" : "false"}">
         <span class="tick">${draft.consent ? icon("check") : ""}</span>
         <span>Согласен на обработку Telegram ID и настроек: банк, город вылета, поездка. Имя, username и телефон не сохраняем.</span>
       </button>
       <button type="button" class="text-btn" data-action="privacy">Политика конфиденциальности</button>`;
   }
-  const ready = step === 0 ? draft.bank_id : step === 1 ? draft.departure_city_id : (draft.destination_slug && draft.depart_date && draft.consent);
+  const ready = step === 0 ? draft.bank_id : step === 1 ? draft.departure_city_id : (draft.destination_slug && draft.consent);
   return `<section class="screen onboard">
     ${body}
     ${state.message ? `<p class="form-error">${esc(state.message)}</p>` : ""}
     <div class="onboard-actions">
-      ${step > 0 ? `<button type="button" class="ghost" data-action="onboard-back">Назад</button>` : ""}
-      <button type="button" class="primary${ready ? "" : " is-off"}" data-action="onboard-next" ${ready ? "" : "disabled"}>${step === 2 ? "Открыть поездку" : "Дальше"}</button>
+      ${step > 0 ? `<button type="button" class="ghost" data-action="pick-back">Назад</button>` : ""}
+      <button type="button" class="primary${ready ? "" : " is-off"}" data-action="pick-next" ${ready ? "" : "disabled"}>${step === 2 ? "Сохранить" : "Дальше"}</button>
     </div>
   </section>`;
 }
 
 function tripScreen(state) {
   const trip = state.trip;
-  const city = state.catalog.cities.find((item) => item.id === (trip && trip.departure_city_id)) || state.catalog.cities[0];
-  const country = countryBySlug(state.catalog, trip && trip.destination_slug);
-  const place = country ? splitName(country.name) : { title: "Страна не выбрана", flag: "" };
-  const until = trip && daysUntil(trip.depart_date);
-  const nights = trip && nightsBetween(trip.depart_date, trip.return_date);
-  let when = "Даты не указаны";
-  if (trip && trip.depart_date) {
+  if (!trip || !trip.destination_slug) {
+    return `<section class="screen">
+      <article class="hero-trip">
+        <p class="eyebrow">Поездка</p>
+        <h2>Подбор ещё не сделан</h2>
+        <p class="lead">Банк, город вылета и страна. Дату можно не указывать — она сама не станет сегодняшней.</p>
+        <button type="button" class="primary" data-action="start-pick">Подобрать под поездку</button>
+      </article>
+    </section>`;
+  }
+  const city = state.catalog.cities.find((item) => item.id === trip.departure_city_id);
+  const country = countryBySlug(state.catalog, trip.destination_slug);
+  const place = country ? splitName(country.name) : { title: "Страна", flag: "" };
+  const nights = nightsBetween(trip.depart_date, trip.return_date);
+  let when = tripWhen(trip.depart_date);
+  if (trip.depart_date) {
     when = formatDay(trip.depart_date);
     if (trip.return_date) when += ` — ${formatDay(trip.return_date)}`;
     if (nights) when += ` · ${nights} дн.`;
   }
-  let countdown = "";
-  if (until === 0) countdown = "Вылет сегодня";
-  else if (until > 0) countdown = `До вылета ${until} дн.`;
-  else if (until < 0) countdown = "Дата вылета уже прошла";
+  const countdown = tripCountdown(daysUntil(trip.depart_date));
   const route = state.catalog.routes[0];
-  const matches = trip && trip.departure_city_id === "mow" && trip.destination_slug === "hong_kong";
+  const matches = trip.departure_city_id === "mow" && trip.destination_slug === "hong_kong";
+  const dateNote = trip.depart_date
+    ? ""
+    : `<p class="hint">Дата не выбрана — отсчёта до вылета нет. Чек-лист ниже без привязки ко дню.</p>`;
   return `<section class="screen">
     <article class="hero-trip">
-      <p class="eyebrow">${esc(countdown || "Ваша поездка")}</p>
+      <p class="eyebrow">${esc(countdown || "Поездка")}</p>
       <h2>${esc(city ? city.name : "Город")} → ${esc(place.title)} ${place.flag ? esc(place.flag) : ""}</h2>
       <p class="lead">${esc(when)}</p>
       <button type="button" class="text-btn" data-action="edit-trip">Изменить поездку</button>
+      <button type="button" class="text-btn" data-action="start-pick">Подобрать под поездку</button>
     </article>
+    ${dateNote}
     ${routeCard(state, route, matches)}
     ${checklist(state, country)}
   </section>`;
@@ -436,7 +485,14 @@ function sosScreen(state) {
 }
 
 function profileScreen(state) {
-  const profile = state.profile;
+  const profile = state.profile || {
+    bank_id: "",
+    departure_city_id: "",
+    favorite_countries: [],
+    notify_checklist: true,
+    notify_trip: true,
+    notify_alerts: false,
+  };
   const banks = state.catalog.banks.map((bank) => choice("bank", bank.id, bank.label, profile.bank_id === bank.id)).join("");
   const cities = state.catalog.cities.map((city) => choice("city", city.id, city.name, profile.departure_city_id === city.id, city.iata)).join("");
   const favorites = state.catalog.countries.map((country) => {
@@ -473,10 +529,7 @@ function tripEdit(state) {
       const place = splitName(country.name);
       return choice("country", country.slug, place.title, draft.destination_slug === country.slug, place.flag);
     }).join("")}</div>
-    <div class="dates">
-      <label>Вылет<input id="depart-date" type="date" value="${esc(draft.depart_date || "")}" data-field="depart_date"></label>
-      <label>Обратно<input id="return-date" type="date" value="${esc(draft.return_date || "")}" data-field="return_date"></label>
-    </div>
+    ${dateFields(draft)}
     ${state.message ? `<p class="form-error">${esc(state.message)}</p>` : ""}
     <button type="button" class="primary" data-action="save-trip">Сохранить</button>
   </section>`;
@@ -526,7 +579,8 @@ export function render(state) {
     const title = state.failedTitle || "Не удалось открыть";
     body = `<section class="screen"><h2>${esc(title)}</h2><p class="lead">${esc(state.failed)}</p></section>`;
   }
-  else if (screen.name === "onboarding") body = onboarding(state);
+  else if (screen.name === "intro") body = introScreen(state);
+  else if (screen.name === "pick") body = pickScreen(state);
   else if (screen.name === "trip") body = tripScreen(state);
   else if (screen.name === "trip-edit") body = tripEdit(state);
   else if (screen.name === "guide") body = guideHome(state);
@@ -536,7 +590,7 @@ export function render(state) {
   else if (screen.name === "sos") body = sosScreen(state);
   else if (screen.name === "profile") body = profileScreen(state);
   else if (screen.name === "search") body = searchScreen(state);
-  const showNav = state.catalog && screen.name !== "onboarding";
+  const showNav = state.catalog && screen.name !== "intro";
   const toast = state.toast ? `<p class="toast" role="status">${esc(state.toast)}</p>` : "";
   return `<div class="shell" data-ready="1" data-screen="${esc(screen.name)}">
     ${state.catalog ? header(state, screen) : ""}

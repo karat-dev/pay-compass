@@ -237,6 +237,85 @@ def test_signed_session_rejects_dev_login(local_store, monkeypatch):
     assert "first_name" not in dumped
 
 
+def test_intro_flag_is_once_and_date_stays_empty(local_store):
+    status, session = dispatch("POST", "miniapp/session", b"{}", _dev_headers())
+    assert status == 200
+    assert session["intro_seen"] is False
+    assert session["profile"] is None
+
+    status, marked = dispatch("POST", "miniapp/intro", b"{}", _dev_headers())
+    assert status == 200, marked
+    assert marked["intro_seen"] is True
+    assert marked["profile"]["intro_seen"] is True
+    assert marked["profile"]["bank_id"] is None
+
+    status, again = dispatch("POST", "miniapp/intro", b"{}", _dev_headers())
+    assert again["intro_seen"] is True
+
+    status, session = dispatch("POST", "miniapp/session", b"{}", _dev_headers())
+    assert session["intro_seen"] is True
+    assert session["trip"] is None
+
+    status, saved = dispatch("POST", "miniapp/onboarding", json.dumps({
+        "profile": {
+            "bank_id": "tbank",
+            "departure_city_id": "mow",
+            "favorite_countries": ["hong_kong"],
+            "consent_given": True,
+            "onboarding_completed": True,
+        },
+        "trip": {"destination_slug": "hong_kong"},
+    }).encode(), _dev_headers())
+    assert status == 200, saved
+    assert saved["profile"]["intro_seen"] is True
+    assert saved["trip"]["depart_date"] is None
+    stored = json.loads(local_store.path.read_text(encoding="utf-8"))
+    assert stored["profiles"]["1001"]["intro_seen"] is True
+    assert stored["trips"]["1001"]["depart_date"] is None
+
+
+def test_client_flow_keeps_intro_ahead_of_deep_links():
+    import subprocess
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    script = """
+import { afterPick, bootTarget, introExit, tripCountdown, tripWhen } from "./miniapp/js/flow.js";
+const assert = (ok, message) => { if (!ok) { console.error(message); process.exit(1); } };
+assert(bootTarget({ introSeen: false, deepLink: "/guide/china", hash: "#/sos" }) === "/intro", "intro first");
+assert(bootTarget({ introSeen: true, deepLink: "/guide/china", hash: "" }) === "/guide/china", "then deep link");
+assert(bootTarget({ introSeen: true, deepLink: "/guide/china", hash: "#tgWebAppData=1" }) === "/guide/china", "ignore telegram hash");
+assert(bootTarget({ introSeen: true, deepLink: "", hash: "#/sos" }) === "/sos", "keep app hash");
+assert(introExit({ action: "pick", deepLink: "/guide/china" }) === "/pick", "pick before target");
+assert(introExit({ action: "skip", deepLink: "/guide/china" }) === "/guide/china", "skip to target");
+assert(introExit({ action: "skip", deepLink: "" }) === "/guide", "skip to guide");
+assert(afterPick({ deepLink: "/guide/china" }) === "/guide/china", "finish on target");
+assert(afterPick({ deepLink: "" }) === "/trip", "finish on trip");
+assert(tripWhen("") === "Дата не выбрана", "missing date");
+assert(tripWhen(null) === "Дата не выбрана", "null date");
+assert(tripCountdown(null) === "", "no countdown");
+assert(tripCountdown(0) === "Вылет сегодня", "chosen today");
+"""
+    result = subprocess.run(
+        ["node", "--input-type=module", "-e", script],
+        cwd=root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    screens = (root / "miniapp" / "js" / "screens.js").read_text(encoding="utf-8")
+    main = (root / "miniapp" / "js" / "main.js").read_text(encoding="utf-8")
+    assert "Подобрать под поездку" in screens
+    assert "Дата не выбрана" in screens
+    assert "Подбор под поездку" in screens
+    assert "Сообщить о неточности" in screens
+    assert "Укажите дату вылета" not in main
+    assert "intro_seen" in main
+    settings_source = (root / "config" / "settings.py").read_text(encoding="utf-8")
+    assert "MINIAPP_DEV_AUTH: bool = False" in settings_source
+
+
 def test_page_loads_telegram_sdk_and_names_the_failed_step():
     from pathlib import Path
 
@@ -337,17 +416,20 @@ def test_onboarding_progress_and_report_roundtrip(local_store):
     assert session["profile"]["onboarding_completed"] is True
     assert session["trip"]["depart_date"] == "2026-11-12"
 
-    status, missing_date = dispatch("POST", "miniapp/onboarding", json.dumps({
+    status, open_date = dispatch("POST", "miniapp/onboarding", json.dumps({
         "profile": {
             "bank_id": "sber",
             "departure_city_id": "led",
             "consent_given": True,
             "onboarding_completed": True,
+            "intro_seen": True,
         },
         "trip": {"destination_slug": "georgia"},
     }).encode(), _dev_headers())
-    assert status == 400
-    assert "дат" in missing_date["error"].lower()
+    assert status == 200, open_date
+    assert open_date["trip"]["depart_date"] is None
+    assert open_date["trip"]["return_date"] is None
+    assert open_date["profile"]["intro_seen"] is True
 
     status, saved = dispatch("POST", "miniapp/progress", json.dumps({
         "item_id": fact["id"],
@@ -419,13 +501,14 @@ def test_supabase_store_uses_service_tables():
 
     import asyncio
     asyncio.run(run())
-    assert ("upsert", "miniapp_profiles", "telegram_id") == tuple(rest.calls[0][:3])
-    stored_profile = rest.calls[0][3]
+    profile_upsert = next(call for call in rest.calls if call[0] == "upsert" and call[1] == "miniapp_profiles")
+    assert profile_upsert[2] == "telegram_id"
+    stored_profile = profile_upsert[3]
     assert "username" not in stored_profile
     assert "phone" not in stored_profile
     assert "first_name" not in stored_profile
-    assert ("upsert", "miniapp_trips", "telegram_id") == tuple(rest.calls[1][:3])
-    assert rest.calls[2][1] == "miniapp_fact_reports"
+    assert ("upsert", "miniapp_trips", "telegram_id") in [tuple(call[:3]) for call in rest.calls]
+    assert any(call[1] == "miniapp_fact_reports" for call in rest.calls)
     assert {call[1] for call in rest.calls if call[0] == "delete"} == {
         "miniapp_profiles", "miniapp_trips", "miniapp_progress", "miniapp_fact_reports",
     }

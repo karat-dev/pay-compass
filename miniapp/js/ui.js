@@ -107,7 +107,8 @@ export function parseRoute(hash) {
   if (!parts.length || parts[0] === "trip") {
     return { name: parts[1] === "edit" ? "trip-edit" : "trip", tab: "trip", parts, params };
   }
-  if (parts[0] === "onboarding") return { name: "onboarding", tab: "", parts, params };
+  if (parts[0] === "intro") return { name: "intro", tab: "", parts, params };
+  if (parts[0] === "pick" || parts[0] === "onboarding") return { name: "pick", tab: "", parts, params };
   if (parts[0] === "guide") {
     if (parts.length === 1) return { name: "guide", tab: "guide", parts, params };
     if (parts[2] === "i" && parts[3]) {
