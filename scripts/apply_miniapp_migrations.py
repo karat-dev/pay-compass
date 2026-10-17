@@ -136,12 +136,15 @@ def main() -> None:
     url = ""
     errors = []
     for candidate in connection_candidates(secret, region):
+        userinfo = candidate.split("://", 1)[-1].split("@", 1)[0]
+        user = userinfo.split(":", 1)[0]
+        label = "tenant" if "." in user else "plain"
         probe = psql(candidate, "SELECT 1")
         if probe.returncode == 0 and (probe.stdout or "").strip() == "1":
             url = candidate
             break
         detail = (probe.stderr or probe.stdout or "SELECT 1 failed").strip()
-        errors.append(" ".join(detail.split()))
+        errors.append(f"user={label} " + " ".join(detail.split()))
     if not url:
         emit("connectivity=false")
         emit("error=" + " | ".join(errors))

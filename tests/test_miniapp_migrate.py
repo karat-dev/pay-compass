@@ -54,12 +54,11 @@ def test_dry_run_parser_and_redaction():
     assert "pooler.supabase.com" not in cleaned
     assert "[redacted]" in cleaned
 
-    direct = "postgresql://postgres:s3cret@db.abcproject.supabase.co:5432/postgres"
+    direct = "postgresql://postgres:p%2Fa!ss@db.abcproject.supabase.co:5432/postgres"
     pooled = session_pooler_url(direct, "eu-central-1")
     assert pooled is not None
     assert "db.abcproject.supabase.co" not in pooled
-    assert "@aws-0-eu-central-1.pooler.supabase.com:5432/" in pooled
-    assert "postgres.abcproject:s3cret@" in pooled
-    assert "sslmode=require" in pooled
+    assert "postgres.abcproject:p%2Fa!ss@" in pooled
+    assert "@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require" in pooled
     assert connection_candidates(direct)[0] == pooled
     assert connection_candidates(pooled) == [pooled]

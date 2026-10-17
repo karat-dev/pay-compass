@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import re
 from typing import Dict, Iterable, List, Optional, Sequence, Set
-from urllib.parse import quote, urlparse, urlunparse
 
 BASELINE_VERSION = "20260913000000"
 MINIAPP_VERSIONS = ("20261014000000", "20261016000000")
@@ -21,7 +20,19 @@ _SUPABASE_HOST_RE = re.compile(
     r"\b(?:db\.[a-z0-9]+\.supabase\.co|aws-\d+-[a-z0-9-]+\.pooler\.supabase\.com)\b",
     re.IGNORECASE,
 )
-_DIRECT_HOST_RE = re.compile(r"^db\.([a-z0-9]+)\.supabase\.co$", re.IGNORECASE)
+_IPV4_RE = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
+_IPV6_RE = re.compile(r"\b[0-9a-f]{0,4}(?::[0-9a-f]{0,4}){2,}\b", re.IGNORECASE)
+_DIRECT_URL_RE = re.compile(
+    r"^(?P<scheme>postgres(?:ql)?://)"
+    r"(?P<user>[^:@/?]+)"
+    r"(?P<password>:[^@]*@)"
+    r"db\.(?P<ref>[a-z0-9]+)\.supabase\.co"
+    r"(?::\d+)?"
+    r"(?P<tail>/[^?#]*)?"
+    r"(?P<query>\?[^#]*)?"
+    r"$",
+    re.IGNORECASE,
+)
 _VERSION_FILE_RE = re.compile(r"\b(20\d{12})(?:_[A-Za-z0-9_]+)?\.sql\b")
 _VERSION_BULLET_RE = re.compile(r"(?m)^\s*[•*\-]\s*(20\d{12})\b")
 
@@ -61,33 +72,34 @@ def redact_text(text: str, secret: str = "") -> str:
         cleaned = cleaned.replace(secret, "[redacted]")
     cleaned = _URL_RE.sub("[redacted-url]", cleaned)
     cleaned = _SUPABASE_HOST_RE.sub("[redacted-host]", cleaned)
+    cleaned = _IPV4_RE.sub("[redacted-ip]", cleaned)
+    cleaned = _IPV6_RE.sub("[redacted-ip]", cleaned)
     cleaned = _PASSWORD_RE.sub("password=[redacted]", cleaned)
     return cleaned
 
 
 def session_pooler_url(url: str, region: str = "eu-central-1") -> Optional[str]:
-    """Rewrite a direct db host to the IPv4 session pooler. Pooler URLs pass through."""
-    parsed = urlparse(url)
-    host = parsed.hostname or ""
-    if "pooler.supabase.com" in host:
+    """Rewrite a direct db host to the IPv4 session pooler. Pooler URLs pass through.
+
+    The password substring is copied unchanged so percent-encoding survives.
+    """
+    if "pooler.supabase.com" in url:
         return url
-    match = _DIRECT_HOST_RE.match(host)
+    match = _DIRECT_URL_RE.match(url.strip())
     if not match or not region:
         return None
-    project_ref = match.group(1)
-    user = parsed.username or "postgres"
-    if user == "postgres":
+    user = match.group("user")
+    project_ref = match.group("ref")
+    if user.lower() == "postgres":
         user = f"postgres.{project_ref}"
-    password = quote(parsed.password or "", safe="")
-    auth = quote(user, safe=".")
-    if password:
-        auth = f"{auth}:{password}"
-    query = parsed.query
+    tail = match.group("tail") or "/postgres"
+    query = match.group("query") or ""
     if "sslmode=" not in query:
-        query = f"{query}&sslmode=require" if query else "sslmode=require"
-    netloc = f"{auth}@aws-0-{region}.pooler.supabase.com:5432"
-    path = parsed.path or "/postgres"
-    return urlunparse((parsed.scheme or "postgresql", netloc, path, "", query, ""))
+        query = f"{query}&sslmode=require" if query else "?sslmode=require"
+    return (
+        f"{match.group('scheme')}{user}{match.group('password')}"
+        f"aws-0-{region}.pooler.supabase.com:5432{tail}{query}"
+    )
 
 
 def connection_candidates(url: str, region: str = "eu-central-1") -> List[str]:
