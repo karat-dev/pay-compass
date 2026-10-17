@@ -98,7 +98,7 @@ def local_versions() -> list:
 
 def supabase(*args: str, url: str) -> subprocess.CompletedProcess:
     return run(
-        ["supabase", *args, "--db-url", url, "--linked=false", "--yes"],
+        ["supabase", *args, "--db-url", url, "--yes"],
         url=url,
     )
 
