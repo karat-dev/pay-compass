@@ -1,0 +1,71 @@
+name: Telegram getWebhookInfo
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - cursor/production-miniapp-static-cd01
+
+permissions:
+  contents: read
+
+jobs:
+  webhook-info:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Telegram getWebhookInfo
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import urllib.request
+          from urllib.parse import urlparse
+
+          def emit(host="", path="", pending="", message=""):
+              print("host=" + host)
+              print("path=" + path)
+              print("pending_update_count=" + str(pending))
+              print("last_error_message=" + message)
+
+          token = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip()
+          if not token:
+              emit(message="missing_token")
+              raise SystemExit(1)
+
+          request = urllib.request.Request(
+              "https://api.telegram.org/bot" + token + "/getWebhookInfo",
+              method="GET",
+          )
+          try:
+              with urllib.request.urlopen(request, timeout=20) as response:
+                  payload = json.load(response)
+          except Exception:
+              emit(message="request_failed")
+              raise SystemExit(1)
+
+          result = payload.get("result") if isinstance(payload, dict) else None
+          if not isinstance(payload, dict) or not payload.get("ok") or not isinstance(result, dict):
+              emit(message="not_ok")
+              raise SystemExit(1)
+
+          parsed = urlparse(result.get("url") if isinstance(result.get("url"), str) else "")
+          host = parsed.hostname or ""
+          if host and not all(char.isalnum() or char in ".-" for char in host):
+              host = ""
+          path = parsed.path or ""
+          if path and not all(char.isalnum() or char in "/._-" for char in path):
+              path = ""
+          pending = result.get("pending_update_count")
+          if not isinstance(pending, int) or pending < 0:
+              pending = ""
+          message = result.get("last_error_message") or ""
+          if not isinstance(message, str):
+              message = ""
+          message = re.sub(r"\d{6,}:[A-Za-z0-9_-]{20,}", "[redacted]", message)
+          message = re.sub(r"https?://\S+", "[url]", message)
+          message = message.replace("\n", " ").replace("\r", " ").strip()
+          emit(host, path, pending, message)
+          PY

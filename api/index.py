@@ -45,8 +45,27 @@ class handler(BaseHTTPRequestHandler):
         self._send_json(status, payload)
         return True
 
+    def _serve_static(self) -> bool:
+        from pathlib import Path
+
+        from api.static_files import is_static_request, resolve_static
+
+        if not is_static_request(self.path):
+            return False
+        root = Path(__file__).resolve().parent.parent
+        found = resolve_static(self.path, root)
+        if found is None:
+            self._send_bytes(404, "Не найдено".encode("utf-8"), "text/plain; charset=utf-8")
+            return True
+        file_path, content_type = found
+        cache = "no-cache" if content_type.startswith("text/html") else "public, max-age=300"
+        self._send_bytes(200, file_path.read_bytes(), content_type, cache_control=cache)
+        return True
+
     def do_GET(self):
         if self._serve_miniapp("GET"):
+            return
+        if self._serve_static():
             return
         try:
             from config.settings import settings, telegram_bot_token_configured
@@ -142,7 +161,16 @@ class handler(BaseHTTPRequestHandler):
                 pass
 
     def _send_json(self, status_code: int, data: dict):
+        self._send_bytes(
+            status_code,
+            json.dumps(data, ensure_ascii=False).encode("utf-8"),
+            "application/json",
+        )
+
+    def _send_bytes(self, status_code: int, body: bytes, content_type: str, cache_control: str = "no-store"):
         self.send_response(status_code)
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", cache_control)
         self.end_headers()
-        self.wfile.write(json.dumps(data, ensure_ascii=False).encode("utf-8"))
+        self.wfile.write(body)
