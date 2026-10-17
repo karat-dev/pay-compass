@@ -522,7 +522,10 @@ export function render(state) {
   const screen = parseRoute(location.hash);
   let body = "";
   if (!state.catalog) body = `<p class="boot">Открываем справочник…</p>`;
-  else if (state.failed) body = `<section class="screen"><h2>Справочник не открылся</h2><p class="lead">${esc(state.failed)}</p></section>`;
+  else if (state.failed) {
+    const title = state.failedTitle || "Не удалось открыть";
+    body = `<section class="screen"><h2>${esc(title)}</h2><p class="lead">${esc(state.failed)}</p></section>`;
+  }
   else if (screen.name === "onboarding") body = onboarding(state);
   else if (screen.name === "trip") body = tripScreen(state);
   else if (screen.name === "trip-edit") body = tripEdit(state);

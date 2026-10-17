@@ -173,6 +173,90 @@ def test_init_data_signature_and_dev_switch():
     assert validate_init_data("dev:1001", bot_token="test-token", dev_auth=True)["telegram_id"] == 1001
 
 
+# Frozen sample signed with token "123456789:AAFakeTokenForSignatureTest".
+# auth_date 1700000000, user id 4242, start_param guide_china.
+SIGNED_INIT_DATA = (
+    "auth_date=1700000000&query_id=AAE"
+    "&user=%7B%22id%22%3A4242%2C%22first_name%22%3A%22Ann%22%7D"
+    "&start_param=guide_china"
+    "&hash=ea0bc1f113e4208ba3cb878f45f2ccc613f5b77a65e7bf4249dfd73ef2448805"
+)
+SIGNATURE_TOKEN = "123456789:AAFakeTokenForSignatureTest"
+
+
+def test_frozen_init_data_matches_telegram_hmac():
+    identity = validate_init_data(
+        SIGNED_INIT_DATA,
+        bot_token=SIGNATURE_TOKEN,
+        dev_auth=False,
+        now=1700000100,
+    )
+    assert identity == {
+        "telegram_id": 4242,
+        "start_param": "guide_china",
+        "dev": False,
+    }
+    with pytest.raises(AuthError) as mismatch:
+        validate_init_data(
+            SIGNED_INIT_DATA,
+            bot_token=SIGNATURE_TOKEN + "x",
+            dev_auth=False,
+            now=1700000100,
+        )
+    assert mismatch.value.status == 401
+    assert "подтвердить" in mismatch.value.message
+
+
+def test_signed_session_rejects_dev_login(local_store, monkeypatch):
+    monkeypatch.setattr(settings, "MINIAPP_DEV_AUTH", False)
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", SIGNATURE_TOKEN)
+    user = json.dumps({"id": 4242, "first_name": "Ann"}, separators=(",", ":"))
+    raw = sign_init_data(
+        {
+            "auth_date": str(int(time.time())),
+            "query_id": "AAE",
+            "user": user,
+            "start_param": "guide_china",
+        },
+        SIGNATURE_TOKEN,
+    )
+    status, empty = dispatch("POST", "miniapp/session", b"{}", {})
+    assert status == 401
+    assert empty["error"] == "Откройте приложение из Telegram."
+
+    status, dev = dispatch("POST", "miniapp/session", b"{}", {"X-Telegram-Init-Data": "dev:1001"})
+    assert status == 401
+    assert dev["error"] == "Локальный вход выключен."
+
+    status, session = dispatch("POST", "miniapp/session", b"{}", {"X-Telegram-Init-Data": raw})
+    assert status == 200, session
+    assert session["telegram_id"] == 4242
+    assert session["screen"] == "guide_china"
+    dumped = json.dumps(session, ensure_ascii=False)
+    assert "Ann" not in dumped
+    assert "first_name" not in dumped
+
+
+def test_page_loads_telegram_sdk_and_names_the_failed_step():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    html = (root / "miniapp" / "index.html").read_text(encoding="utf-8")
+    sdk = html.find("https://telegram.org/js/telegram-web-app.js")
+    module = html.find('src="./js/main.js"')
+    assert 0 <= sdk < module
+    assert "if (live) return;" in html
+    main = (root / "miniapp" / "js" / "main.js").read_text(encoding="utf-8")
+    assert "tgWebAppData" in main
+    assert 'failedTitle = "Не удалось войти"' in main
+    assert 'failedTitle = "Справочник не открылся"' in main
+    screens = (root / "miniapp" / "js" / "screens.js").read_text(encoding="utf-8")
+    assert "state.failedTitle" in screens
+    assert "<h2>Справочник не открылся</h2>" not in screens
+    settings_source = (root / "config" / "settings.py").read_text(encoding="utf-8")
+    assert "MINIAPP_DEV_AUTH: bool = False" in settings_source
+
+
 def test_screen_names_and_vercel_path():
     assert extract_route("/api/index.py?path=miniapp/session") == "miniapp/session"
     assert extract_route("/api/catalog") == "catalog"

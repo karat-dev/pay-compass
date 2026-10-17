@@ -33,6 +33,7 @@ const state = {
   toast: "",
   message: "",
   failed: "",
+  failedTitle: "",
   preview: false,
   returnTo: "/trip",
   after: "/trip",
@@ -43,11 +44,25 @@ const state = {
 
 const app = document.getElementById("app");
 
-function initData() {
-  const tg = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData;
-  if (tg) return tg;
-  if (isLocalHost()) return "dev:1001";
+let cachedInitData = "";
+
+function launchInitData() {
+  const sources = [location.hash || "", location.search || ""];
+  for (const source of sources) {
+    const raw = source.charAt(0) === "#" || source.charAt(0) === "?" ? source.slice(1) : source;
+    if (!raw || raw.charAt(0) === "/") continue;
+    const value = new URLSearchParams(raw).get("tgWebAppData");
+    if (value) return value;
+  }
   return "";
+}
+
+function initData() {
+  if (cachedInitData) return cachedInitData;
+  const tg = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData;
+  const value = tg || launchInitData() || (isLocalHost() ? "dev:1001" : "");
+  if (value) cachedInitData = value;
+  return value;
 }
 
 async function getJSON(path) {
@@ -576,6 +591,7 @@ async function boot() {
   try {
     state.catalog = await getJSON("/api/catalog");
   } catch (error) {
+    state.failedTitle = "Справочник не открылся";
     state.failed = "Не удалось загрузить справочник. Запустите python3 -m miniapp и обновите страницу.";
     draw();
     return;
@@ -587,9 +603,16 @@ async function boot() {
     navigate(previewTarget(preview));
     return;
   }
+  if (!initData()) {
+    state.failedTitle = "Не удалось войти";
+    state.failed = "Откройте приложение из Telegram.";
+    draw();
+    return;
+  }
   try {
     applySession(await postJSON("/api/miniapp/session", {}));
   } catch (error) {
+    state.failedTitle = "Не удалось войти";
     state.failed = error.message;
     draw();
     return;
