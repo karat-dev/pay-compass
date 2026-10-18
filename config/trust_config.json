@@ -120,6 +120,66 @@
   "route_rules": {
     "allow_map_estimate_in_allowance": false
   },
+  "auto_checks": {
+    "summary_label": "Следующая автопроверка",
+    "date_text": "{date}",
+    "uncovered_text": "Нет автопроверки — нужен твой ответ ({kind})",
+    "owner_summary": "Нужен твой ответ: {product_label} {product}, {logic_label} {logic}",
+    "kind_labels": {
+      "product": "продуктовый",
+      "logic": "логический"
+    },
+    "kinds": {
+      "product": "product",
+      "logic": "logic"
+    },
+    "product": {
+      "source_kinds": ["internal"],
+      "verified_field": "verified_by_us",
+      "conflict_field": "agreement",
+      "conflict_volatility": "conflict",
+      "review_source_kind": "traveler",
+      "owner_check_field": "needs_owner_check",
+      "decision_field": "decision_needed",
+      "refresh_field": "refresh_search"
+    },
+    "source_kinds": ["official", "media", "map_estimate"],
+    "schedules": [
+      {
+        "id": "fact_check",
+        "minute": 0,
+        "hour": 6,
+        "day_of_month": null,
+        "day_of_week": 1,
+        "classes": ["fast", "medium", "slow", "fallback"]
+      },
+      {
+        "id": "transfers",
+        "minute": 0,
+        "hour": 6,
+        "day_of_month": 10,
+        "day_of_week": null,
+        "classes": ["transfer_travel_time", "transfer_price_schedule"]
+      },
+      {
+        "id": "entry_rules",
+        "minute": 0,
+        "hour": 6,
+        "day_of_month": 3,
+        "day_of_week": null,
+        "classes": ["slow"],
+        "categories": ["visa", "stamps"]
+      },
+      {
+        "id": "cache",
+        "minute": 0,
+        "hour": 6,
+        "day_of_month": 7,
+        "day_of_week": null,
+        "categories": ["tickets"]
+      }
+    ]
+  },
   "volatility": {
     "fallback_class": "fallback",
     "fact_field": "volatility_class",

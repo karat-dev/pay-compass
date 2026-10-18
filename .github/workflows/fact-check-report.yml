@@ -18,6 +18,7 @@ on:
         default: ""
   schedule:
     # Monday 09:00 Moscow (UTC+3). GitHub Actions cron is UTC.
+    # The same weekly fact-check, plus the monthly transfer, entry-rule, and cache dates, live in config auto_checks.
     - cron: '0 6 * * 1'
   push:
     branches:

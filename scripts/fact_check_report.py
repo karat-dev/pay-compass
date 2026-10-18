@@ -14,7 +14,7 @@ import sys
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 ROOT = Path(__file__).resolve().parents[1]
@@ -116,6 +116,180 @@ def _rank(zone: Optional[str], config: Dict[str, Any]) -> Optional[int]:
     return zone_rank(zone, config)
 
 
+def _weekday_matches(moment: date, cron_dow: int) -> bool:
+    """Cron day-of-week: 0 and 7 are Sunday, 1 is Monday. date.weekday starts at Monday."""
+    normalized = int(cron_dow) % 7
+    sunday_based = (moment.weekday() + 1) % 7
+    return sunday_based == normalized
+
+
+def next_schedule_date(schedule: Dict[str, Any], as_of: date) -> date:
+    """First calendar date strictly after as_of that matches the config schedule."""
+    day_of_month = schedule.get("day_of_month")
+    day_of_week = schedule.get("day_of_week")
+    cursor = as_of
+    for _ in range(366):
+        cursor = cursor + timedelta(days=1)
+        if day_of_month is not None and cursor.day != int(day_of_month):
+            continue
+        if day_of_week is not None and not _weekday_matches(cursor, int(day_of_week)):
+            continue
+        return cursor
+    raise ValueError(f"No date for schedule {schedule.get('id')}")
+
+
+def _schedule_matches(schedule: Dict[str, Any], class_name: Optional[str], category: Optional[str]) -> bool:
+    classes = schedule.get("classes")
+    categories = schedule.get("categories")
+    if not classes and not categories:
+        return False
+    if classes is not None and class_name not in classes:
+        return False
+    if categories is not None and category not in categories:
+        return False
+    return True
+
+
+def _covering_schedules(
+    config: Dict[str, Any],
+    *,
+    class_name: Optional[str],
+    category: Optional[str],
+) -> List[Dict[str, Any]]:
+    matched = [
+        schedule
+        for schedule in (config.get("auto_checks") or {}).get("schedules") or []
+        if _schedule_matches(schedule, class_name, category)
+    ]
+    categorized = [schedule for schedule in matched if schedule.get("categories")]
+    return categorized or matched
+
+
+def _is_product_question(source: Dict[str, Any], resolved: Dict[str, Any], config: Dict[str, Any]) -> bool:
+    rules = (config.get("auto_checks") or {}).get("product") or {}
+    verified = rules.get("verified_field")
+    if verified and source.get(verified) is True:
+        return True
+    if source.get("source_kind") in set(rules.get("source_kinds") or []):
+        return True
+    conflict_field = rules.get("conflict_field")
+    if conflict_field and source.get(conflict_field) == config["early_warning"]["conflict_agreement"]:
+        return True
+    if source.get("volatility") == rules.get("conflict_volatility"):
+        return True
+    review_kind = rules.get("review_source_kind")
+    green = config["upgrade"]["green_zone"]
+    if source.get("source_kind") == review_kind and (
+        resolved.get("owner_prompt")
+        or resolved.get("score_zone") == green
+        or source.get("score_zone") == green
+    ):
+        return True
+    for field in (rules.get("owner_check_field"), rules.get("decision_field"), rules.get("refresh_field")):
+        if field and source.get(field):
+            return True
+    return False
+
+
+def _uncovered_text(config: Dict[str, Any], kind: str) -> str:
+    labels = config["auto_checks"]
+    word = labels["kind_labels"][kind]
+    return labels["uncovered_text"].format(kind=word)
+
+
+def auto_check_fields(
+    source: Dict[str, Any],
+    resolved: Dict[str, Any],
+    config: Dict[str, Any],
+    as_of: date,
+    *,
+    category: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Next planned automatic check, or an explicit owner question when none covers the fact."""
+    labels = config["auto_checks"]
+    product = labels["kinds"]["product"]
+    logic = labels["kinds"]["logic"]
+    if _is_product_question(source, resolved, config):
+        return {
+            "next_auto_check": None,
+            "owner_question_type": product,
+            "auto_check_text": _uncovered_text(config, product),
+        }
+    kind = resolved.get("kind")
+    gap = kind == "gap" or source.get("fact_type") == "gap" or source.get("gap") is True
+    if gap or kind == "unscored":
+        return {
+            "next_auto_check": None,
+            "owner_question_type": logic,
+            "auto_check_text": _uncovered_text(config, logic),
+        }
+    automatic_sources = set(labels.get("source_kinds") or [])
+    if source.get("fact_type") == "advice" and source.get("source_kind") not in automatic_sources:
+        return {
+            "next_auto_check": None,
+            "owner_question_type": logic,
+            "auto_check_text": _uncovered_text(config, logic),
+        }
+    class_name = resolved.get("volatility_class") or source.get("volatility_class")
+    schedules = _covering_schedules(config, class_name=class_name, category=category)
+    if not schedules:
+        return {
+            "next_auto_check": None,
+            "owner_question_type": logic,
+            "auto_check_text": _uncovered_text(config, logic),
+        }
+    planned = min(next_schedule_date(schedule, as_of) for schedule in schedules)
+    if resolved.get("at_risk"):
+        drop = parse_date(resolved.get("drops_on"))
+        if drop is not None and as_of <= drop < planned:
+            planned = drop
+    return {
+        "next_auto_check": planned.isoformat(),
+        "owner_question_type": None,
+        "auto_check_text": labels["date_text"].format(date=planned.isoformat()),
+    }
+
+
+def summarize_auto_checks(rows: Sequence[Dict[str, Any]], config: Dict[str, Any]) -> Dict[str, Any]:
+    labels = config["auto_checks"]
+    product = labels["kinds"]["product"]
+    logic = labels["kinds"]["logic"]
+    dates: Dict[str, int] = {}
+    product_count = 0
+    logic_count = 0
+    for row in rows:
+        when = row.get("next_auto_check")
+        if when:
+            dates[str(when)] = dates.get(str(when), 0) + 1
+        elif row.get("owner_question_type") == product:
+            product_count += 1
+        else:
+            logic_count += 1
+    return {
+        "label": labels["summary_label"],
+        "dates": [{"date": key, "count": dates[key]} for key in sorted(dates)],
+        "product": product_count,
+        "logic": logic_count,
+        "owner_label": labels["owner_summary"].format(
+            product_label=labels["kind_labels"]["product"],
+            logic_label=labels["kind_labels"]["logic"],
+            product=product_count,
+            logic=logic_count,
+        ),
+    }
+
+
+def _auto_lines(block: Optional[Dict[str, Any]]) -> List[str]:
+    if not block:
+        return []
+    lines = [block["label"]]
+    for item in block.get("dates") or []:
+        lines.append(f"{item['date']}: {item['count']}")
+    lines.append(block["owner_label"])
+    lines.append("")
+    return lines
+
+
 def assess_fact(
     fact: Dict[str, Any],
     *,
@@ -184,6 +358,9 @@ def assess_fact(
         "drops_on": None,
         "at_risk": False,
         "at_risk_reason": None,
+        "next_auto_check": None,
+        "owner_question_type": None,
+        "auto_check_text": "",
         "flags": flags,
     }
     resolved = resolve_zone(
@@ -205,18 +382,18 @@ def assess_fact(
     if gap or resolved["kind"] == "gap":
         base["reason"] = resolved["reason"] or config["messages"]["gap"]
         base["suggested_action"] = "owner_decision"
-        return _finalize_http(base, flags, config)
+        return _finalize_http(base, flags, config, source=fact, resolved=resolved, as_of=as_of)
     if resolved["kind"] == "advice" or fact.get("fact_type") == "advice" or current in set(config["display"].get("extra_hidden_zones") or []):
         base["reason"] = resolved["reason"] or config["messages"]["advice"]
         if fact.get("needs_owner_check"):
             base["suggested_action"] = "owner_manual_check"
         elif fact.get("decision_needed"):
             base["suggested_action"] = "owner_decision"
-        return _finalize_http(base, flags, config)
+        return _finalize_http(base, flags, config, source=fact, resolved=resolved, as_of=as_of)
     if resolved["kind"] != "scored":
         base["reason"] = resolved["reason"] or config["messages"]["unscored"]
         base["suggested_action"] = "rerun"
-        return _finalize_http(base, flags, config)
+        return _finalize_http(base, flags, config, source=fact, resolved=resolved, as_of=as_of)
 
     score_zone = resolved["score_zone"]
     computed = resolved["zone"]
@@ -250,7 +427,7 @@ def assess_fact(
         base["status"] = "inconclusive"
         base["reason"] = "Записанная зона вне шкалы green/yellow/red/black."
         base["suggested_action"] = "rerun"
-        return _finalize_http(base, flags)
+        return _finalize_http(base, flags, config, source=fact, resolved=resolved, as_of=as_of)
     if current != computed:
         base["status"] = "fail"
     elif score_rank is not None and score_rank < current_rank:
@@ -297,10 +474,18 @@ def assess_fact(
     base["reason"] = reason
     if base["suggested_action"] == "owner_decision" and base["owner_prompt"]:
         flags.append("traveler_green_needs_owner")
-    return _finalize_http(base, flags, config)
+    return _finalize_http(base, flags, config, source=fact, resolved=resolved, as_of=as_of)
 
 
-def _finalize_http(row: Dict[str, Any], flags: List[str], config: Dict[str, Any]) -> Dict[str, Any]:
+def _finalize_http(
+    row: Dict[str, Any],
+    flags: List[str],
+    config: Dict[str, Any],
+    *,
+    source: Optional[Dict[str, Any]] = None,
+    resolved: Optional[Dict[str, Any]] = None,
+    as_of: Optional[date] = None,
+) -> Dict[str, Any]:
     rules = config["http"]
     excluded = set(rules["failure_exclude_statuses"])
     minimum = int(rules["failure_min_status"])
@@ -316,6 +501,8 @@ def _finalize_http(row: Dict[str, Any], flags: List[str], config: Dict[str, Any]
     row["flags"] = sorted(set(flags))
     if row["suggested_action"] is not None and row["suggested_action"] not in ACTIONS:
         raise RuntimeError(f"unexpected action {row['suggested_action']}")
+    if as_of is not None and source is not None and resolved is not None:
+        row.update(auto_check_fields(source, resolved, config, as_of, category=row.get("category")))
     return row
 
 
@@ -662,7 +849,7 @@ def transfer_rows(
         measurement = measurements[measurement_id]
         fact = measurement_fact(measurement_id, measurement, rules, as_of)
         built[measurement_id] = fact
-        rows.append(_transfer_row(measurement_id, fact, measurement, config))
+        rows.append(_transfer_row(measurement_id, fact, measurement, config, as_of))
     for spec in allowances:
         for measurement_id in spec["inputs"]:
             if measurement_id not in built:
@@ -670,7 +857,7 @@ def transfer_rows(
                     measurement_id, measurements[measurement_id], rules, as_of
                 )
         fact = allowance_fact(spec, built, rules, as_of)
-        rows.append(_transfer_row(spec["id"], fact, {}, config))
+        rows.append(_transfer_row(spec["id"], fact, {}, config, as_of))
     return rows
 
 
@@ -688,9 +875,18 @@ def _transfer_row(
     fact: Dict[str, Any],
     measurement: Dict[str, Any],
     config: Dict[str, Any],
+    as_of: date,
 ) -> Dict[str, Any]:
     gap = is_gap(fact)
-    return {
+    resolved = {
+        "kind": "gap" if gap else ("advice" if fact.get("fact_type") == "advice" else "scored"),
+        "volatility_class": fact.get("volatility_class"),
+        "at_risk": bool(fact.get("at_risk")) and not gap,
+        "drops_on": fact.get("drops_on"),
+        "owner_prompt": fact.get("owner_prompt"),
+        "score_zone": fact.get("score_zone"),
+    }
+    row = {
         "id": row_id,
         "text": fact.get("text") or "",
         "zone": None if gap else fact.get("zone"),
@@ -700,6 +896,8 @@ def _transfer_row(
         "topic": measurement.get("transfer_topic"),
         "volatility_class": fact.get("volatility_class"),
     }
+    row.update(auto_check_fields(fact, resolved, config, as_of, category=row["topic"]))
+    return row
 
 
 def summarize_transfers(rows: Sequence[Dict[str, Any]], config: Dict[str, Any]) -> Dict[str, Any]:
@@ -791,18 +989,17 @@ def build_report(
         route_rules = loaded_rules if route_rules is None else route_rules
         route_measurements = loaded_measurements if route_measurements is None else route_measurements
         route_definitions = loaded_routes if route_definitions is None else route_definitions
-    transfers = summarize_transfers(
-        transfer_rows(
-            route_rules,
-            route_measurements,
-            route_definitions,
-            config,
-            as_of,
-            scope=scope,
-            country=country,
-        ),
+    transfer_list = transfer_rows(
+        route_rules,
+        route_measurements,
+        route_definitions,
         config,
+        as_of,
+        scope=scope,
+        country=country,
     )
+    transfers = summarize_transfers(transfer_list, config)
+    transfers["auto_check"] = summarize_auto_checks(transfer_list, config)
     scope_label = "все страны" if scope == "all" else names.get(country or "", country or "")
     return {
         "schema_version": SCHEMA_VERSION,
@@ -823,6 +1020,7 @@ def build_report(
             "refresh_action": config["early_warning"]["refresh_action"],
         },
         "summary": summary,
+        "auto_check": summarize_auto_checks(facts, config),
         "facts": facts,
         "transfers": transfers,
     }
@@ -885,6 +1083,7 @@ def render_text(report: Dict[str, Any]) -> str:
         f"Обновить поиск источника: {summary['refresh_search']}",
         "",
     ]
+    lines.extend(_auto_lines(report.get("auto_check")))
     lines.extend(_transfer_lines(report))
     lines.extend(_section(report, "Не сошлось с формулой", lambda fact: fact["status"] == "fail"))
     lines.extend(_section(report, "Устарело: баллы не держат записанную зону", lambda fact: fact["status"] == "stale"))
@@ -936,8 +1135,11 @@ def _transfer_lines(report: Dict[str, Any]) -> List[str]:
     lines.append(f"{block['stale_label']}: {block['stale']}")
     lines.append(f"{block['gap_label']}: {block['gaps']}")
     for row in block.get("gap_rows") or []:
-        lines.append(f"- {row['text']}")
-    lines.append("")
+        extra = row.get("auto_check_text")
+        lines.append(f"- {row['text']}" + (f" · {extra}" if extra else ""))
+    lines.extend(_auto_lines(block.get("auto_check")))
+    if not block.get("auto_check"):
+        lines.append("")
     return lines
 
 
@@ -951,7 +1153,8 @@ def _risk_lines(report: Dict[str, Any]) -> List[str]:
             shown = fact.get("computed_zone") or fact.get("current_zone")
             lines.append(
                 f"- [{fact['fact_id']}] {shown} → {fact.get('next_zone') or '—'} · "
-                f"{fact.get('drops_on') or 'без даты'} · {fact.get('at_risk_reason') or ''}"
+                f"{fact.get('drops_on') or 'без даты'} · {fact.get('at_risk_reason') or ''} · "
+                f"{fact.get('auto_check_text') or ''}".rstrip(" ·")
             )
             lines.append(f"   {fact['text']}")
     lines.append("")
@@ -966,8 +1169,9 @@ def _section(report: Dict[str, Any], title: str, predicate) -> List[str]:
     else:
         for fact in rows:
             action = fact.get("suggested_action") or "—"
+            suffix = f" · {fact['auto_check_text']}" if fact.get("auto_check_text") else ""
             lines.append(
-                f"- {fact['country']} · {fact['category']} · {fact['current_zone']} → {fact.get('computed_zone') or '—'} · {action} · {fact['text']}"
+                f"- {fact['country']} · {fact['category']} · {fact['current_zone']} → {fact.get('computed_zone') or '—'} · {action} · {fact['text']}{suffix}"
             )
     lines.append("")
     return lines
@@ -986,6 +1190,7 @@ def format_telegram_messages(report: Dict[str, Any], run_url: str = "", *, limit
         f"Не смогли проверить: {summary['could_not_check']}",
         f"Нужно решение владельца: {summary['needs_owner_decision']}",
     ]
+    lines.extend(line for line in _auto_lines(report.get("auto_check")) if line)
     block = report.get("transfers")
     if block:
         lines.append(block["title"])
@@ -994,6 +1199,7 @@ def format_telegram_messages(report: Dict[str, Any], run_url: str = "", *, limit
         lines.append(f"{block['at_risk_label']}: {block['at_risk']}")
         lines.append(f"{block['stale_label']}: {block['stale']}")
         lines.append(f"{block['gap_label']}: {block['gaps']}")
+        lines.extend(line for line in _auto_lines(block.get("auto_check")) if line)
     if run_url:
         lines.append(f"Прогон: {run_url}")
     return split_telegram("\n".join(lines), run_url=run_url, limit=limit)
