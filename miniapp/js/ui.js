@@ -84,6 +84,49 @@ export function visibleFacts(facts, showHidden) {
   return (facts || []).filter((fact) => showHidden || !fact.hidden);
 }
 
+const FACT_GROUP_ORDER = ["green", "yellow", "gap", "red", "advice-unsupported", "black"];
+
+const FACT_GROUP_TITLES = {
+  green: "Подтверждено",
+  yellow: "Скорее всего верно",
+  gap: "Не исследовано",
+  red: "Мало подтверждений",
+  "advice-unsupported": "Непроверено",
+  black: "Устарело или опровергнуто",
+};
+
+export function factStamp(fact) {
+  const value = String((fact && (fact.date_iso || fact.date)) || "");
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (iso) return Date.parse(`${iso[1]}-${iso[2]}-${iso[3]}T00:00:00Z`) || 0;
+  const ru = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(value);
+  if (ru) return Date.parse(`${ru[3]}-${ru[2]}-${ru[1]}T00:00:00Z`) || 0;
+  return 0;
+}
+
+export function groupFacts(facts) {
+  const buckets = new Map(FACT_GROUP_ORDER.map((zone) => [zone, []]));
+  const extra = [];
+  (facts || []).forEach((fact, index) => {
+    const zone = fact.gap ? "gap" : (fact.zone || "yellow");
+    const item = { fact, index };
+    if (buckets.has(zone)) buckets.get(zone).push(item);
+    else extra.push(item);
+  });
+  const sortNewest = (items) => items
+    .slice()
+    .sort((a, b) => factStamp(b.fact) - factStamp(a.fact) || a.index - b.index)
+    .map((item) => item.fact);
+  const groups = [];
+  for (const zone of FACT_GROUP_ORDER) {
+    const items = sortNewest(buckets.get(zone));
+    if (items.length) groups.push({ zone, title: FACT_GROUP_TITLES[zone], facts: items });
+  }
+  const rest = sortNewest(extra);
+  if (rest.length) groups.push({ zone: "yellow", title: FACT_GROUP_TITLES.yellow, facts: rest });
+  return groups;
+}
+
 export function hasHidden(facts) {
   return (facts || []).some((fact) => fact.hidden);
 }

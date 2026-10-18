@@ -1,10 +1,11 @@
-import { routeForTrip, searchTicketsUrl, tripCountdown, tripWhen } from "./flow.js";
+import { backPlan, routeForTrip, searchTicketsUrl, tripCountdown, tripWhen } from "./flow.js";
 import {
   countryBySlug,
   daysUntil,
   esc,
   factMeta,
   formatDay,
+  groupFacts,
   hasHidden,
   icon,
   nightsBetween,
@@ -19,6 +20,8 @@ import {
   visibleSteps,
   zoneName,
 } from "./ui.js";
+
+const ORDER_HINT = "Сначала подтверждённые, внутри группы — более свежая проверка выше.";
 
 function factCard(fact) {
   const zone = fact.gap ? "gap" : (fact.zone || "yellow");
@@ -41,6 +44,33 @@ function choice(group, id, label, on, extra = "") {
   return `<button type="button" class="choice${on ? " is-on" : ""}" data-action="choice" data-group="${esc(group)}" data-id="${esc(id)}" aria-pressed="${on ? "true" : "false"}">
     <span>${esc(label)}</span>${extra ? `<span class="choice-extra">${extra}</span>` : ""}${on ? icon("check") : ""}
   </button>`;
+}
+
+function navigationPlan(state, screen) {
+  let instructionIndex = 0;
+  let instructionSection = "";
+  if (screen.name === "instruction" && state.catalog) {
+    const instruction = state.catalog.instructions[screen.instructionId];
+    instructionSection = (instruction && instruction.section) || "";
+    const scope = `instruction:${instruction && instruction.id}`;
+    const steps = visibleSteps(instruction, Boolean(state.unverified && state.unverified[scope]));
+    instructionIndex = stepPosition(steps, state.progress || {}, state.cursor && instruction && state.cursor[instruction.id]);
+  }
+  return backPlan({
+    screen: Object.assign({}, screen, { instructionSection }),
+    stackDepth: state.stackDepth == null ? 1 : state.stackDepth,
+    introSeen: Boolean(state.introSeen),
+    introStep: state.introStep || 0,
+    pickStep: state.step || 0,
+    instructionIndex,
+    openRoute: state.openRoute || "",
+    sheet: Boolean(state.sheet),
+    returnTo: state.returnTo || "",
+  });
+}
+
+function backButton() {
+  return `<button type="button" class="icon-btn" data-action="back" aria-label="Назад">${icon("back")}</button>`;
 }
 
 function header(state, screen) {
@@ -70,16 +100,13 @@ function header(state, screen) {
     const instruction = state.catalog.instructions[screen.instructionId];
     title = instruction ? instruction.service : title;
   }
-  const nested = !["trip", "guide", "sos", "profile", "intro", "pick"].includes(screen.name);
-  const back = nested
-    ? `<button type="button" class="icon-btn" data-action="back" aria-label="Назад">${icon("back")}</button>`
-    : "";
+  const back = navigationPlan(state, screen).type === "none" ? "" : backButton();
   const search = screen.name === "intro" || screen.name === "pick" || screen.name === "search"
     ? ""
     : `<button type="button" class="icon-btn" data-action="search" aria-label="Поиск">${icon("search")}</button>`;
   if (screen.name === "search") {
     return `<header class="header">
-      <button type="button" class="icon-btn" data-action="back" aria-label="Назад">${icon("back")}</button>
+      ${back || backButton()}
       <input id="search-input" class="search-input" type="search" placeholder="Факт, страна или раздел" value="${esc(state.query)}" autocomplete="off">
     </header>`;
   }
@@ -359,6 +386,18 @@ function checklistOfferRow(state) {
   return `<div class="partner-row">${links}${partnerNote(state)}</div>`;
 }
 
+function groupTitle(group) {
+  return `<p class="fact-group-title"><span class="zone-dot" data-zone="${esc(group.zone)}" aria-hidden="true"></span><span>${esc(group.title)}</span><span class="count">${group.facts.length}</span></p>`;
+}
+
+function factGroupHtml(facts, renderFact) {
+  return groupFacts(facts).map((group) => `<div class="fact-group" data-zone="${esc(group.zone)}">${groupTitle(group)}${group.facts.map(renderFact).join("")}</div>`).join("");
+}
+
+function orderHint() {
+  return `<p class="hint order-hint">${ORDER_HINT}</p>`;
+}
+
 function checklist(state, country) {
   if (!country) return "";
   const section = sectionOf(country, "1_checklist");
@@ -370,15 +409,19 @@ function checklist(state, country) {
   const show = Boolean(state.unverified.checklist);
   const facts = section.facts || [];
   const tasks = visibleFacts(facts.filter((fact) => !fact.gap), show);
-  const gaps = facts.filter((fact) => fact.gap);
   const done = tasks.filter((fact) => state.progress[fact.id] && state.progress[fact.id].completed).length;
-  const rows = tasks.map((fact) => {
+  const checkRow = (fact) => {
     const checked = Boolean(state.progress[fact.id] && state.progress[fact.id].completed);
     return `<div class="check${checked ? " is-done" : ""}">
       <button type="button" class="tick" data-action="check" data-id="${esc(fact.id)}" aria-pressed="${checked ? "true" : "false"}" aria-label="Отметить пункт">${checked ? icon("check") : ""}</button>
       <div class="check-body">${factCard(fact)}</div>
     </div>`;
-  }).join("");
+  };
+  const visibleRows = factGroupHtml(
+    visibleFacts(facts.filter((fact) => !fact.gap), false).concat(facts.filter((fact) => fact.gap)),
+    (fact) => (fact.gap ? factCard(fact) : checkRow(fact)),
+  );
+  const hiddenRows = show ? factGroupHtml(facts.filter((fact) => !fact.gap && fact.hidden), checkRow) : "";
   const toggle = hasHidden(facts)
     ? `<button type="button" class="ghost wide" data-action="unverified" data-scope="checklist">${show ? "Скрыть непроверенное" : "Показать непроверенное"}</button>`
     : "";
@@ -387,10 +430,11 @@ function checklist(state, country) {
       <h2>Чек-лист до вылета</h2>
       <p class="hint">${done} из ${tasks.length}</p>
     </div>
-    ${rows || `<p class="hint">В зелёной и жёлтой зоне пунктов нет.</p>`}
+    ${visibleRows || hiddenRows ? orderHint() : ""}
+    ${visibleRows || `<p class="hint">В зелёной и жёлтой зоне пунктов нет.</p>`}
     ${offer}
-    ${gaps.map((fact) => factCard(fact)).join("")}
     ${toggle}
+    ${hiddenRows}
   </section>`;
 }
 
@@ -455,31 +499,45 @@ function sectionScreen(state, screen) {
     })),
   );
   const hidden = pools.some((pool) => hasHidden(pool.facts));
-  const blocks = pools.map((pool) => {
-    const facts = visibleFacts(pool.facts, show);
-    const title = pool.title ? `<h3>${esc(pool.title)}</h3>` : "";
-    if (pool.note) return `${title}<p class="hint">${esc(pool.note)}</p>`;
-    if (!facts.length && !pool.title) {
-      const subsections = section.subsections || [];
-      const nested = subsections.some((sub) => visibleFacts(sub.facts || [], show).length || sub.note);
-      if (nested) return "";
-      return `<p class="hint">${show ? "Дополнительных непроверенных фактов нет." : "В зелёной и жёлтой зоне фактов нет."}</p>`;
-    }
-    if (!facts.length) return `${title}<p class="hint">${show ? "Дополнительных непроверенных фактов нет." : "В зелёной и жёлтой зоне фактов нет."}</p>`;
-    return `${title}${facts.map(factCard).join("")}`;
-  }).join("");
+  const visibleBlocks = pools.map((pool) => poolMarkup(pool)).join("");
+  const hiddenBlocks = show ? pools.map((pool) => hiddenMarkup(pool)).join("") : "";
   const guides = (section.instructions || []).map((id) => instructionTeaser(state, country.slug, id)).join("");
   const toggle = hidden
     ? `<button type="button" class="ghost wide" data-action="unverified" data-scope="${esc(scope)}">${show ? "Скрыть непроверенное" : "Показать непроверенное"}</button>`
     : "";
+  const anyFacts = pools.some((pool) => (pool.facts || []).some((fact) => show || !fact.hidden));
+  const empty = visibleBlocks || hiddenBlocks
+    ? ""
+    : `<p class="hint">${show ? "Дополнительных непроверенных фактов нет." : "В зелёной и жёлтой зоне фактов нет."}</p>`;
   return `<section class="screen">
     <p class="eyebrow">${esc(splitName(country.name).title)}</p>
     <h2>${esc(section.title)}</h2>
-    ${toggle}
-    ${blocks}
+    ${anyFacts ? orderHint() : ""}
+    ${visibleBlocks}
+    ${empty}
     ${offer}
-    ${guides}
+    ${toggle}
+    ${hiddenBlocks}
+    <div class="instruction-block">${guides}</div>
   </section>`;
+}
+
+function poolMarkup(pool) {
+  const title = pool.title ? `<h3>${esc(pool.title)}</h3>` : "";
+  if (pool.note) return `${title}<p class="hint">${esc(pool.note)}</p>`;
+  const facts = (pool.facts || []).filter((fact) => !fact.hidden);
+  if (!facts.length) {
+    if (!pool.title || (pool.facts || []).some((fact) => fact.hidden)) return "";
+    return `${title}<p class="hint">В зелёной и жёлтой зоне фактов нет.</p>`;
+  }
+  return `${title}${factGroupHtml(facts, factCard)}`;
+}
+
+function hiddenMarkup(pool) {
+  const facts = (pool.facts || []).filter((fact) => fact.hidden);
+  if (!facts.length) return "";
+  const title = pool.title ? `<h3>${esc(pool.title)}</h3>` : "";
+  return `${title}${factGroupHtml(facts, factCard)}`;
 }
 
 function instructionTeaser(state, slug, id) {
