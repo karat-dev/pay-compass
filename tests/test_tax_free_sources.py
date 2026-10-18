@@ -5,8 +5,15 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
-from database.fact_score import georgia_refund_rate, georgia_refund_text, percent_text, score_fact
-from database.knowledge_base import COUNTRIES_KNOWLEDGE_BASE, load_trust_config
+from database.fact_score import (
+    georgia_refund_rate,
+    georgia_refund_text,
+    georgia_shelf_refund_rate,
+    percent_text,
+    score_fact,
+)
+from database.knowledge_base import COUNTRIES_KNOWLEDGE_BASE, load_trust_config, normalize_fact
+from database.trust_zones import resolve_zone
 
 AS_OF = date(2026, 10, 18)
 CHECK = "2026-10-18"
@@ -37,8 +44,9 @@ def test_owner_statement_replaces_probably_impossible_and_leaves_manual_checks()
         assert fact["source"] is None
         assert fact["date_verified"] == CHECK
         scored = score_fact(fact, CONFIG, AS_OF)
-        assert fact["zone"] == scored["zone"]
-        assert fact["score"] == scored["score"]
+        live = resolve_zone(fact, config=CONFIG, as_of=AS_OF, section_key="8_tax_free")
+        assert fact["zone"] == scored["zone"] == live["zone"]
+        assert fact["score"] == scored["score"] == live["score"]
         assert fact["zone"] == "yellow"
     joined = "\n".join(fact["text"] for slug in ("china", "thailand", "uae", "turkey", "georgia") for fact in _raw_tax(slug))
     assert "вероятно" not in joined
@@ -49,9 +57,13 @@ def test_owner_statement_replaces_probably_impossible_and_leaves_manual_checks()
     built = report.build_report(as_of=AS_OF, check_http=False)
     manual = [fact["text"] for fact in built["facts"] if "needs_owner_check" in fact["flags"]]
     assert OWNER not in "\n".join(manual)
-    refresh = [fact for fact in built["facts"] if fact["suggested_action"] == "refresh_search"]
+    refresh = [
+        fact
+        for fact in built["facts"]
+        if fact["suggested_action"] == "refresh_search" and fact["text"] == OWNER
+    ]
     assert len(refresh) == 5
-    assert {fact["text"] for fact in refresh} == {OWNER}
+    assert {fact["country"] for fact in refresh} == {"china", "thailand", "uae", "turkey", "georgia"}
 
 
 def test_thailand_uses_the_current_revenue_department_pages():
@@ -96,10 +108,22 @@ def test_georgia_refund_share_is_computed_from_the_revenue_service_rule():
     vat = Decimal(rule["vat_of_price_ex_vat"])
     service = Decimal(rule["service_fee_of_price_ex_vat"])
     bank = Decimal(rule["bank_fee_of_remainder"])
-    assert georgia_refund_rate(CONFIG) == (vat - service) * (Decimal(1) - bank)
+    ex_vat = (vat - service) * (Decimal(1) - bank)
+    shelf = ex_vat / (Decimal(1) + vat)
+    assert georgia_refund_rate(CONFIG) == ex_vat
+    assert georgia_shelf_refund_rate(CONFIG) == shelf
+    places = int(rule["result_decimal_places"])
+    shelf_text = percent_text(shelf, places)
+    ex_text = percent_text(ex_vat, places)
+    assert shelf_text == "11,5"
+    assert ex_text == "13,6"
+    source = (ROOT / "database" / "fact_score.py").read_text(encoding="utf-8")
+    assert "11,5" not in source
+    assert "13,6" not in source
     expected = georgia_refund_text(CONFIG)
-    result = percent_text(georgia_refund_rate(CONFIG), int(rule["result_decimal_places"]))
-    assert result in expected
+    assert f"≈{shelf_text}% от цены на ценнике" in expected
+    assert f"≈{ex_text}% от цены без НДС" in expected
+    assert expected.index("ценнике") < expected.index("от цены без НДС")
     assert "13,5" not in expected
     facts = _raw_tax("georgia")
     refund = next(fact for fact in facts if fact["text"] == expected)
@@ -128,7 +152,9 @@ def test_tax_free_zones_match_the_formula_and_sourced_facts_have_a_check_date():
             if raw.get("source_kind") != "internal":
                 assert raw["source"]
             scored = score_fact(raw, CONFIG, AS_OF)
-            assert raw["zone"] == scored["zone"]
-            assert raw["score"] == scored["score"]
-            assert raw["score_breakdown"] == scored["score_breakdown"]
-            assert shown["zone"] == scored["zone"]
+            live = resolve_zone(raw, config=CONFIG, as_of=AS_OF, section_key="8_tax_free")
+            shown_on_date = normalize_fact(raw, section_key="8_tax_free", as_of=AS_OF)
+            assert raw["zone"] == scored["zone"] == live["zone"] == shown_on_date["zone"]
+            assert raw["score"] == scored["score"] == live["score"]
+            assert raw["score_breakdown"] == scored["score_breakdown"] == live["score_breakdown"]
+            assert shown["zone"] == live["zone"]

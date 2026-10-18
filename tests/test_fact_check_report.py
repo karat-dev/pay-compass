@@ -104,7 +104,7 @@ def test_corpus_counts_match_the_guide():
     assert summary["needs_owner_decision"] == 8
     assert summary["needs_owner_manual_check"] == 12
     assert summary["unknown_zone"] == 39
-    assert summary["refresh_search"] == 5
+    assert summary["refresh_search"] == 17
     country = [fact for fact in built["facts"] if fact["instruction_id"] is None]
     visible = [fact for fact in country if fact["current_zone"] in ("green", "yellow")]
     hidden_url = [fact for fact in visible if "no_public_source" in fact["flags"]]

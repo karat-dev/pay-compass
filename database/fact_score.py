@@ -97,25 +97,36 @@ def percent_text(rate: Decimal, places: int) -> str:
     return text.replace(".", ",")
 
 
+def _georgia_rule(config: Dict[str, Any]) -> Dict[str, Any]:
+    return config["tax_free_rules"]["georgia_refund"]
+
+
 def georgia_refund_rate(config: Dict[str, Any]) -> Decimal:
     """Share of the price without VAT left after the Revenue Service fee and the bank fee."""
-    rule = config["tax_free_rules"]["georgia_refund"]
+    rule = _georgia_rule(config)
     vat = Decimal(rule["vat_of_price_ex_vat"])
     service = Decimal(rule["service_fee_of_price_ex_vat"])
     bank = Decimal(rule["bank_fee_of_remainder"])
     return (vat - service) * (Decimal(1) - bank)
 
 
+def georgia_shelf_refund_rate(config: Dict[str, Any]) -> Decimal:
+    """Share of the shelf price. The shelf price already includes VAT."""
+    vat = Decimal(_georgia_rule(config)["vat_of_price_ex_vat"])
+    return georgia_refund_rate(config) / (Decimal(1) + vat)
+
+
 def georgia_refund_text(config: Dict[str, Any]) -> str:
-    rule = config["tax_free_rules"]["georgia_refund"]
+    rule = _georgia_rule(config)
     vat = Decimal(rule["vat_of_price_ex_vat"])
     service = Decimal(rule["service_fee_of_price_ex_vat"])
     bank = Decimal(rule["bank_fee_of_remainder"])
     places = int(rule["result_decimal_places"])
-    result = percent_text(georgia_refund_rate(config), places)
+    shelf = percent_text(georgia_shelf_refund_rate(config), places)
+    ex_vat = percent_text(georgia_refund_rate(config), places)
     return (
         "На руки остаётся не весь НДС. Правило Налоговой службы: "
         f"НДС {percent_text(vat, 0)}% цены без НДС, минус сбор службы {percent_text(service, 0)}% "
         f"той же цены, минус комиссия банка {percent_text(bank, 0)}% от оставшейся суммы. "
-        f"Получается {result}% цены без НДС."
+        f"Получается ≈{shelf}% от цены на ценнике (≈{ex_vat}% от цены без НДС)."
     )
