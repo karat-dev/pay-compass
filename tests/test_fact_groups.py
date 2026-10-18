@@ -251,3 +251,140 @@ def test_topics_follow_data_and_the_summary_limit_comes_from_config():
     opened = route["routeExpanded"].split(f'data-group="{route["transferOpenId"]}"', 1)[1]
     assert 'aria-expanded="true"' in opened
     assert 'class="fact-key"' in opened
+
+
+FRESH_CARDS_SCRIPT = r"""
+const chunks = [];
+for await (const chunk of process.stdin) chunks.push(chunk);
+const catalog = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+globalThis.location = { hash: "#/guide/georgia/3_local_wallets_cards", search: "", hostname: "127.0.0.1" };
+globalThis.document = { documentElement: { dataset: {}, style: {} }, querySelector() { return null; } };
+
+const { sectionTopicGroups, topicGroups } = await import("./miniapp/js/ui.js");
+const { render } = await import("./miniapp/js/screens.js");
+
+function baseState(extra) {
+  return {
+    catalog,
+    introSeen: true,
+    unverified: {},
+    progress: {},
+    openRoute: "",
+    trip: null,
+    profile: { favorite_countries: [], bank_id: "tbank", departure_city_id: "mow", citizenship: "ru" },
+    draft: {},
+    cursor: {},
+    sheet: null,
+    openGroups: {},
+    openFacts: {},
+    openSummaries: {},
+    ...extra,
+  };
+}
+
+function groupChunks(html) {
+  return html.split('<section class="fact-group"').slice(1).map((chunk) => chunk.split("</section>")[0]);
+}
+
+function groupName(chunk) {
+  const match = chunk.match(/class="fact-group-name">([^<]*)</);
+  return match ? match[1] : "";
+}
+
+const georgia = catalog.countries.find((country) => country.slug === "georgia");
+const wallets = georgia.sections.find((section) => section.key === "3_local_wallets_cards");
+const limits = { prefixMax: catalog.summary.prefix_max_chars, minFacts: catalog.summary.min_facts, catalog };
+const cardGroups = sectionTopicGroups(wallets, catalog, false);
+const tbcGroup = cardGroups.find((group) => group.facts.some((fact) => fact.text.startsWith("TBC Bank:")));
+const georgiaCollapsed = render(baseState());
+const georgiaExpanded = render(baseState({
+  openGroups: tbcGroup ? { [`georgia/3_local_wallets_cards:${tbcGroup.id}`]: true } : {},
+}));
+
+location.hash = "#/trip";
+const route = catalog.routes.find((item) => item.id === "mow_thailand");
+const transfer = route.sections.find((section) => section.id === "route:mow_thailand:transfer");
+const transferGroups = topicGroups(transfer.facts, { ...limits, fallbackId: "all", fallbackTitle: transfer.title });
+const grabGroup = transferGroups.find((group) => group.facts.some((fact) => fact.text.includes("JustGrab") && fact.text.includes("652")));
+const transferOpenId = grabGroup && `${transfer.id}:${grabGroup.id}`;
+const trip = {
+  destination_slug: "thailand",
+  departure_city_id: "mow",
+  depart_date: "2026-12-01",
+  return_date: "2026-12-12",
+};
+const transferCollapsed = render(baseState({ trip, openRoute: transfer.id }));
+const transferExpanded = render(baseState({
+  trip,
+  openRoute: transfer.id,
+  openGroups: transferOpenId ? { [transferOpenId]: true } : {},
+}));
+
+process.stdout.write(JSON.stringify({
+  tbcTitle: tbcGroup && tbcGroup.title,
+  tbcId: tbcGroup && `georgia/3_local_wallets_cards:${tbcGroup.id}`,
+  georgiaTitles: groupChunks(georgiaCollapsed).map(groupName),
+  georgiaCollapsed,
+  georgiaExpanded,
+  grabTitle: grabGroup && grabGroup.title,
+  transferOpenId,
+  transferTitles: groupChunks(transferCollapsed).map(groupName),
+  transferCollapsed,
+  transferExpanded,
+  grabTexts: (grabGroup && grabGroup.facts || []).map((fact) => fact.text),
+}));
+"""
+
+
+def _fresh(catalog):
+    result = subprocess.run(
+        ["node", "--input-type=module", "-e", FRESH_CARDS_SCRIPT],
+        input=json.dumps(catalog),
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr or result.stdout
+    return json.loads(result.stdout)
+
+
+def _group_named(html, title):
+    for chunk in html.split('<section class="fact-group"')[1:]:
+        body = chunk.split("</section>", 1)[0]
+        if f'class="fact-group-name">{title}<' in body:
+            return body
+    return ""
+
+
+def test_georgia_tbc_and_bkk_dmk_grab_use_collapsed_groups():
+    painted = _fresh(get_catalog())
+    assert painted["tbcTitle"] == "Местная карта или счёт"
+    assert "Риск" in painted["georgiaTitles"]
+    tbc = _group_named(painted["georgiaCollapsed"], "Местная карта или счёт")
+    assert tbc
+    assert 'class="fact-group-body" hidden' in tbc
+    assert "TBC Bank" in tbc
+    assert "10 GEL" in tbc
+    assert 'data-zone="green"' in tbc
+    assert "Unired" not in painted["georgiaCollapsed"]
+    opened = painted["georgiaExpanded"].split(f'data-group="{painted["tbcId"]}"', 1)[1]
+    assert 'aria-expanded="true"' in opened
+    assert "карту Visa выпускают" in opened
+    assert 'class="fact-key"' in opened
+
+    assert painted["grabTitle"] == "Трансфер"
+    titles = painted["transferTitles"]
+    assert titles[0] == "Москва → Таиланд", titles
+    assert "Трансфер" in titles, titles
+    assert titles.index("Трансфер") < titles.index("Чек-лист")
+    transfer = _group_named(painted["transferCollapsed"], "Трансфер")
+    assert 'class="fact-group-body" hidden' in transfer
+    assert "JustGrab" in transfer and "652" in transfer
+    assert "GrabCar" in transfer and "924" in transfer
+    assert "1 038 батов" in transfer
+    assert "Floor 1" in transfer
+    assert "<article class=\"fact" not in painted["transferCollapsed"]
+    expanded = painted["transferExpanded"].split(f'data-group="{painted["transferOpenId"]}"', 1)[1]
+    assert 'aria-expanded="true"' in expanded
+    assert "Котировка в Grab наличными, не поездка." in expanded
+    assert "Компас оплаты" not in painted["transferCollapsed"].split('<div class="route-copy">', 1)[1]
