@@ -107,6 +107,7 @@ _PRIVATE_KEYS = {
     "at_risk_reason",
     "reports",
     "contradicted_by_own",
+    "sources_checked",
 }
 
 
@@ -197,6 +198,8 @@ def publish_fact(
         "date": _display_date(fact.get("date_verified")),
         "date_estimated": bool(fact.get("date_estimated")),
         "source_url": source_url,
+        "volatility": fact.get("volatility") or "",
+        "volatility_label": fact.get("volatility_label") or "",
         "country_slug": country_slug,
         "section_key": section_key,
         "instruction_id": instruction_id,
@@ -342,6 +345,7 @@ def _public_route(route_id: str = "mow_hkg_via_pek") -> Dict[str, Any]:
                     "partner": link["url"] in partner_urls,
                 }
                 for link in section_links
+                if link["label"] != "Источник"
             ],
         })
     lines = lead_lines(route.get("text") or "")

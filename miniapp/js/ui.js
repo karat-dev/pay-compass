@@ -55,14 +55,19 @@ export function zoneName(zone, catalog) {
   return titles[zone] || "зона";
 }
 
+function volatilitySuffix(fact) {
+  return fact.volatility_label ? ` · ${fact.volatility_label}` : "";
+}
+
 export function factMeta(fact) {
-  if (fact.gap) return "не исследовано";
+  if (fact.gap) return `не исследовано${volatilitySuffix(fact)}`;
   const estimate = fact.date_estimated ? " (дата ориентировочная)" : "";
+  const volatility = volatilitySuffix(fact);
   if (fact.hidden) {
-    return fact.date ? `Непроверено, проверено ${fact.date}` : "Непроверено";
+    return fact.date ? `Непроверено, проверено ${fact.date}${volatility}` : `Непроверено${volatility}`;
   }
-  if (fact.date) return `Проверено: ${fact.date}${estimate}`;
-  return "Даты проверки нет";
+  if (fact.date) return `Проверено: ${fact.date}${estimate}${volatility}`;
+  return `Даты проверки нет${volatility}`;
 }
 
 export function countryBySlug(catalog, slug) {

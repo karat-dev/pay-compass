@@ -31,6 +31,21 @@ def _load(name: str) -> Any:
         return json.load(handle)
 
 
+def format_int(value: int, rules: Dict[str, Any]) -> str:
+    """Group large integers. Width and threshold come from rules.json."""
+    number = int(value)
+    width = int(rules["integer_group"])
+    if abs(number) < int(rules["integer_group_from"]):
+        return str(number)
+    sign = "-" if number < 0 else ""
+    digits = str(abs(number))
+    parts = []
+    while digits:
+        parts.append(digits[-width:])
+        digits = digits[:-width]
+    return sign + " ".join(reversed(parts))
+
+
 def ru_plural(value: int, forms: List[str]) -> str:
     number = abs(int(value))
     if number % 10 == 1 and number % 100 != 11:
@@ -69,27 +84,70 @@ def _gap(text: str) -> Dict[str, Any]:
     })
 
 
+def _unit_label(value: Any, unit: Optional[str], rules: Dict[str, Any]) -> Optional[str]:
+    forms = rules["units"].get(unit) if unit else None
+    if forms and isinstance(value, int):
+        return ru_plural(int(value), forms)
+    return None
+
+
+def _extra_numbers(measurement: Dict[str, Any], rules: Dict[str, Any], fields: Dict[str, Any]) -> None:
+    for key, spec in (measurement.get("numbers") or {}).items():
+        if not isinstance(spec, dict) or not isinstance(spec.get("value"), int):
+            raise ValueError(f"Route number {key!r} must be an integer in data")
+        fields[key] = format_int(spec["value"], rules)
+        label = _unit_label(spec["value"], spec.get("unit"), rules)
+        if label:
+            fields[f"{key}_label"] = label
+
+
+def _volatility(measurement: Dict[str, Any], rules: Dict[str, Any]) -> tuple:
+    classes = rules["volatility_classes"]
+    name = measurement.get("volatility")
+    if name not in classes:
+        raise ValueError(f"Unknown volatility class {name!r} on {measurement.get('template') or measurement.get('text') or ''}")
+    return name, classes[name]
+
+
+def _sources_checked(measurement: Dict[str, Any], rules: Dict[str, Any]) -> List[Dict[str, Any]]:
+    checked = []
+    for item in measurement.get("sources_checked") or []:
+        if item.get("volatility") not in rules["volatility_classes"]:
+            raise ValueError(f"Unknown volatility on a checked source: {item!r}")
+        if not item.get("url") or not item.get("source_date"):
+            raise ValueError(f"A checked source needs a url and a date: {item!r}")
+        checked.append({
+            "url": item["url"],
+            "source_date": str(item["source_date"])[:10],
+            "volatility": item["volatility"],
+            "note": item.get("note") or "",
+        })
+    return checked
+
+
 def _render_fields(measurement: Dict[str, Any], rules: Dict[str, Any]) -> Dict[str, Any]:
     fields: Dict[str, Any] = {}
     unit = measurement.get("unit")
-    forms = rules["units"].get(unit) if unit else None
     if measurement.get("policy_name"):
         fields["policy_name"] = measurement["policy_name"]
+    _extra_numbers(measurement, rules, fields)
     kind = measurement.get("kind")
     if kind == "date":
         year, month, day = str(measurement["value"]).split("-")
         fields["value"] = f"{day}.{month}.{year}"
         return fields
     if kind == "range":
-        fields["value_min"] = measurement["value_min"]
-        fields["value_max"] = measurement["value_max"]
-        if forms:
-            fields["unit_label"] = ru_plural(int(measurement["value_max"]), forms)
+        fields["value_min"] = format_int(int(measurement["value_min"]), rules)
+        fields["value_max"] = format_int(int(measurement["value_max"]), rules)
+        label = _unit_label(int(measurement["value_max"]), unit, rules)
+        if label:
+            fields["unit_label"] = label
         return fields
     if "value" in measurement and measurement.get("value") is not None and kind != "statement":
-        fields["value"] = measurement["value"]
-        if forms and isinstance(measurement["value"], int):
-            fields["unit_label"] = ru_plural(int(measurement["value"]), forms)
+        fields["value"] = format_int(measurement["value"], rules) if isinstance(measurement["value"], int) else measurement["value"]
+        label = _unit_label(measurement["value"], unit, rules)
+        if label:
+            fields["unit_label"] = label
     return fields
 
 
@@ -99,10 +157,18 @@ def _dated(measurement: Dict[str, Any], as_of: date) -> str:
     return as_of.isoformat()
 
 
+def _stamp(fact: Dict[str, Any], measurement: Dict[str, Any], rules: Dict[str, Any], measurement_id: str) -> None:
+    name, label = _volatility(measurement, rules)
+    fact["measurement_id"] = measurement_id
+    fact["volatility"] = name
+    fact["volatility_label"] = label
+    fact["sources_checked"] = _sources_checked(measurement, rules)
+
+
 def measurement_fact(measurement_id: str, measurement: Dict[str, Any], rules: Dict[str, Any], as_of: date) -> Dict[str, Any]:
     if measurement.get("gap"):
         fact = _gap(measurement["text"])
-        fact["measurement_id"] = measurement_id
+        _stamp(fact, measurement, rules, measurement_id)
         return fact
     text = str(measurement["template"]).format(**_render_fields(measurement, rules))
     verified = _dated(measurement, as_of)
@@ -135,7 +201,7 @@ def measurement_fact(measurement_id: str, measurement: Dict[str, Any], rules: Di
     fact = normalize_fact(raw)
     fact["agreement"] = raw["agreement"]
     fact["reports"] = raw.get("reports") or 0
-    fact["measurement_id"] = measurement_id
+    _stamp(fact, measurement, rules, measurement_id)
     if measurement.get("kind") == "range":
         fact["value_max"] = measurement["value_max"]
         fact["value"] = measurement["value_max"]

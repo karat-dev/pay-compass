@@ -39,7 +39,7 @@
       {
         "id": "transfer",
         "title": "Трансфер",
-        "facts": ["hkg_express_fares"],
+        "facts": ["pek_express_cny", "pek_express_interval", "pkx_rail_minutes", "pkx_city_fare"],
         "partners": ["kiwitaxi", "gettransfer"]
       },
       {
@@ -51,7 +51,7 @@
       {
         "id": "customs",
         "title": "Ввоз и вывоз",
-        "facts": ["hkg_customs_amounts", "hkg_penalties"]
+        "facts": ["china_rmb_cash_cny", "china_fx_declare_usd", "hk_cbni_declare_hkd", "china_overstay_fine", "hk_overstay_fine", "hk_asp_import_fine", "hk_asp_transit", "hkg_other_prohibited"]
       },
       {
         "id": "stamps",
@@ -100,6 +100,9 @@
           "pek_pkx_mct",
           {"rule": "airport_change_allowance", "id": "pek_pkx_allowance", "pair": "PEK и PKX", "inputs": ["pek_pkx_transfer_minutes", "pek_pkx_mct"]},
           "pvg_sha_link_minutes",
+          "pvg_sha_fare_cny",
+          "pvg_sha_interval",
+          "ceair_pvg_sha_minutes",
           "pvg_sha_mct",
           {"rule": "airport_change_allowance", "id": "pvg_sha_allowance", "pair": "PVG и SHA", "inputs": ["pvg_sha_link_minutes", "pvg_sha_mct"]},
           "direct_connect_china",
@@ -120,7 +123,7 @@
       {
         "id": "transfer",
         "title": "Трансфер",
-        "facts": ["city_transfer_fares"],
+        "facts": ["pek_express_cny", "pek_express_interval", "pkx_rail_minutes", "pkx_city_fare", "city_transfer_china"],
         "partners": ["kiwitaxi", "gettransfer"]
       },
       {
@@ -167,7 +170,7 @@
       {
         "id": "visa",
         "title": "Виза и транзит",
-        "facts": ["thailand_visa_free_days", "thailand_transit"]
+        "facts": ["thailand_visa_free_days", "thailand_airside_hours"]
       },
       {
         "id": "baggage",
@@ -177,7 +180,7 @@
       {
         "id": "transfer",
         "title": "Трансфер",
-        "facts": ["city_transfer_fares"],
+        "facts": ["city_transfer_thailand"],
         "partners": ["kiwitaxi", "gettransfer"]
       },
       {

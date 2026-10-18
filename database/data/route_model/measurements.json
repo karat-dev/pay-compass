@@ -7,7 +7,8 @@
     "source": "https://www.mfa.gov.cn/wjbzwfwpt/kzx/tzgg/202605/t20260520_11914502.html",
     "source_kind": "official",
     "source_date": "2026-05-20",
-    "agreement": "agree"
+    "agreement": "agree",
+    "volatility": "statute"
   },
   "china_visa_free_until": {
     "kind": "date",
@@ -16,7 +17,8 @@
     "source": "https://www.mfa.gov.cn/wjbzwfwpt/kzx/tzgg/202605/t20260520_11914502.html",
     "source_kind": "official",
     "source_date": "2026-05-20",
-    "agreement": "agree"
+    "agreement": "agree",
+    "volatility": "statute"
   },
   "hk_visa_free_days": {
     "kind": "value",
@@ -28,7 +30,8 @@
     "source_date": "2026-10-18",
     "date_estimated": true,
     "date_basis": "таблица ImmD, даты обновления строки в снимке нет",
-    "agreement": "agree"
+    "agreement": "agree",
+    "volatility": "statute"
   },
   "thailand_visa_free_days": {
     "kind": "value",
@@ -38,7 +41,8 @@
     "source": "https://moscow.thaiembassy.org/en/publicservice/revision-of-thailand-s-visa-exemption-and-visa-on-arrival-schemes",
     "source_kind": "official",
     "source_date": "2026-09-02",
-    "agreement": "agree"
+    "agreement": "agree",
+    "volatility": "statute"
   },
   "china_transit_days": {
     "kind": "value",
@@ -49,7 +53,8 @@
     "source": "https://en.nia.gov.cn/n147418/n147463/c183412/content.html",
     "source_kind": "official",
     "source_date": "2026-08-20",
-    "agreement": "agree"
+    "agreement": "agree",
+    "volatility": "statute"
   },
   "china_airside_hours": {
     "kind": "value",
@@ -59,7 +64,8 @@
     "source": "https://en.nia.gov.cn/n147418/n147463/c183412/content.html",
     "source_kind": "official",
     "source_date": "2026-08-20",
-    "agreement": "agree"
+    "agreement": "agree",
+    "volatility": "statute"
   },
   "pvg_sha_link_minutes": {
     "kind": "value",
@@ -69,7 +75,8 @@
     "source": "https://english.shanghai.gov.cn/en-Individuals-Transportation-Airplane/20260813/7366238930024ac8b22e5adf82217bd8.html",
     "source_kind": "official",
     "source_date": "2026-06-04",
-    "agreement": "agree"
+    "agreement": "agree",
+    "volatility": "operator"
   },
   "bkk_dmk_shuttle_minutes": {
     "kind": "range",
@@ -79,10 +86,10 @@
     "template": "Шаттл между аэропортами Бангкока BKK и DMK занимает от {value_min} до {value_max} {unit_label}.",
     "source": "https://thailand.go.th/public/issue-focus-detail/001_01_090",
     "source_kind": "official",
-    "source_date": "2026-10-18",
-    "date_estimated": true,
-    "date_basis": "на странице нет даты публикации, снимок 18.10.2026",
-    "agreement": "agree"
+    "source_date": "2023-07-11",
+    "date_basis": "страница thailand.go.th: Created 2023-03-16, Updated 2023-07-11",
+    "agreement": "agree",
+    "volatility": "operator"
   },
   "pek_pkx_bus": {
     "kind": "statement",
@@ -90,86 +97,440 @@
     "source": "https://www.cah.com.cn/content/2026/08-19/7495648762631557120.html",
     "source_kind": "official",
     "source_date": "2026-08-19",
-    "agreement": "agree"
+    "agreement": "agree",
+    "volatility": "operator"
   },
   "pek_pkx_transfer_minutes": {
     "gap": true,
-    "text": "Сколько минут занимает переезд между PEK и PKX — не исследовано."
+    "volatility": "open",
+    "text": "Сколько минут занимает переезд между PEK и PKX — не исследовано.",
+    "sources_checked": [
+      {
+        "url": "https://www.cah.com.cn/content/2026/08-19/7495648762631557120.html",
+        "source_date": "2026-08-19",
+        "volatility": "operator",
+        "note": "есть продукт самолёт плюс автобус, минут нет"
+      }
+    ]
   },
   "pek_pkx_bus_frequency": {
     "gap": true,
-    "text": "Сколько раз в день ходит автобус между PEK и PKX — не исследовано."
+    "volatility": "open",
+    "text": "Сколько раз в день ходит автобус между PEK и PKX — не исследовано.",
+    "sources_checked": [
+      {
+        "url": "https://www.cah.com.cn/content/2026/08-19/7495648762631557120.html",
+        "source_date": "2026-08-19",
+        "volatility": "operator",
+        "note": "частота межаэропортового автобуса не указана"
+      }
+    ]
   },
   "pek_pkx_mct": {
     "gap": true,
-    "text": "Минимальная стыковка в PEK и в PKX — не исследовано."
+    "volatility": "open",
+    "text": "Минимальная стыковка в PEK и в PKX — не исследовано.",
+    "sources_checked": [
+      {
+        "url": "https://www.bcia.com.cn/lkxz.html",
+        "source_date": "2026-10-18",
+        "volatility": "operator",
+        "note": "у PEK несколько строк по направлению и багажу, и время авиакомпании важнее; одной цифры нет. PKX на странице нет"
+      }
+    ]
   },
   "pvg_sha_mct": {
     "gap": true,
-    "text": "Минимальная стыковка в PVG и в SHA — не исследовано."
+    "volatility": "open",
+    "text": "Минимальная стыковка в PVG и в SHA — не исследовано.",
+    "sources_checked": [
+      {
+        "url": "https://www.ceair.com/global/en_AUD/Announcement/AnnouncementMessage/202503/t20250328_27937.html",
+        "source_date": "2025-03-28",
+        "volatility": "operator",
+        "note": "3.5 часа — условие China Eastern для своего билета, уже включает дорогу, это не MCT аэропорта и не вход формулы"
+      }
+    ]
   },
   "bkk_dmk_mct": {
     "gap": true,
-    "text": "Минимальная стыковка в BKK и в DMK — не исследовано."
+    "volatility": "open",
+    "text": "Минимальная стыковка в BKK и в DMK — не исследовано.",
+    "sources_checked": [
+      {
+        "url": "https://suvarnabhumi.airportthai.co.th/service/transportation/detail/1288",
+        "source_date": "2026-10-18",
+        "volatility": "operator",
+        "note": "одна страница даёт около 90 минут и отдельно 60–90, 120 и 150–180; одно число не выбрано"
+      }
+    ]
   },
   "bkk_dmk_interval": {
     "gap": true,
-    "text": "Интервал шаттла BKK–DMK — не исследовано: у страниц AOT и thailand.go.th разные формулировки."
+    "volatility": "conflict",
+    "text": "Интервал шаттла BKK–DMK — не исследовано: страница AOT и thailand.go.th называют разную частоту.",
+    "sources_checked": [
+      {
+        "url": "https://suvarnabhumi.airportthai.co.th/service/transportation/detail/1093",
+        "source_date": "2026-10-18",
+        "volatility": "schedule",
+        "note": "AOT: каждые 30 минут, 05:00–24:00, даты на странице нет"
+      },
+      {
+        "url": "https://donmueang.airportthai.co.th/service/transportation/detail/1093",
+        "source_date": "2026-10-18",
+        "volatility": "schedule",
+        "note": "та же формулировка AOT на сайте Донмыанга"
+      },
+      {
+        "url": "https://thailand.go.th/public/issue-focus-detail/001_01_090",
+        "source_date": "2023-07-11",
+        "volatility": "schedule",
+        "note": "Updated 2023-07-11: 1 автобус в час"
+      }
+    ]
   },
   "airlines_mow_hkg": {
     "gap": true,
-    "text": "Какие авиакомпании летают по маршруту Москва — Гонконг — не исследовано."
+    "volatility": "open",
+    "text": "Какие авиакомпании летают по маршруту Москва — Гонконг — не исследовано.",
+    "sources_checked": [
+      {
+        "url": "https://flights.aeroflot.ru/ru-ru/schedule/",
+        "source_date": "2026-10-18",
+        "volatility": "schedule",
+        "note": "официальное расписание Аэрофлота не открылось, список рейсов не снят"
+      }
+    ]
   },
   "airlines_mow_china": {
     "gap": true,
-    "text": "Какие авиакомпании летают по маршруту Москва — Китай — не исследовано."
+    "volatility": "open",
+    "text": "Какие авиакомпании летают по маршруту Москва — Китай — не исследовано.",
+    "sources_checked": [
+      {
+        "url": "https://flights.aeroflot.ru/ru-ru/schedule/",
+        "source_date": "2026-10-18",
+        "volatility": "schedule",
+        "note": "официальное расписание Аэрофлота не открылось, список рейсов не снят"
+      }
+    ]
   },
   "airlines_mow_thailand": {
     "gap": true,
-    "text": "Какие авиакомпании летают по маршруту Москва — Таиланд — не исследовано."
+    "volatility": "open",
+    "text": "Какие авиакомпании летают по маршруту Москва — Таиланд — не исследовано.",
+    "sources_checked": [
+      {
+        "url": "https://flights.aeroflot.ru/ru-ru/schedule/",
+        "source_date": "2026-10-18",
+        "volatility": "schedule",
+        "note": "официальное расписание Аэрофлота не открылось, список рейсов не снят"
+      }
+    ]
   },
   "direct_connect_hkg": {
     "gap": true,
-    "text": "Прямые рейсы и типичные стыковки Москва — Гонконг (в том числе через Урумчи, Стамбул, Ближний Восток и Центральную Азию) — не исследовано."
+    "volatility": "open",
+    "text": "Прямые рейсы и типичные стыковки Москва — Гонконг (в том числе через Урумчи, Стамбул, Ближний Восток и Центральную Азию) — не исследовано.",
+    "sources_checked": [
+      {
+        "url": "https://flights.aeroflot.ru/ru-ru/schedule/",
+        "source_date": "2026-10-18",
+        "volatility": "schedule",
+        "note": "официальное расписание Аэрофлота не открылось, список рейсов не снят"
+      }
+    ]
   },
   "direct_connect_china": {
     "gap": true,
-    "text": "Прямые рейсы и типичные стыковки Москва — Пекин и Москва — Шанхай (в том числе через Урумчи, Стамбул, Ближний Восток и Центральную Азию) — не исследовано."
+    "volatility": "open",
+    "text": "Прямые рейсы и типичные стыковки Москва — Пекин и Москва — Шанхай (в том числе через Урумчи, Стамбул, Ближний Восток и Центральную Азию) — не исследовано.",
+    "sources_checked": [
+      {
+        "url": "https://flights.aeroflot.ru/ru-ru/schedule/",
+        "source_date": "2026-10-18",
+        "volatility": "schedule",
+        "note": "официальное расписание Аэрофлота не открылось, список рейсов не снят"
+      }
+    ]
   },
   "direct_connect_thailand": {
     "gap": true,
-    "text": "Прямые рейсы и типичные стыковки Москва — Бангкок и Москва — Пхукет (в том числе через Урумчи, Стамбул, Ближний Восток и Центральную Азию) — не исследовано."
+    "volatility": "open",
+    "text": "Прямые рейсы и типичные стыковки Москва — Бангкок и Москва — Пхукет (в том числе через Урумчи, Стамбул, Ближний Восток и Центральную Азию) — не исследовано.",
+    "sources_checked": [
+      {
+        "url": "https://flights.aeroflot.ru/ru-ru/schedule/",
+        "source_date": "2026-10-18",
+        "volatility": "schedule",
+        "note": "официальное расписание Аэрофлота не открылось, список рейсов не снят"
+      }
+    ]
   },
   "separate_ticket_baggage": {
     "gap": true,
-    "text": "Багаж на раздельных билетах: сдаётся ли он до конечной точки — не исследовано."
-  },
-  "hkg_express_fares": {
-    "gap": true,
-    "text": "Проезд PEK → город и PKX → город: цена и время — не исследовано."
-  },
-  "city_transfer_fares": {
-    "gap": true,
-    "text": "Цена и время проезда из аэропорта в город — не исследовано."
-  },
-  "hkg_customs_amounts": {
-    "gap": true,
-    "text": "Лимиты ввоза валюты и юаней в Китай и Гонконг — не исследовано."
-  },
-  "hkg_penalties": {
-    "gap": true,
-    "text": "Штрафы за просрочку пребывания и запрещённые предметы в Китае и Гонконге — не исследовано."
+    "volatility": "open",
+    "text": "Багаж на раздельных билетах: сдаётся ли он до конечной точки — не исследовано.",
+    "sources_checked": [
+      {
+        "url": "https://suvarnabhumi.airportthai.co.th/service/transportation/detail/1288",
+        "source_date": "2026-10-18",
+        "volatility": "operator",
+        "note": "AOT пишет, что раздельный билет рискованнее, но не говорит, сдаётся ли багаж до конца"
+      }
+    ]
   },
   "hkg_stamp_rules": {
     "gap": true,
-    "text": "Как турецкие штампы влияют на въезд в Китай — не исследовано."
+    "volatility": "open",
+    "text": "Как турецкие штампы влияют на въезд в Китай — не исследовано.",
+    "sources_checked": []
   },
   "hkg_comms": {
     "gap": true,
-    "text": "Какие сервисы связи не работают в Китае на этом маршруте — не исследовано."
+    "volatility": "open",
+    "text": "Какие сервисы связи не работают в Китае на этом маршруте — не исследовано.",
+    "sources_checked": [
+      {
+        "url": "https://www.cac.gov.cn/2022-06-14/c_1656821626455324.htm",
+        "source_date": "2022-06-14",
+        "volatility": "statute",
+        "note": "правила приложений не называют WhatsApp, Telegram, Google или YouTube"
+      }
+    ]
   },
-  "thailand_transit": {
+  "pek_express_cny": {
+    "kind": "value",
+    "value": 25,
+    "unit": "cny",
+    "volatility": "operator",
+    "template": "Экспресс PEK → город: {value} {unit_label} за одну поездку.",
+    "source": "https://en.bcia.com.cn/dtjcx.html",
+    "source_kind": "official",
+    "source_date": "2026-10-18",
+    "date_estimated": true,
+    "date_basis": "на странице BCIA нет даты, снимок 18.10.2026",
+    "agreement": "agree"
+  },
+  "pek_express_interval": {
+    "kind": "value",
+    "value": 10,
+    "unit": "minutes",
+    "volatility": "schedule",
+    "template": "Интервал экспресса PEK → город: {value} {unit_label}.",
+    "source": "https://en.bcia.com.cn/dtjcx.html",
+    "source_kind": "official",
+    "source_date": "2026-10-18",
+    "date_estimated": true,
+    "date_basis": "на странице BCIA нет даты, снимок 18.10.2026",
+    "agreement": "agree"
+  },
+  "pkx_rail_minutes": {
+    "kind": "value",
+    "value": 19,
+    "unit": "minutes",
+    "volatility": "operator",
+    "template": "Железная дорога Цаоцяо — аэропорт Дасин: {value} {unit_label}.",
+    "source": "https://english.beijing.gov.cn/travellinginbeijing/transportation/airport/202005/t20200516_1899220.html",
+    "source_kind": "official",
+    "source_date": "2020-05-16",
+    "agreement": "agree"
+  },
+  "pkx_city_fare": {
     "gap": true,
-    "text": "Отдельные правила транзита через Таиланд без въезда в страну — не исследовано."
+    "volatility": "open",
+    "text": "Цена билета на линию аэропорта Дасин — не исследовано.",
+    "sources_checked": [
+      {
+        "url": "https://www.bjdx.gov.cn/bjsdxqrmzf/zwfw/ztlm/jghjfbzcx/2197595/index.html",
+        "source_date": "2025-10-22",
+        "volatility": "statute",
+        "note": "указана базовая цена регулирования, не цена билета пассажира"
+      }
+    ]
+  },
+  "pvg_sha_fare_cny": {
+    "kind": "value",
+    "value": 26,
+    "unit": "cny",
+    "volatility": "operator",
+    "template": "Полный проезд Airport Link Line между PVG и SHA: {value} {unit_label}.",
+    "source": "https://english.shanghai.gov.cn/en-Transportation/20241231/f66f14bbd4b549ab88e6f3aec375790c.html",
+    "source_kind": "official",
+    "source_date": "2026-03-31",
+    "date_basis": "Updated on March 31, 2026",
+    "agreement": "agree"
+  },
+  "pvg_sha_interval": {
+    "kind": "value",
+    "value": 15,
+    "unit": "minutes",
+    "volatility": "schedule",
+    "template": "Поезда Airport Link Line между PVG и SHA ходят каждые {value} {unit_label}.",
+    "source": "https://english.shanghai.gov.cn/en-Transportation/20241231/f66f14bbd4b549ab88e6f3aec375790c.html",
+    "source_kind": "official",
+    "source_date": "2026-03-31",
+    "date_basis": "Updated on March 31, 2026",
+    "agreement": "agree"
+  },
+  "ceair_pvg_sha_minutes": {
+    "kind": "value",
+    "value": 210,
+    "unit": "minutes",
+    "volatility": "operator",
+    "template": "China Eastern и Shanghai Airlines для своего билета между PVG и SHA просят не меньше {value} {unit_label} между рейсами. Это их условие, в сумму переезда и стыковки оно не входит.",
+    "source": "https://www.ceair.com/global/en_AUD/Announcement/AnnouncementMessage/202503/t20250328_27937.html",
+    "source_kind": "official",
+    "source_date": "2025-03-28",
+    "date_basis": "страница: at least 3.5 hours; в данных это 210 минут",
+    "agreement": "agree"
+  },
+  "china_rmb_cash_cny": {
+    "kind": "value",
+    "value": 20000,
+    "unit": "cny",
+    "volatility": "statute",
+    "template": "Через границу Китая один человек за раз может везти не больше {value} {unit_label} наличными.",
+    "source": "https://www.pbc.gov.cn/en/3688253/3689009/3788456/2025092319414236381/index.html",
+    "source_kind": "official",
+    "source_date": "2004-12-02",
+    "date_basis": "объявление Народного банка Китая №18 от 29.11.2004, на английской странице дата 02.12.2004, действует с 01.01.2005",
+    "agreement": "agree"
+  },
+  "china_fx_declare_usd": {
+    "kind": "value",
+    "value": 5000,
+    "unit": "usd",
+    "volatility": "statute",
+    "template": "На въезде в Китай наличную иностранную валюту больше {value} {unit_label} нужно письменно задекларировать на таможне. Страница помечает справку как справочную.",
+    "source": "https://en.nia.gov.cn/n147428/n147498/n147770/n147895/c158995/content.html",
+    "source_kind": "official",
+    "source_date": "2021-03-27",
+    "agreement": "agree"
+  },
+  "hk_cbni_declare_hkd": {
+    "kind": "value",
+    "value": 120000,
+    "unit": "hkd",
+    "volatility": "statute",
+    "template": "В Гонконге наличные и денежные документы дороже {value} {unit_label} нужно задекларировать.",
+    "source": "https://www.customs.gov.hk/en/service-enforcement-information/passenger-clearance/currency-bearer-negotiable-instruments/index.html",
+    "source_kind": "official",
+    "source_date": "2026-10-18",
+    "date_estimated": true,
+    "date_basis": "на странице таможни Гонконга нет даты, снимок 18.10.2026",
+    "agreement": "agree"
+  },
+  "china_overstay_fine": {
+    "kind": "value",
+    "value": 10000,
+    "unit": "cny",
+    "volatility": "statute",
+    "numbers": {
+      "daily": {
+        "value": 500,
+        "unit": "cny"
+      },
+      "detain_min": {
+        "value": 5,
+        "unit": "days"
+      },
+      "detain_max": {
+        "value": 15,
+        "unit": "days"
+      }
+    },
+    "template": "Незаконное пребывание иностранца в Китае: предупреждение. Если случай тяжёлый — {daily} {daily_label} за день, всего не больше {value} {unit_label}, либо арест от {detain_min} до {detain_max} {detain_max_label}.",
+    "source": "https://www.nia.gov.cn/n794014/n1050181/n1050479/c1013311/content.html",
+    "source_kind": "official",
+    "source_date": "2013-07-01",
+    "date_basis": "статья 78 закона о выезде и въезде, закон действует с этой даты",
+    "agreement": "agree"
+  },
+  "hk_overstay_fine": {
+    "kind": "value",
+    "value": 50000,
+    "unit": "hkd",
+    "volatility": "statute",
+    "numbers": {
+      "years": {
+        "value": 2,
+        "unit": "years_cap"
+      }
+    },
+    "template": "Нарушение условий пребывания в Гонконге, включая просрочку выезда: штраф до {value} {unit_label} или до {years} {years_label} тюрьмы.",
+    "source": "https://www.immd.gov.hk/eng/faq/visit-transit.html",
+    "source_kind": "official",
+    "source_date": "2025-12-31",
+    "date_basis": "вопрос 13 и вопрос 18, внизу страницы дата 31-12-2025",
+    "agreement": "agree"
+  },
+  "hk_asp_import_fine": {
+    "kind": "value",
+    "value": 2000000,
+    "unit": "hkd",
+    "volatility": "statute",
+    "numbers": {
+      "summary": {
+        "value": 500000,
+        "unit": "hkd"
+      },
+      "summary_years": {
+        "value": 2,
+        "unit": "years_cap"
+      },
+      "indict_years": {
+        "value": 7,
+        "unit": "years_cap"
+      }
+    },
+    "template": "Ввоз электронных сигарет в Гонконг запрещён. Штраф за ввоз: до {summary} {summary_label} и до {summary_years} {summary_years_label} тюрьмы либо, по более тяжкому обвинению, до {value} {unit_label} и до {indict_years} {indict_years_label}.",
+    "source": "https://www.taco.gov.hk/t/english/legislation/files/faqs_on_asp.pdf",
+    "source_kind": "official",
+    "source_date": "2022-04-30",
+    "date_basis": "в файле нет даты редакции, запрет действует с 30.04.2022, вопрос 4",
+    "agreement": "agree"
+  },
+  "hk_asp_transit": {
+    "kind": "statement",
+    "volatility": "statute",
+    "template": "Запрет ввоза электронных сигарет в Гонконг не действует, если их везут транзитом через аэропорт и не проходят иммиграционный контроль.",
+    "source": "https://www.customs.gov.hk/en/service-enforcement-information/trade-facilitation/ASP/index.html",
+    "source_kind": "official",
+    "source_date": "2026-10-18",
+    "date_estimated": true,
+    "date_basis": "на странице таможни нет даты, снимок 18.10.2026",
+    "agreement": "agree"
+  },
+  "thailand_airside_hours": {
+    "kind": "value",
+    "value": 12,
+    "unit": "hours",
+    "volatility": "statute",
+    "template": "Транзит в том же аэропорту Таиланда без выхода из транзитной зоны: до {value} {unit_label} виза и документы не нужны. Смена аэропорта этим правилом не покрыта.",
+    "source": "https://aip.caat.or.th/2025-05-15-AIRAC/html/eAIP/VT-GEN-1.3-en-GB.html",
+    "source_kind": "official",
+    "source_date": "2025-05-15",
+    "date_basis": "AIP Таиланда GEN 1.3, пункт 2.2, цикл AIRAC от 15.05.2025",
+    "agreement": "agree"
+  },
+  "city_transfer_china": {
+    "gap": true,
+    "volatility": "open",
+    "text": "Цена и время проезда из аэропортов Шанхая в город — не исследовано.",
+    "sources_checked": []
+  },
+  "city_transfer_thailand": {
+    "gap": true,
+    "volatility": "open",
+    "text": "Цена и время проезда из BKK, DMK и HKT в город — не исследовано.",
+    "sources_checked": []
+  },
+  "hkg_other_prohibited": {
+    "gap": true,
+    "volatility": "open",
+    "text": "Прочие запрещённые предметы и лекарства в Китае и Гонконге, кроме электронных сигарет Гонконга — не исследовано.",
+    "sources_checked": []
   }
 }

@@ -109,3 +109,82 @@ def test_published_routes_match_trips_and_list_gaps():
     assert any("Багаж на раздельных билетах" in text for text in gaps)
     assert any("авиакомпании" in text.lower() for text in gaps)
     assert all("4–5" not in text and "1,5" not in text for text in gaps)
+
+
+def test_every_measurement_has_a_volatility_class_and_no_typed_number():
+    rules = json.loads((MODEL_DIR / "rules.json").read_text(encoding="utf-8"))
+    measurements = json.loads((MODEL_DIR / "measurements.json").read_text(encoding="utf-8"))
+    classes = set(rules["volatility_classes"])
+    for measurement_id, measurement in measurements.items():
+        assert measurement.get("volatility") in classes, measurement_id
+        if measurement.get("gap"):
+            assert is_gap(measurement_fact(measurement_id, measurement, rules, AS_OF))
+            continue
+        assert measurement.get("source")
+        assert measurement.get("source_date")
+        fact = measurement_fact(measurement_id, measurement, rules, AS_OF)
+        assert fact["volatility_label"] == rules["volatility_classes"][measurement["volatility"]]
+        assert not re.search(r"\d", measurement.get("template") or "")
+
+
+def test_sourced_amounts_come_from_data_and_large_ones_are_grouped():
+    rules = json.loads((MODEL_DIR / "rules.json").read_text(encoding="utf-8"))
+    measurements = json.loads((MODEL_DIR / "measurements.json").read_text(encoding="utf-8"))
+    cash = measurement_fact("china_rmb_cash_cny", measurements["china_rmb_cash_cny"], rules, AS_OF)
+    assert "20 000 юаней" in cash["text"]
+    assert cash["zone"] == "yellow"
+    assert cash["score"] == 70
+    edited = json.loads(json.dumps(measurements))
+    edited["china_rmb_cash_cny"]["value"] = 30000
+    changed = measurement_fact("china_rmb_cash_cny", edited["china_rmb_cash_cny"], rules, AS_OF)
+    assert "30 000 юаней" in changed["text"]
+    express = measurement_fact("pek_express_cny", measurements["pek_express_cny"], rules, AS_OF)
+    assert "PEK → город: 25 юаней" in express["text"]
+    assert express["zone"] == "green"
+    overstay = measurement_fact("china_overstay_fine", measurements["china_overstay_fine"], rules, AS_OF)
+    assert "500 юаней" in overstay["text"]
+    assert "10 000 юаней" in overstay["text"]
+    assert "от 5 до 15 дней" in overstay["text"]
+
+
+def test_airline_connection_advice_is_not_added_into_the_allowance():
+    rules = json.loads((MODEL_DIR / "rules.json").read_text(encoding="utf-8"))
+    measurements = json.loads((MODEL_DIR / "measurements.json").read_text(encoding="utf-8"))
+    advice = measurement_fact("ceair_pvg_sha_minutes", measurements["ceair_pvg_sha_minutes"], rules, AS_OF)
+    assert advice["value"] == 210
+    assert "210 минут" in advice["text"]
+    assert advice["zone"] == "yellow"
+    routes = build_routes()
+    china = next(card for card in routes if card["id"] == "mow_china")
+    allowance = next(fact for fact in china["lead_facts"] if fact.get("rule_id") == "pvg_sha_allowance")
+    assert is_gap(allowance)
+    assert not re.search(r"\d", allowance["text"])
+    shuttle = measurement_fact("bkk_dmk_shuttle_minutes", measurements["bkk_dmk_shuttle_minutes"], rules, AS_OF)
+    assert shuttle["date_verified"] == "2023-07-11"
+    assert shuttle["zone"] == "yellow"
+    assert not shuttle.get("date_estimated")
+    interval = measurements["bkk_dmk_interval"]
+    assert interval["volatility"] == "conflict"
+    urls = {item["url"] for item in interval["sources_checked"]}
+    assert "https://suvarnabhumi.airportthai.co.th/service/transportation/detail/1093" in urls
+    assert "https://thailand.go.th/public/issue-focus-detail/001_01_090" in urls
+
+
+def test_unknown_volatility_is_rejected_and_notes_stay_out_of_the_catalog():
+    rules = json.loads((MODEL_DIR / "rules.json").read_text(encoding="utf-8"))
+    measurements = json.loads((MODEL_DIR / "measurements.json").read_text(encoding="utf-8"))
+    broken = json.loads(json.dumps(measurements["pek_express_cny"]))
+    broken["volatility"] = "guess"
+    try:
+        measurement_fact("pek_express_cny", broken, rules, AS_OF)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("unknown volatility was accepted")
+    from database.miniapp_catalog import get_catalog
+
+    catalog = json.dumps(get_catalog(), ensure_ascii=False)
+    assert "sources_checked" not in catalog
+    assert "20 000 юаней" in catalog
+    assert "до 12 часов" in catalog
+    assert "umnyturizm.example" not in catalog
