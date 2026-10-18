@@ -376,7 +376,7 @@
     "full_vote_weight": 1,
     "min_refutes_to_downgrade": 2,
     "fact_date_field": "trip_date_end",
-    "max_trip_age_days_on_submit": 120,
+    "max_trip_age_days_on_submit": 90,
     "suggest_facts_limit": 5,
     "recheck_reminder_days": 30,
     "nick_max_length": 32,
@@ -413,9 +413,9 @@
       "refute_penalty": 1,
       "max_refutes": 1,
       "levels": [
-        {"code": "confirmed", "title": "Подтверждено сообществом", "min_strength": 1},
-        {"code": "many", "title": "Много подтверждений", "min_strength": 2},
-        {"code": "strong", "title": "Сильно подтверждено", "min_strength": 4}
+        {"code": "confirmed", "title": "Подтверждено сообществом", "min_strength": 3},
+        {"code": "many", "title": "Много подтверждений", "min_strength": 6},
+        {"code": "strong", "title": "Сильно подтверждено", "min_strength": 12}
       ]
     },
     "antifraud": {

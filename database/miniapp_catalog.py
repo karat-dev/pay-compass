@@ -276,7 +276,9 @@ def publish_fact(
         published["n"] = step_n
     if stage:
         published["stage"] = stage
-    published["topic"] = _topic_for(section_key, instruction_id)
+    community_topic = _topic_for(section_key, instruction_id)
+    if community_topic:
+        published["community_topic"] = community_topic
     return published
 
 

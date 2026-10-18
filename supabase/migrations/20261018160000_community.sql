@@ -125,3 +125,32 @@ GRANT ALL ON public.achievements TO service_role;
 GRANT ALL ON public.user_levels TO service_role;
 GRANT ALL ON public.fact_views TO service_role;
 GRANT ALL ON public.moderation_queue TO service_role;
+
+-- Private bucket for redacted review photos.
+-- Supabase documents this insert as the SQL way to create a bucket:
+-- https://supabase.com/docs/guides/storage/buckets/creating-buckets
+-- public = false means there is no public URL.
+-- storage.objects already has row level security. This migration adds no
+-- permissive policy, so anon and authenticated cannot read or write objects.
+-- The restrictive policy below still denies this bucket if some other policy
+-- allows every bucket. service_role bypasses row level security; the Mini App
+-- uploads with that key only.
+-- File size stays at the project global limit. The app rejects larger files
+-- using community.photo.max_bytes before the upload.
+
+INSERT INTO storage.buckets (id, name, public, allowed_mime_types)
+VALUES ('community-photos', 'community-photos', false, ARRAY['image/jpeg']::text[])
+ON CONFLICT (id) DO UPDATE
+SET
+    name = EXCLUDED.name,
+    public = false,
+    allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+DROP POLICY IF EXISTS community_photos_block_clients ON storage.objects;
+CREATE POLICY community_photos_block_clients
+ON storage.objects
+AS RESTRICTIVE
+FOR ALL
+TO anon, authenticated
+USING (bucket_id IS DISTINCT FROM 'community-photos')
+WITH CHECK (bucket_id IS DISTINCT FROM 'community-photos');

@@ -1019,7 +1019,7 @@ def suggest_facts(
     for fact in facts:
         if fact.get("country_slug") != country:
             continue
-        if topic and fact.get("topic") != topic:
+        if topic and fact.get("community_topic") != topic:
             continue
         text = (fact.get("text") or "").casefold()
         city_hit = bool(city_norm and city_norm in text)

@@ -17,6 +17,7 @@ from database.community import (
     apply_community_state,
     apply_owner_action,
     community_badge,
+    clean_review_fields,
     confirmation_items,
     count_refutes,
     estimate_tg_age_days,
@@ -111,14 +112,14 @@ def _visible_fact():
     for country in get_catalog()["countries"]:
         for section in country["sections"]:
             for fact in section["facts"]:
-                if fact.get("topic") and not fact.get("hidden") and source_facts_by_id().get(fact["id"]):
+                if fact.get("community_topic") and not fact.get("hidden") and source_facts_by_id().get(fact["id"]):
                     return fact
     raise AssertionError("нет видимого факта")
 
 
 def _payload(fact, **extra):
     community = _config()["community"]
-    topic = fact["topic"]
+    topic = fact["community_topic"]
     body = {
         "consent": True,
         "country": fact["country_slug"],
@@ -136,6 +137,18 @@ def _payload(fact, **extra):
         body["payment_method"] = community["payment_methods"][0]["code"]
     body.update(extra)
     return body
+
+
+def test_supabase_migration_creates_a_private_photo_bucket():
+    sql = (ROOT / "supabase" / "migrations" / "20261018160000_community.sql").read_text(encoding="utf-8")
+    assert "INSERT INTO storage.buckets (id, name, public, allowed_mime_types)" in sql
+    assert "('community-photos', 'community-photos', false, ARRAY['image/jpeg']::text[])" in sql
+    assert "public = false" in sql
+    assert "AS RESTRICTIVE" in sql
+    assert "TO anon, authenticated" in sql
+    assert "bucket_id IS DISTINCT FROM 'community-photos'" in sql
+    mirror = (ROOT / "database" / "migrations" / "006_community.sql").read_text(encoding="utf-8")
+    assert "storage.buckets" not in mirror
 
 
 def test_missing_community_key_is_a_config_error():
@@ -285,25 +298,59 @@ def test_downgrade_waits_for_the_threshold_and_official_conflict_does_not_drop()
     assert config["early_warning"]["reasons"]["conflict"] in (kept["at_risk_reason"] or "")
 
 
+def _confirms(count, prefix):
+    reviews = [_review(index + 1, id=f"{prefix}-{index}") for index in range(count)]
+    return reviews, [_link(row) for row in reviews]
+
+
+def _badge_for(count, prefix, config, window):
+    reviews, links = _confirms(count, prefix)
+    return community_badge(links, reviews, config, fact_id="fact-1", as_of=AS_OF, window_days=window)
+
+
+def test_trip_at_the_submit_limit_is_kept_and_one_day_older_is_rejected():
+    config = _config()
+    limit = config["community"]["max_trip_age_days_on_submit"]
+    fact = _visible_fact()
+    newest = AS_OF - timedelta(days=limit)
+    kept = clean_review_fields(
+        _payload(fact, trip_date_start=newest.isoformat(), trip_date_end=newest.isoformat()),
+        config,
+        AS_OF,
+    )
+    assert kept["trip_date_end"] == newest.isoformat()
+    older = AS_OF - timedelta(days=limit + 1)
+    with pytest.raises(ValueError):
+        clean_review_fields(
+            _payload(fact, trip_date_start=older.isoformat(), trip_date_end=older.isoformat()),
+            config,
+            AS_OF,
+        )
+
+
 def test_badge_levels_sort_inside_the_zone_and_do_not_move_it():
     config = _config()
     community = config["community"]
     window = config["volatility"]["classes"]["medium"]["fresh_days"]
-    one = _review(1, id="b1")
-    badge = community_badge([_link(one)], [one], config, fact_id="fact-1", as_of=AS_OF, window_days=window)
+    weights = community["weights"]
+    unit = weights["base"] * weights["level_multipliers"][weights["default_level"]]
+    levels = {level["code"]: level["min_strength"] for level in community["badge"]["levels"]}
+    confirmed_n = int(levels["confirmed"] / unit)
+    many_n = int(levels["many"] / unit)
+    strong_n = int(levels["strong"] / unit)
+    assert _badge_for(confirmed_n - 1, "short", config, window) is None
+    badge = _badge_for(confirmed_n, "base", config, window)
     assert badge["label"] == community["badge"]["label"]
     assert badge["caption"] == community["badge"]["caption"]
-    assert badge["code"] == community["badge"]["levels"][0]["code"]
-    many_reviews = [_review(index, id=f"m-{index}") for index in range(3)]
-    many = community_badge(
-        [_link(row) for row in many_reviews],
-        many_reviews,
-        config,
-        fact_id="fact-1",
-        as_of=AS_OF,
-        window_days=window,
-    )
-    assert many["strength"] > badge["strength"]
+    assert badge["code"] == "confirmed"
+    assert badge["strength"] == levels["confirmed"]
+    many = _badge_for(many_n, "many", config, window)
+    strong = _badge_for(strong_n, "strong", config, window)
+    assert many["code"] == "many"
+    assert many["strength"] == levels["many"]
+    assert strong["code"] == "strong"
+    assert strong["strength"] == levels["strong"]
+    assert strong["strength"] > many["strength"] > badge["strength"]
     refute = _review(9, result="fail", id="ref")
     confirm = _review(8, id="ok")
     blocked = community_badge(
@@ -330,10 +377,11 @@ def test_badge_levels_sort_inside_the_zone_and_do_not_move_it():
     assert resolve_zone(card, config=config, as_of=AS_OF)["zone"] == before
     ordered = sort_by_badge([
         {"id": "plain", "community_badge": None},
-        {"id": "strong", "community_badge": many},
+        {"id": "strong", "community_badge": strong},
+        {"id": "many", "community_badge": many},
         {"id": "base", "community_badge": badge},
     ])
-    assert [item["id"] for item in ordered] == ["strong", "base", "plain"]
+    assert [item["id"] for item in ordered] == ["strong", "many", "base", "plain"]
 
 
 def test_moderation_modes_and_idea_without_a_fact():

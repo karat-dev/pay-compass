@@ -488,7 +488,7 @@ function openFactReview(factId, changed) {
   if (!fact) return;
   state.review = blankReview({
     country: fact.country_slug || (state.trip && state.trip.destination_slug) || "",
-    topic: fact.topic || "",
+    topic: fact.community_topic || "",
     fact_id: fact.id,
     changed,
   });

@@ -1,4 +1,6 @@
--- Mirror of supabase/migrations/20261018160000_community.sql
+-- Mirror of the public tables in supabase/migrations/20261018160000_community.sql.
+-- The private storage bucket community-photos is created only in that Supabase
+-- migration. This file has no storage schema.
 -- Community reviews. The service role bypasses RLS. The API still checks the author
 -- and the owner, because these policies cannot see a Telegram id.
 -- Anon and authenticated clients can read approved reviews only.
