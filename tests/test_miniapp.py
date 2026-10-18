@@ -86,7 +86,7 @@ def test_banks_come_from_guides_and_route_card_has_no_price():
     assert route["title"] == "Москва → Гонконг через Пекин"
     assert route["departure_city_id"] == "mow"
     assert route["destination_slug"] == "hong_kong"
-    assert route["iata"] == "MOW · PEK · HKG"
+    assert route["iata"] == "MOW · PEK/PKX · HKG"
     assert route["marker"] == AVIASALES_MARKER
     assert catalog["tickets_marker"] == AVIASALES_MARKER
     assert f"marker={AVIASALES_MARKER}" in route["tickets_url"]
@@ -97,16 +97,14 @@ def test_banks_come_from_guides_and_route_card_has_no_price():
     assert "price" not in route
     assert "prices" not in route
     assert "₽" not in "\n".join(route["summary"])
-    assert any(line.startswith("🛂") for line in route["summary"])
+    assert any(line.startswith("Виза не нужна для паспорта РФ") for line in route["summary"])
     assert any("PKX" in line and "PEK" in line for line in route["summary"])
-    airline_names = [item["name"] for item in route["airlines"]]
-    assert airline_names == [
-        "Аэрофлот", "Air China", "China Eastern", "China Southern", "Hainan Airlines",
-        "Cathay Pacific", "Hong Kong Airlines",
-    ]
-    assert airline_names.count("Air China") == 1
-    assert all(item["placeholder"] for item in route["airlines"])
+    assert route["airlines"] == []
+    assert "не исследовано" in route["airline_gap"]
+    assert "umnyturizm.example" not in route["airline_gap"]
     assert any("для паспорта РФ" in line for line in route["summary"])
+    assert any("30" in line and "Китай" in line for line in route["summary"])
+    assert not any("4–5" in line or "1,5" in line for line in route["summary"])
     assert [section["title"] for section in route["sections"]] == [
         "Пересадка", "Трансфер", "Связь", "Ввоз и вывоз", "Штампы и отметки", "Оплата",
     ]

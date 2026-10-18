@@ -1,0 +1,175 @@
+{
+  "china_visa_free_days": {
+    "kind": "value",
+    "value": 30,
+    "unit": "days",
+    "template": "Виза не нужна для паспорта РФ: Китай до {value} {unit_label}. Цели: бизнес, туризм, визит к близким, обмен и транзит.",
+    "source": "https://www.mfa.gov.cn/wjbzwfwpt/kzx/tzgg/202605/t20260520_11914502.html",
+    "source_kind": "official",
+    "source_date": "2026-05-20",
+    "agreement": "agree"
+  },
+  "china_visa_free_until": {
+    "kind": "date",
+    "value": "2027-12-31",
+    "template": "Безвиз Китая для обычного паспорта РФ продлён до {value}.",
+    "source": "https://www.mfa.gov.cn/wjbzwfwpt/kzx/tzgg/202605/t20260520_11914502.html",
+    "source_kind": "official",
+    "source_date": "2026-05-20",
+    "agreement": "agree"
+  },
+  "hk_visa_free_days": {
+    "kind": "value",
+    "value": 14,
+    "unit": "days",
+    "template": "Виза не нужна для паспорта РФ: Гонконг до {value} {unit_label}.",
+    "source": "https://www.immd.gov.hk/eng/services/visas/visit-transit/visit-visa-entry-permit.html",
+    "source_kind": "official",
+    "source_date": "2026-10-18",
+    "date_estimated": true,
+    "date_basis": "таблица ImmD, даты обновления строки в снимке нет",
+    "agreement": "agree"
+  },
+  "thailand_visa_free_days": {
+    "kind": "value",
+    "value": 30,
+    "unit": "days",
+    "template": "Виза не нужна для паспорта РФ: Таиланд до {value} {unit_label} по двустороннему соглашению.",
+    "source": "https://moscow.thaiembassy.org/en/publicservice/revision-of-thailand-s-visa-exemption-and-visa-on-arrival-schemes",
+    "source_kind": "official",
+    "source_date": "2026-09-02",
+    "agreement": "agree"
+  },
+  "china_transit_days": {
+    "kind": "value",
+    "value": 10,
+    "unit": "days",
+    "policy_name": "240-hour",
+    "template": "Транзит через Китай в третью страну или регион для паспорта РФ по политике {policy_name}: до {value} {unit_label} в разрешённой зоне, если есть билет дальше с датой.",
+    "source": "https://en.nia.gov.cn/n147418/n147463/c183412/content.html",
+    "source_kind": "official",
+    "source_date": "2026-08-20",
+    "agreement": "agree"
+  },
+  "china_airside_hours": {
+    "kind": "value",
+    "value": 24,
+    "unit": "hours",
+    "template": "Транзит без выхода из зоны аэропорта в Китае: не больше {value} {unit_label} и нужен билет дальше. Выход из зоны требует отдельного разрешения.",
+    "source": "https://en.nia.gov.cn/n147418/n147463/c183412/content.html",
+    "source_kind": "official",
+    "source_date": "2026-08-20",
+    "agreement": "agree"
+  },
+  "pvg_sha_link_minutes": {
+    "kind": "value",
+    "value": 40,
+    "unit": "minutes",
+    "template": "Между аэропортами Шанхая PVG и SHA линия Airport Link Line идёт {value} {unit_label}.",
+    "source": "https://english.shanghai.gov.cn/en-Individuals-Transportation-Airplane/20260813/7366238930024ac8b22e5adf82217bd8.html",
+    "source_kind": "official",
+    "source_date": "2026-06-04",
+    "agreement": "agree"
+  },
+  "bkk_dmk_shuttle_minutes": {
+    "kind": "range",
+    "value_min": 60,
+    "value_max": 120,
+    "unit": "minutes",
+    "template": "Шаттл между аэропортами Бангкока BKK и DMK занимает от {value_min} до {value_max} {unit_label}.",
+    "source": "https://thailand.go.th/public/issue-focus-detail/001_01_090",
+    "source_kind": "official",
+    "source_date": "2026-10-18",
+    "date_estimated": true,
+    "date_basis": "на странице нет даты публикации, снимок 18.10.2026",
+    "agreement": "agree"
+  },
+  "pek_pkx_bus": {
+    "kind": "statement",
+    "template": "Между аэропортами Пекина PEK и PKX ходит автобус аэропортов.",
+    "source": "https://www.cah.com.cn/content/2026/08-19/7495648762631557120.html",
+    "source_kind": "official",
+    "source_date": "2026-08-19",
+    "agreement": "agree"
+  },
+  "pek_pkx_transfer_minutes": {
+    "gap": true,
+    "text": "Сколько минут занимает переезд между PEK и PKX — не исследовано."
+  },
+  "pek_pkx_bus_frequency": {
+    "gap": true,
+    "text": "Сколько раз в день ходит автобус между PEK и PKX — не исследовано."
+  },
+  "pek_pkx_mct": {
+    "gap": true,
+    "text": "Минимальная стыковка в PEK и в PKX — не исследовано."
+  },
+  "pvg_sha_mct": {
+    "gap": true,
+    "text": "Минимальная стыковка в PVG и в SHA — не исследовано."
+  },
+  "bkk_dmk_mct": {
+    "gap": true,
+    "text": "Минимальная стыковка в BKK и в DMK — не исследовано."
+  },
+  "bkk_dmk_interval": {
+    "gap": true,
+    "text": "Интервал шаттла BKK–DMK — не исследовано: у страниц AOT и thailand.go.th разные формулировки."
+  },
+  "airlines_mow_hkg": {
+    "gap": true,
+    "text": "Какие авиакомпании летают по маршруту Москва — Гонконг — не исследовано."
+  },
+  "airlines_mow_china": {
+    "gap": true,
+    "text": "Какие авиакомпании летают по маршруту Москва — Китай — не исследовано."
+  },
+  "airlines_mow_thailand": {
+    "gap": true,
+    "text": "Какие авиакомпании летают по маршруту Москва — Таиланд — не исследовано."
+  },
+  "direct_connect_hkg": {
+    "gap": true,
+    "text": "Прямые рейсы и типичные стыковки Москва — Гонконг (в том числе через Урумчи, Стамбул, Ближний Восток и Центральную Азию) — не исследовано."
+  },
+  "direct_connect_china": {
+    "gap": true,
+    "text": "Прямые рейсы и типичные стыковки Москва — Пекин и Москва — Шанхай (в том числе через Урумчи, Стамбул, Ближний Восток и Центральную Азию) — не исследовано."
+  },
+  "direct_connect_thailand": {
+    "gap": true,
+    "text": "Прямые рейсы и типичные стыковки Москва — Бангкок и Москва — Пхукет (в том числе через Урумчи, Стамбул, Ближний Восток и Центральную Азию) — не исследовано."
+  },
+  "separate_ticket_baggage": {
+    "gap": true,
+    "text": "Багаж на раздельных билетах: сдаётся ли он до конечной точки — не исследовано."
+  },
+  "hkg_express_fares": {
+    "gap": true,
+    "text": "Проезд PEK → город и PKX → город: цена и время — не исследовано."
+  },
+  "city_transfer_fares": {
+    "gap": true,
+    "text": "Цена и время проезда из аэропорта в город — не исследовано."
+  },
+  "hkg_customs_amounts": {
+    "gap": true,
+    "text": "Лимиты ввоза валюты и юаней в Китай и Гонконг — не исследовано."
+  },
+  "hkg_penalties": {
+    "gap": true,
+    "text": "Штрафы за просрочку пребывания и запрещённые предметы в Китае и Гонконге — не исследовано."
+  },
+  "hkg_stamp_rules": {
+    "gap": true,
+    "text": "Как турецкие штампы влияют на въезд в Китай — не исследовано."
+  },
+  "hkg_comms": {
+    "gap": true,
+    "text": "Какие сервисы связи не работают в Китае на этом маршруте — не исследовано."
+  },
+  "thailand_transit": {
+    "gap": true,
+    "text": "Отдельные правила транзита через Таиланд без въезда в страну — не исследовано."
+  }
+}

@@ -88,28 +88,63 @@ const hongKong = paint({
   depart_date: "2026-11-12",
   return_date: "2026-11-20",
 });
-process.stdout.write(JSON.stringify({ china, hongKong }));
+const thailand = paint({
+  destination_slug: "thailand",
+  departure_city_id: "mow",
+  depart_date: "2026-12-01",
+  return_date: "2026-12-12",
+});
+const uae = paint({
+  destination_slug: "uae",
+  departure_city_id: "mow",
+  depart_date: "2026-12-01",
+  return_date: "2026-12-08",
+});
+process.stdout.write(JSON.stringify({ china, hongKong, thailand, uae }));
 """
 
 
-def test_china_trip_has_no_hong_kong_route():
+def test_china_trip_shows_its_own_breakdown():
     painted = _render_catalog(get_catalog(), RENDER_TRIPS)["china"]
     ticket = painted["ticket"]
-    assert "Разбор этого маршрута пока не готов" in ticket
-    assert "https://www.aviasales.ru/search/MOW3110BJS1?marker=765617" in ticket
-    assert "MOW · PEK · HKG" not in ticket
+    assert "Разбор этого маршрута пока не готов" not in ticket
+    assert "Москва → Китай" in ticket
     assert "Москва → Гонконг через Пекин" not in ticket
+    assert "https://www.aviasales.ru/search/MOW3110BJS1?marker=765617" in ticket
+    assert "https://www.aviasales.ru/search/MOW3110SHA1?marker=765617" in ticket
     assert "HKG" not in ticket
+    assert "Китай до 30 дней" in ticket
+    assert "40 минут" in ticket
+    assert "не исследовано" in ticket
+    assert "4–5" not in ticket
 
 
 def test_hong_kong_trip_keeps_its_breakdown():
     painted = _render_catalog(get_catalog(), RENDER_TRIPS)["hongKong"]
     ticket = painted["ticket"]
     assert "Москва → Гонконг через Пекин" in ticket
-    assert "MOW · PEK · HKG" in ticket
+    assert "MOW · PEK/PKX · HKG" in ticket
     assert "MOW1211HKG1" in ticket
     assert "marker=765617" in ticket
     assert "Разбор этого маршрута пока не готов" not in ticket
+    assert "4–5" not in ticket
+    assert "1,5" not in ticket
+
+
+def test_thailand_trip_shows_its_breakdown_and_other_countries_wait():
+    painted = _render_catalog(get_catalog(), RENDER_TRIPS)
+    thailand = painted["thailand"]["ticket"]
+    assert "Москва → Таиланд" in thailand
+    assert "https://www.aviasales.ru/search/MOW0112BKK1?marker=765617" in thailand
+    assert "https://www.aviasales.ru/search/MOW0112HKT1?marker=765617" in thailand
+    assert "Таиланд до 30 дней" in thailand
+    assert "от 60 до 120 минут" in thailand
+    assert "Разбор этого маршрута пока не готов" not in thailand
+    uae = painted["uae"]["ticket"]
+    assert "Разбор этого маршрута пока не готов" in uae
+    assert "MOW0112DXB1?marker=765617" in uae
+    assert "Москва → Таиланд" not in uae
+    assert "Москва → Китай" not in uae
 
 
 RENDER_INTRO = r"""
@@ -442,8 +477,8 @@ function paint(openRoute) {
   });
 }
 const closed = paint("");
-const payment = paint("route:mow_hkg_via_pek:5");
-const transfer = paint("route:mow_hkg_via_pek:1");
+const payment = paint("route:mow_hkg_via_pek:payment");
+const transfer = paint("route:mow_hkg_via_pek:transfer");
 location.hash = "#/profile";
 const profileHtml = render({
   catalog,
@@ -465,14 +500,11 @@ def test_route_airlines_are_deduped_and_collapsed():
     fold = ticket.split('<details class="airline-fold">', 1)
     assert len(fold) == 2
     assert not fold[1].startswith(" open")
-    assert "<summary>Авиакомпании на маршруте (7)</summary>" in ticket
-    assert ticket.count("Air China") == 1
-    assert "Cathay Pacific" in ticket
-    assert "Hong Kong Airlines" in ticket
-    assert "Страницы авиакомпаний ещё не подключены — пока только названия." in fold[1]
+    assert "<summary>Авиакомпании на маршруте</summary>" in ticket
+    assert "Какие авиакомпании летают по маршруту Москва — Гонконг — не исследовано." in fold[1]
+    assert "umnyturizm.example" not in ticket
+    assert "Air China" not in ticket
     assert "для паспорта РФ" in ticket
-    assert 'class="airline-row"' in fold[1]
-    assert ticket.index("airline-row") > ticket.index("<details")
 
 
 def test_payment_compass_opens_guide_sections():

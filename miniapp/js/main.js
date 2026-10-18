@@ -330,6 +330,7 @@ function seedPreview(name) {
   const bare = intro || name === "empty";
   const nodate = name === "nodate";
   const china = name === "china";
+  const thailand = name === "thailand";
   state.introStep = intro ? introSteps[name] : 0;
   state.introSeen = !intro;
   const named = new URLSearchParams(location.search).get("startapp") || "";
@@ -346,18 +347,19 @@ function seedPreview(name) {
     intro_seen: !intro,
     citizenship: "ru",
   };
+  const destination = china ? "china" : thailand ? "thailand" : "hong_kong";
   state.trip = bare ? null : {
-    destination_slug: china ? "china" : "hong_kong",
+    destination_slug: destination,
     departure_city_id: "mow",
-    depart_date: china ? "2026-10-31" : nodate ? null : "2026-11-12",
-    return_date: china ? "2026-11-14" : nodate ? null : "2026-11-20",
+    depart_date: china ? "2026-10-31" : thailand ? "2026-12-01" : nodate ? null : "2026-11-12",
+    return_date: china ? "2026-11-14" : thailand ? "2026-12-12" : nodate ? null : "2026-11-20",
   };
   state.draft = {
     bank_id: state.profile.bank_id,
     departure_city_id: state.profile.departure_city_id,
-    destination_slug: bare ? "" : (china ? "china" : "hong_kong"),
-    depart_date: china ? "2026-10-31" : nodate || bare ? "" : "2026-11-12",
-    return_date: china ? "2026-11-14" : nodate || bare ? "" : "2026-11-20",
+    destination_slug: bare ? "" : destination,
+    depart_date: china ? "2026-10-31" : thailand ? "2026-12-01" : nodate || bare ? "" : "2026-11-12",
+    return_date: china ? "2026-11-14" : thailand ? "2026-12-12" : nodate || bare ? "" : "2026-11-20",
     consent: false,
   };
   state.step = 0;
@@ -383,6 +385,7 @@ function previewTarget(name) {
     empty: "/trip",
     nodate: "/trip",
     china: "/trip",
+    thailand: "/trip",
     pick: "/pick",
     onboarding: "/pick",
     trip: "/trip",

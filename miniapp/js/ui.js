@@ -226,14 +226,25 @@ export function searchRows(catalog) {
   return rows;
 }
 
-export function ticketsUrl(route, depart) {
-  let url = route.tickets_url || "";
-  if (!url.includes("{DDMM}")) return url;
+function fillTicketDate(url, depart) {
+  if (!url || !url.includes("{DDMM}")) return url || "";
   if (depart && /^\d{4}-\d{2}-\d{2}$/.test(depart)) {
     const [, month, day] = depart.split("-");
     return url.replace("{DDMM}", `${day}${month}`);
   }
   return url.replace("{DDMM}", "");
+}
+
+export function ticketLinks(route, depart) {
+  const links = route.ticket_links && route.ticket_links.length
+    ? route.ticket_links
+    : (route.tickets_url ? [{ label: "Найти билеты", url: route.tickets_url }] : []);
+  return links.map((link) => ({ label: link.label, url: fillTicketDate(link.url, depart) }));
+}
+
+export function ticketsUrl(route, depart) {
+  const links = ticketLinks(route, depart);
+  return links.length ? links[0].url : "";
 }
 
 export function applyTheme() {

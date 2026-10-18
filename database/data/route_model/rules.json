@@ -1,0 +1,19 @@
+{
+  "evaluated_on": "2026-10-18",
+  "ticket_url": "https://www.aviasales.ru/search/{origin}{date}{destination}1?marker={marker}",
+  "payment_phrase": "Компас оплаты → {title}",
+  "payment_button": "Компас оплаты · {title}",
+  "units": {
+    "days": ["день", "дня", "дней"],
+    "hours": ["час", "часа", "часов"],
+    "minutes": ["минута", "минуты", "минут"]
+  },
+  "formulas": {
+    "format_value": "Подставляет value измерения и unit_label. Число в шаблоне не пишется.",
+    "format_range": "Подставляет value_min и value_max. unit_label склоняется по value_max.",
+    "format_date": "Поле value в формате YYYY-MM-DD показывается как ДД.ММ.ГГГГ.",
+    "airport_change_allowance": "Сумма минут: value_max (если есть, иначе value) переезда плюс value минимальной стыковки. Надбавки сверх суммы нет. Если вход — пробел или его нет, совет не считается и становится пробелом. Зона совета — худшая зона опор по шкале trust_config.",
+    "allowance_text": "На стыковку со сменой аэропорта {pair} закладывайте {value} {unit_label}: это сумма максимального переезда и минимальной стыковки.",
+    "allowance_gap": "Сколько времени закладывать на смену аэропорта {pair} — не исследовано."
+  }
+}

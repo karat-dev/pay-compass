@@ -1,0 +1,190 @@
+[
+  {
+    "id": "mow_hkg_via_pek",
+    "title": "Москва → Гонконг через Пекин",
+    "departure_city_id": "mow",
+    "destination_slug": "hong_kong",
+    "origin_iata": "MOW",
+    "iata": "MOW · PEK/PKX · HKG",
+    "tickets": [
+      {"label": "🔎 Найти билеты", "destination": "HKG"}
+    ],
+    "payment_targets": [
+      {"slug": "china", "title": "Китай"},
+      {"slug": "hong_kong", "title": "Гонконг"}
+    ],
+    "airline_fact": "airlines_mow_hkg",
+    "lead_facts": [
+      "china_visa_free_days",
+      "hk_visa_free_days",
+      "pek_pkx_bus",
+      "pek_pkx_transfer_minutes",
+      {"rule": "airport_change_allowance", "id": "pek_pkx_allowance", "pair": "PEK и PKX", "inputs": ["pek_pkx_transfer_minutes", "pek_pkx_mct"]}
+    ],
+    "sections": [
+      {
+        "id": "connection",
+        "title": "Пересадка",
+        "facts": [
+          "pek_pkx_bus",
+          "pek_pkx_transfer_minutes",
+          "pek_pkx_bus_frequency",
+          "pek_pkx_mct",
+          {"rule": "airport_change_allowance", "id": "pek_pkx_allowance", "pair": "PEK и PKX", "inputs": ["pek_pkx_transfer_minutes", "pek_pkx_mct"]},
+          "direct_connect_hkg",
+          "separate_ticket_baggage",
+          "china_airside_hours"
+        ]
+      },
+      {
+        "id": "transfer",
+        "title": "Трансфер",
+        "facts": ["hkg_express_fares"],
+        "partners": ["kiwitaxi", "gettransfer"]
+      },
+      {
+        "id": "comms",
+        "title": "Связь",
+        "facts": ["hkg_comms"],
+        "partners": ["airalo", "yesim"]
+      },
+      {
+        "id": "customs",
+        "title": "Ввоз и вывоз",
+        "facts": ["hkg_customs_amounts", "hkg_penalties"]
+      },
+      {
+        "id": "stamps",
+        "title": "Штампы и отметки",
+        "facts": ["hkg_stamp_rules"]
+      },
+      {
+        "id": "payment",
+        "title": "Оплата",
+        "role": "payment"
+      }
+    ]
+  },
+  {
+    "id": "mow_china",
+    "title": "Москва → Китай",
+    "departure_city_id": "mow",
+    "destination_slug": "china",
+    "origin_iata": "MOW",
+    "iata": "MOW · BJS (PEK/PKX) · SHA (PVG/SHA)",
+    "tickets": [
+      {"label": "🔎 Билеты · Пекин (BJS)", "destination": "BJS"},
+      {"label": "🔎 Билеты · Шанхай (SHA)", "destination": "SHA"}
+    ],
+    "payment_targets": [
+      {"slug": "china", "title": "Китай"}
+    ],
+    "airline_fact": "airlines_mow_china",
+    "lead_facts": [
+      "china_visa_free_days",
+      "china_visa_free_until",
+      "pek_pkx_bus",
+      "pek_pkx_transfer_minutes",
+      "pvg_sha_link_minutes",
+      {"rule": "airport_change_allowance", "id": "pek_pkx_allowance", "pair": "PEK и PKX", "inputs": ["pek_pkx_transfer_minutes", "pek_pkx_mct"]},
+      {"rule": "airport_change_allowance", "id": "pvg_sha_allowance", "pair": "PVG и SHA", "inputs": ["pvg_sha_link_minutes", "pvg_sha_mct"]}
+    ],
+    "sections": [
+      {
+        "id": "connection",
+        "title": "Пересадка",
+        "facts": [
+          "pek_pkx_bus",
+          "pek_pkx_transfer_minutes",
+          "pek_pkx_bus_frequency",
+          "pek_pkx_mct",
+          {"rule": "airport_change_allowance", "id": "pek_pkx_allowance", "pair": "PEK и PKX", "inputs": ["pek_pkx_transfer_minutes", "pek_pkx_mct"]},
+          "pvg_sha_link_minutes",
+          "pvg_sha_mct",
+          {"rule": "airport_change_allowance", "id": "pvg_sha_allowance", "pair": "PVG и SHA", "inputs": ["pvg_sha_link_minutes", "pvg_sha_mct"]},
+          "direct_connect_china",
+          "separate_ticket_baggage",
+          "china_airside_hours"
+        ]
+      },
+      {
+        "id": "visa",
+        "title": "Виза и транзит",
+        "facts": ["china_visa_free_days", "china_visa_free_until", "china_transit_days", "china_airside_hours"]
+      },
+      {
+        "id": "baggage",
+        "title": "Багаж",
+        "facts": ["separate_ticket_baggage"]
+      },
+      {
+        "id": "transfer",
+        "title": "Трансфер",
+        "facts": ["city_transfer_fares"],
+        "partners": ["kiwitaxi", "gettransfer"]
+      },
+      {
+        "id": "payment",
+        "title": "Оплата",
+        "role": "payment"
+      }
+    ]
+  },
+  {
+    "id": "mow_thailand",
+    "title": "Москва → Таиланд",
+    "departure_city_id": "mow",
+    "destination_slug": "thailand",
+    "origin_iata": "MOW",
+    "iata": "MOW · BKK/DMK · HKT",
+    "tickets": [
+      {"label": "🔎 Билеты · Бангкок (BKK)", "destination": "BKK"},
+      {"label": "🔎 Билеты · Пхукет (HKT)", "destination": "HKT"}
+    ],
+    "payment_targets": [
+      {"slug": "thailand", "title": "Таиланд"}
+    ],
+    "airline_fact": "airlines_mow_thailand",
+    "lead_facts": [
+      "thailand_visa_free_days",
+      "bkk_dmk_shuttle_minutes",
+      {"rule": "airport_change_allowance", "id": "bkk_dmk_allowance", "pair": "BKK и DMK", "inputs": ["bkk_dmk_shuttle_minutes", "bkk_dmk_mct"]},
+      "direct_connect_thailand"
+    ],
+    "sections": [
+      {
+        "id": "connection",
+        "title": "Пересадка",
+        "facts": [
+          "bkk_dmk_shuttle_minutes",
+          "bkk_dmk_interval",
+          "bkk_dmk_mct",
+          {"rule": "airport_change_allowance", "id": "bkk_dmk_allowance", "pair": "BKK и DMK", "inputs": ["bkk_dmk_shuttle_minutes", "bkk_dmk_mct"]},
+          "direct_connect_thailand",
+          "separate_ticket_baggage"
+        ]
+      },
+      {
+        "id": "visa",
+        "title": "Виза и транзит",
+        "facts": ["thailand_visa_free_days", "thailand_transit"]
+      },
+      {
+        "id": "baggage",
+        "title": "Багаж",
+        "facts": ["separate_ticket_baggage"]
+      },
+      {
+        "id": "transfer",
+        "title": "Трансфер",
+        "facts": ["city_transfer_fares"],
+        "partners": ["kiwitaxi", "gettransfer"]
+      },
+      {
+        "id": "payment",
+        "title": "Оплата",
+        "role": "payment"
+      }
+    ]
+  }
+]

@@ -31,15 +31,14 @@ def test_route_card_loads_from_json():
     route = get_route("mow_hkg_via_pek")
     lines = lead_lines(route["text"])
     assert lines[0] == "Москва → Гонконг через Пекин"
-    assert lines[1].startswith("🛂 Виза не нужна для паспорта РФ")
-    assert "Китай до 30 дней" in lines[1]
-    assert "Гонконг до 14 дней" in lines[1]
-    assert lines[2].startswith("⚠️ Главный риск")
-    assert "PKX" in lines[2] and "PEK" in lines[2]
-
-    assert "Аэрофлот" in route["text"]
-    assert "https://umnyturizm.example/airlines/aeroflot" in route["text"]
-    assert "Cathay Pacific" in route["text"]
+    assert any(line.startswith("Виза не нужна для паспорта РФ") for line in lines)
+    assert "Китай до 30 дней" in route["text"]
+    assert "Гонконг до 14 дней" in route["text"]
+    assert "PKX" in route["text"] and "PEK" in route["text"]
+    assert "4–5" not in route["text"]
+    assert "1,5" not in route["text"]
+    assert "umnyturizm.example" not in route["text"]
+    assert "Какие авиакомпании летают по маршруту Москва — Гонконг — не исследовано." in route["text"]
     assert len(route["text"]) <= TELEGRAM_MESSAGE_LIMIT
 
     url = tickets_url(route)
@@ -77,8 +76,8 @@ def test_route_keyboard_and_menu_entry():
     keyboard = get_route_keyboard()
     assert "🔎 Найти билеты" in _labels(keyboard)
     assert any(f"marker={AVIASALES_MARKER}" in url for url in _urls(keyboard))
-    assert "route:mow_hkg_via_pek:0" in _callbacks(keyboard)
-    assert "route:mow_hkg_via_pek:5" in _callbacks(keyboard)
+    assert "route:mow_hkg_via_pek:connection" in _callbacks(keyboard)
+    assert "route:mow_hkg_via_pek:payment" in _callbacks(keyboard)
     assert "back_to_menu" in _callbacks(keyboard)
 
     payment = get_route_section_keyboard("mow_hkg_via_pek", show_payment_links=True)
@@ -88,7 +87,7 @@ def test_route_keyboard_and_menu_entry():
     assert "country_china" not in _callbacks(payment)
     assert "country_hong_kong" not in _callbacks(payment)
     assert "route_open:mow_hkg_via_pek" in _callbacks(payment)
-    transfer = get_route("mow_hkg_via_pek")["callback_replies"]["route:mow_hkg_via_pek:1"]
+    transfer = get_route("mow_hkg_via_pek")["callback_replies"]["route:mow_hkg_via_pek:transfer"]
     assert 'href="https://kiwitaxi.tpk.lv/SYHLlog7?erid=2VtzqwJNmCZ"' in transfer
     assert 'href="https://gettransfer.tpk.lv/ZfIWEo1o?erid=2VtzqwTGgtd"' in transfer
     assert "c1.travelpayouts.com" not in transfer
@@ -96,7 +95,7 @@ def test_route_keyboard_and_menu_entry():
     assert "Welcome Pickups" not in transfer
     assert "PLACEHOLDER" not in transfer
     assert "<i>партнёрская ссылка</i>" in transfer
-    link = get_route("mow_hkg_via_pek")["callback_replies"]["route:mow_hkg_via_pek:2"]
+    link = get_route("mow_hkg_via_pek")["callback_replies"]["route:mow_hkg_via_pek:comms"]
     assert "Airalo" in link
     assert "Yesim" in link
     assert "{AIRALO_LINK}" not in link
@@ -105,6 +104,6 @@ def test_route_keyboard_and_menu_entry():
     assert 'href="https://airalo.tpk.lv/NK1pNs4y?erid=2VtzqwXiejf"' in link
     assert 'href="https://yesim.tpk.lv/acVRMvIx?erid=2VtzqwNpj3b"' in link
     assert "<i>партнёрская ссылка</i>" in link
-    pay = get_route("mow_hkg_via_pek")["callback_replies"]["route:mow_hkg_via_pek:5"]
+    pay = get_route("mow_hkg_via_pek")["callback_replies"]["route:mow_hkg_via_pek:payment"]
     assert "Компас оплаты → Китай" in pay
     assert "Гонконг" in pay

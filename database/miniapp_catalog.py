@@ -31,7 +31,7 @@ from database.knowledge_base import (
     user_visible_fact,
 )
 from database.partners import disclosure, public_offers
-from database.routes import AVIASALES_MARKER, get_route, lead_lines, section_buttons, tickets_url
+from database.routes import AVIASALES_MARKER, ROUTES, get_route, lead_lines, section_buttons, tickets_url
 from texts.privacy_policy import PRIVACY_POLICY_TEXT
 
 # Approved short labels for the Mini App section grid. Full titles stay in the data.
@@ -59,14 +59,8 @@ DESTINATION_IATA = {
     "georgia": "TBS",
 }
 
-# The only published breakdown. It is shown only for this origin and country.
-ROUTE_FOR_TRIP = {
-    "mow_hkg_via_pek": {
-        "departure_city_id": "mow",
-        "destination_slug": "hong_kong",
-        "iata": "MOW · PEK · HKG",
-    },
-}
+# Route matching lives on each built card (departure city + destination).
+# DESTINATION_IATA above is only the empty-state ticket code, not a measured fact.
 
 # Departure cities are a product choice for onboarding, not facts from the guides.
 DEPARTURE_CITIES = (
@@ -325,10 +319,21 @@ def _public_route(route_id: str = "mow_hkg_via_pek") -> Dict[str, Any]:
     for button in section_buttons(route):
         body = route["callback_replies"].get(button["callback_data"]) or ""
         text, section_links = html_to_plain(body)
+        published_facts = []
+        for fact in (route.get("section_facts") or {}).get(button["callback_data"]) or []:
+            item = publish_fact(
+                fact,
+                f"route/{route['id']}/{button['callback_data']}",
+                country_slug=route.get("destination_slug") or "",
+            )
+            if item:
+                published_facts.append(item)
         sections.append({
             "id": button["callback_data"],
             "title": button["text"],
+            "role": (route.get("section_roles") or {}).get(button["callback_data"]) or "",
             "text": text,
+            "facts": published_facts,
             "links": [
                 {
                     "label": link["label"],
@@ -340,17 +345,28 @@ def _public_route(route_id: str = "mow_hkg_via_pek") -> Dict[str, Any]:
             ],
         })
     lines = lead_lines(route.get("text") or "")
-    match = ROUTE_FOR_TRIP.get(route["id"]) or {}
+    title = lines[0] if lines else route["id"]
+    summary = route.get("summary") or [
+        paragraph for paragraph in paragraphs if paragraph != title
+    ]
+    lead_facts = [
+        publish_fact(fact, f"route/{route['id']}/lead/{index}", country_slug=route.get("destination_slug") or "")
+        for index, fact in enumerate(route.get("lead_facts") or [])
+    ]
+    lead_facts = [fact for fact in lead_facts if fact]
     return {
         "id": route["id"],
-        "title": lines[0] if lines else route["id"],
-        "summary": [paragraph for paragraph in paragraphs if paragraph != (lines[0] if lines else "")],
-        "airlines": airlines,
+        "title": title,
+        "summary": summary,
+        "airlines": route.get("airlines") if "airlines" in route else airlines,
+        "airline_gap": route.get("airline_gap") or "",
+        "lead_facts": lead_facts,
         "tickets_url": tickets_url(route),
+        "ticket_links": list(route.get("ticket_links") or []),
         "marker": AVIASALES_MARKER,
-        "departure_city_id": match.get("departure_city_id") or "",
-        "destination_slug": match.get("destination_slug") or "",
-        "iata": match.get("iata") or "",
+        "departure_city_id": route.get("departure_city_id") or "",
+        "destination_slug": route.get("destination_slug") or "",
+        "iata": route.get("iata") or "",
         "sections": sections,
     }
 
@@ -442,7 +458,7 @@ def build_catalog() -> Dict[str, Any]:
         "privacy": PRIVACY_POLICY_TEXT,
         "countries": countries,
         "instructions": instructions,
-        "routes": [_public_route()],
+        "routes": [_public_route(route_id) for route_id in ROUTES],
         "tickets_marker": AVIASALES_MARKER,
         "section_keys": list(SECTION_KEYS),
         "partner_note": disclosure(),
@@ -476,6 +492,12 @@ def get_catalog() -> Dict[str, Any]:
         for instruction in _CATALOG["instructions"].values():
             for step in instruction["steps"]:
                 take(step)
+        for route in _CATALOG["routes"]:
+            for fact in route.get("lead_facts") or []:
+                take(fact)
+            for section in route["sections"]:
+                for fact in section.get("facts") or []:
+                    take(fact)
         _FACT_INDEX = index
     return _CATALOG
 
