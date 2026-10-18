@@ -1,4 +1,10 @@
 {
+  "source_kinds": {
+    "official": "official",
+    "media": "media",
+    "traveler": "traveler",
+    "internal": "internal"
+  },
   "source_points": {
     "official": 50,
     "media": 30,
@@ -60,8 +66,160 @@
     "gap_zones": [
       "gap"
     ],
-    "gap_label": "не исследовано"
+    "gap_label": "не исследовано",
+    "missing_zone": "black",
+    "group_order": [
+      "green",
+      "yellow",
+      "gap",
+      "red",
+      "advice-unsupported",
+      "black"
+    ],
+    "group_titles": {
+      "green": "Подтверждено",
+      "yellow": "Скорее всего верно",
+      "gap": "Не исследовано",
+      "red": "Мало подтверждений",
+      "advice-unsupported": "Непроверено",
+      "black": "Устарело или опровергнуто"
+    },
+    "zone_titles": {
+      "green": "зелёная зона",
+      "yellow": "жёлтая зона",
+      "red": "красная зона",
+      "black": "чёрная зона",
+      "gap": "не исследовано",
+      "advice-unsupported": "непроверено"
+    },
+    "legend": [
+      {
+        "zones": ["green"],
+        "text": "Зелёный — подтверждено официальным источником или нашим личным опытом, проверено недавно."
+      },
+      {
+        "zones": ["yellow"],
+        "text": "Жёлтый — скорее всего верно, но источник слабее или проверка давняя."
+      },
+      {
+        "zones": ["red", "black"],
+        "text": "Красный и чёрный — мало подтверждений, устарело или опровергнуто. Скрыты, открываются кнопкой «Показать непроверенное»."
+      }
+    ]
   },
-  "verified_by_us_max_days": 180,
-  "contradicted_by_own_zone": "red"
+  "verified_by_us_max_days": 90,
+  "contradicted_by_own_zone": "red",
+  "volatility": {
+    "fallback_class": "fallback",
+    "classes": {
+      "fast": {
+        "fresh_days": 7,
+        "green_max_days": 14,
+        "window_days": 7
+      },
+      "medium": {
+        "fresh_days": 30,
+        "green_max_days": 30,
+        "window_days": 30
+      },
+      "slow": {
+        "fresh_days": 90,
+        "green_max_days": 90,
+        "window_days": 90
+      },
+      "fallback": {
+        "green_max_days": null,
+        "window_days": null
+      }
+    },
+    "sections": {
+      "1_checklist": "medium",
+      "2_pay_on_site": "fast",
+      "3_local_wallets_cards": "medium",
+      "4_cash_exchange": "medium",
+      "5_atms": "fast",
+      "6_transport": "medium",
+      "7_risks": "slow",
+      "8_tax_free": "slow"
+    },
+    "subsections": {
+      "3_local_wallets_cards/wallets": "fast",
+      "3_local_wallets_cards/local_card": "medium"
+    },
+    "instructions": {
+      "mts_tr_qr": "fast",
+      "tbank_qr_abroad": "fast",
+      "mts_china_wallets": "fast",
+      "vtb_china_wallets": "fast",
+      "wechat_pay": "fast",
+      "alipay": "fast",
+      "tbc_georgia": "medium"
+    }
+  },
+  "upgrade": {
+    "yellow_min_independent_confirmations": 3,
+    "yellow_zone": "yellow",
+    "green_zone": "green",
+    "traveler_unapproved_max_zone": "yellow",
+    "owner_approved_field": "owner_approved",
+    "official_confirmed_field": "official_confirmed",
+    "owner_prompt_template": "{n} подтверждений, поднять до зелёного?"
+  },
+  "early_warning": {
+    "share": 0.25,
+    "source_failure_field": "source_failure_count",
+    "source_failure_min_count": 1,
+    "conflict_agreement": "conflict",
+    "refresh_action": "refresh_search",
+    "reasons": {
+      "window": "До понижения осталось меньше доли окна класса",
+      "source_failed": "Источник уже не открывался",
+      "conflict": "Появился противоречащий источник"
+    }
+  },
+  "http": {
+    "success_min_status": 200,
+    "success_max_status": 299,
+    "broken_statuses": [404, 410],
+    "retry_statuses": [429],
+    "retry_min_status": 500,
+    "failure_min_status": 400,
+    "failure_exclude_statuses": [401, 403]
+  },
+  "messages": {
+    "gap": "Не исследовано: балл не ставится.",
+    "advice": "Совет: зона берётся из опор, формула баллов к нему не применяется.",
+    "unscored": "Не хватает типа источника или пометки согласия, зону по формуле не посчитать.",
+    "downgrade": "Записана зона {stored}, формула на {as_of} даёт {zone}. Понижение автоматическое.",
+    "upgrade": "Формула даёт {zone}, в файле {stored}. Повышение разрешено правилом.",
+    "matched": "Зона сходится с формулой на дату выдачи."
+  },
+  "official_publishers": {
+    "host_suffixes": [
+      "rshb.ru",
+      "atb.su",
+      "vtb.ru",
+      "tbank.ru",
+      "tinkoff.ru",
+      "sberbank.ru",
+      "tbcbank.ge",
+      "octopus.com.hk",
+      "mts.ru",
+      "magticom.ge",
+      "wechat.com",
+      "tencent.com",
+      "qq.com",
+      "alipay.com",
+      "true.th",
+      "rta.ae",
+      "planetpayment.ae",
+      "planettaxfree.ae",
+      "taxfree.weareplanet.com",
+      "istairport.com",
+      "tbilisiairport.com",
+      "cbr.ru"
+    ],
+    "public_suffixes": [".gov", ".go.th", ".go.jp"],
+    "dot_markers": [".gov."]
+  }
 }

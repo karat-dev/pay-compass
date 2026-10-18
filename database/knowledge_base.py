@@ -12,8 +12,11 @@ from __future__ import annotations
 
 import html
 import json
+from datetime import date
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
+
+from database.trust_zones import resolve_zone
 
 # Generated bundle: countries plus scored step-by-step instructions.
 # A regeneration replaces this file; display thresholds stay in config/trust_config.json.
@@ -107,7 +110,15 @@ def _date_verified(checked_at: Optional[str]) -> str:
     return f"{day}.{month}.{year}"
 
 
-def normalize_fact(raw: Dict[str, Any]) -> Dict[str, Any]:
+def normalize_fact(
+    raw: Dict[str, Any],
+    *,
+    section_key: Optional[str] = None,
+    subsection: Optional[str] = None,
+    instruction_id: Optional[str] = None,
+    as_of: Optional[date] = None,
+    config: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     status = raw.get("status")
     if status not in ALLOWED_FACT_STATUSES:
         raise ValueError(f"Unexpected fact status: {status!r} in {raw.get('text', '')[:80]!r}")
@@ -119,15 +130,33 @@ def normalize_fact(raw: Dict[str, Any]) -> Dict[str, Any]:
         date_verified = raw.get("date_verified") or None
     else:
         date_verified = _date_verified(raw.get("checked_at"))
-    breakdown = raw.get("score_breakdown")
+    active_config = config or TRUST_CONFIG
+    resolved = resolve_zone(
+        raw,
+        config=active_config,
+        as_of=as_of or date.today(),
+        section_key=section_key,
+        subsection=subsection,
+        instruction_id=instruction_id,
+    )
+    live_zone = resolved["zone"]
+    live_status = active_config["zone_to_status"].get(live_zone, status)
+    if resolved["kind"] != "scored":
+        live_status = status
+        live_zone = raw.get("zone")
+    breakdown = resolved["score_breakdown"]
+    if not isinstance(breakdown, dict):
+        stored_breakdown = raw.get("score_breakdown")
+        breakdown = stored_breakdown if isinstance(stored_breakdown, dict) else None
     return {
         "text": raw["text"],
         "type": fact_type,
         "fact_type": fact_type,
-        "status": status,
-        "zone": raw.get("zone"),
-        "score": raw.get("score"),
-        "score_breakdown": breakdown if isinstance(breakdown, dict) else None,
+        "status": live_status,
+        "zone": live_zone,
+        "stored_zone": raw.get("zone"),
+        "score": resolved["score"] if resolved["kind"] == "scored" else raw.get("score"),
+        "score_breakdown": breakdown,
         "date_verified": date_verified,
         "date_estimated": raw.get("date_estimated"),
         "checked_at": raw.get("checked_at"),
@@ -141,15 +170,26 @@ def normalize_fact(raw: Dict[str, Any]) -> Dict[str, Any]:
         "reason": raw.get("reason"),
         "refuted": bool(raw.get("refuted")),
         "verified_by_us": bool(raw.get("verified_by_us")),
-        "status_derived_from": raw.get("status_derived_from"),
+        "agreement": raw.get("agreement"),
+        "reports": raw.get("reports"),
+        "contradicted_by_own": bool(raw.get("contradicted_by_own")),
+        "status_derived_from": "live_zone" if resolved["kind"] == "scored" else raw.get("status_derived_from"),
+        "volatility_class": resolved["volatility_class"],
+        "next_zone": resolved["next_zone"],
+        "drops_on": resolved["drops_on"],
+        "at_risk": resolved["at_risk"],
+        "at_risk_reason": resolved["at_risk_reason"],
     }
 
 
-def _normalize_subsection(raw_facts: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _normalize_subsection(raw_facts: List[Dict[str, Any]], *, section_key: str, subsection: str) -> Dict[str, Any]:
     return {
         "applicable": True,
         "reason": None,
-        "facts": [normalize_fact(fact) for fact in raw_facts],
+        "facts": [
+            normalize_fact(fact, section_key=section_key, subsection=subsection)
+            for fact in raw_facts
+        ],
     }
 
 
@@ -174,11 +214,11 @@ def _build_country(slug: str, raw: Dict[str, Any], instruction_ids: List[str]) -
             "title": title,
             "applicable": bool(raw_section.get("applicable", True)),
             "reason": raw_section.get("reason") or None,
-            "facts": [normalize_fact(fact) for fact in raw_section.get("facts") or []],
+            "facts": [normalize_fact(fact, section_key=key) for fact in raw_section.get("facts") or []],
         }
         if "subsections" in raw_section:
             section["subsections"] = {
-                name: _normalize_subsection(facts)
+                name: _normalize_subsection(facts, section_key=key, subsection=name)
                 for name, facts in raw_section["subsections"].items()
             }
         sections[key] = section
@@ -206,7 +246,11 @@ def _build_instructions(raw_instructions: Dict[str, Any]) -> Dict[str, Any]:
     for instruction_id, raw in raw_instructions.items():
         steps = []
         for step in raw.get("steps") or []:
-            fact = normalize_fact(step)
+            fact = normalize_fact(
+                step,
+                section_key=INSTRUCTION_SECTION.get(instruction_id),
+                instruction_id=instruction_id,
+            )
             fact["n"] = step.get("n")
             fact["stage"] = step.get("stage")
             steps.append(fact)

@@ -17,14 +17,19 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
-from urllib.parse import urlparse
-
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from database.knowledge_base import SECTION_ORDER, public_source_url  # noqa: E402
+from database.knowledge_base import INSTRUCTION_SECTION, SECTION_ORDER, public_source_url  # noqa: E402
 from database.miniapp_catalog import _fact_id  # noqa: E402
+from database.trust_zones import (  # noqa: E402
+    confirmation_stats,
+    http_urls as trust_http_urls,
+    is_official_publisher as trust_is_official_publisher,
+    resolve_zone,
+    zone_rank,
+)
 
 DATA_PATH = ROOT / "database" / "data" / "countries.json"
 CONFIG_PATH = ROOT / "config" / "trust_config.json"
@@ -50,7 +55,6 @@ SUBSECTION_CATEGORY = {
     "wallets": "wallets",
     "local_card": "local_card",
 }
-ZONE_RANK = {"black": 0, "red": 1, "yellow": 2, "green": 3}
 ACTIONS = (
     "downgrade",
     "fix_link",
@@ -58,35 +62,8 @@ ACTIONS = (
     "rerun",
     "owner_decision",
     "owner_manual_check",
+    "refresh_search",
 )
-
-# Hosts that count as a bank, operator, or government site for a green upgrade.
-# A source_kind of "official" is not enough: guide sites were tagged that way.
-_PUBLISHER_SUFFIXES = (
-    "rshb.ru",
-    "atb.su",
-    "vtb.ru",
-    "tbank.ru",
-    "tinkoff.ru",
-    "sberbank.ru",
-    "tbcbank.ge",
-    "octopus.com.hk",
-    "mts.ru",
-    "magticom.ge",
-    "wechat.com",
-    "tencent.com",
-    "qq.com",
-    "alipay.com",
-    "true.th",
-    "rta.ae",
-    "planetpayment.ae",
-    "planettaxfree.ae",
-    "taxfree.weareplanet.com",
-    "istairport.com",
-    "tbilisiairport.com",
-    "cbr.ru",
-)
-
 
 def load_json(path: Path) -> Dict[str, Any]:
     with path.open(encoding="utf-8") as handle:
@@ -116,128 +93,25 @@ def age_days(moment: Optional[date], as_of: date) -> Optional[int]:
     return (as_of - moment).days
 
 
-def fresh_limit_days(config: Dict[str, Any]) -> int:
+def fresh_limit_days(config: Dict[str, Any]) -> Optional[int]:
     finite = [band["max_days"] for band in config["freshness_points"] if band.get("max_days") is not None]
-    return min(finite) if finite else 30
+    if not finite:
+        return None
+    return min(finite)
 
 
-def freshness_points(days: Optional[int], config: Dict[str, Any]) -> int:
-    if days is None or days < 0:
-        return 0 if days is None else config["freshness_points"][0]["points"]
-    finite = [band for band in config["freshness_points"] if band.get("max_days") is not None]
-    finite.sort(key=lambda band: band["max_days"])
-    for band in finite:
-        if days <= band["max_days"]:
-            return int(band["points"])
-    for band in config["freshness_points"]:
-        if band.get("max_days") is None:
-            return int(band["points"])
-    return 0
-
-
-def source_points(kind: Optional[str], reports: Any, config: Dict[str, Any]) -> Optional[int]:
-    points = config["source_points"]
-    if kind == "official":
-        return int(points["official"])
-    if kind == "media":
-        return int(points["media"])
-    if kind == "internal":
-        return int(points["internal"])
-    if kind == "traveler":
-        count = reports if isinstance(reports, int) and reports > 0 else 0
-        return min(int(points["traveler_max"]), int(points["traveler_per_report"]) * count)
-    return None
-
-
-def zone_for_score(score: int, config: Dict[str, Any]) -> str:
-    ranked = sorted(config["zones"], key=lambda zone: zone["min"], reverse=True)
-    for zone in ranked:
-        if score >= zone["min"]:
-            return zone["name"]
-    return "black"
-
-
-def host_of(url: str) -> str:
-    return (urlparse(url).hostname or "").lower()
-
-
-def is_official_publisher(url: str) -> bool:
+def is_official_publisher(url: str, config: Optional[Dict[str, Any]] = None) -> bool:
     """Bank, operator, or government site. Guide blogs do not qualify."""
-    host = host_of(url)
-    if not host:
-        return False
-    if host.endswith(".gov") or ".gov." in f".{host}" or host.endswith(".go.th") or host.endswith(".go.jp"):
-        return True
-    bare = host[4:] if host.startswith("www.") else host
-    return any(bare == suffix or bare.endswith("." + suffix) for suffix in _PUBLISHER_SUFFIXES)
+    active = config if config is not None else load_json(CONFIG_PATH)
+    return trust_is_official_publisher(url, active)
 
 
 def http_urls(fact: Dict[str, Any]) -> List[str]:
-    found: List[str] = []
-    source = fact.get("source")
-    if isinstance(source, str):
-        for token in source.split():
-            if token.startswith("http://") or token.startswith("https://"):
-                found.append(token)
-    seen = set()
-    unique = []
-    for url in found:
-        if url not in seen:
-            seen.add(url)
-            unique.append(url)
-    return unique
+    return trust_http_urls(fact)
 
 
-def _outlet_key(item: Dict[str, Any]) -> Optional[tuple]:
-    if item.get("repost_of"):
-        return None
-    person = str(item.get("person") or "").strip().lower()
-    outlet = str(item.get("outlet") or item.get("url") or "").strip().lower()
-    if outlet.startswith("http"):
-        outlet = host_of(outlet)
-    if person and outlet:
-        return ("person", person, outlet)
-    if person:
-        return ("person", person)
-    if outlet:
-        return ("outlet", outlet)
-    return None
-
-
-def confirmation_stats(fact: Dict[str, Any], as_of: date, fresh_days: int) -> Dict[str, Any]:
-    """Count distinct fresh confirmations.
-
-    A bare `reports` integer is not proof that the people or outlets differ.
-    """
-    items = fact.get("confirmations")
-    reports = fact.get("reports") if isinstance(fact.get("reports"), int) else 0
-    if not isinstance(items, list) or not items:
-        moment = fact_date(fact)
-        age = age_days(moment, as_of)
-        fresh = age is not None and 0 <= age <= fresh_days
-        return {"count": reports, "fresh_count": reports if fresh else 0, "independent": False}
-    keys = []
-    fresh_keys = []
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        key = _outlet_key(item)
-        if key is None:
-            continue
-        keys.append(key)
-        moment = parse_date(item.get("date"))
-        age = age_days(moment, as_of)
-        if age is not None and 0 <= age <= fresh_days:
-            fresh_keys.append(key)
-    distinct = list(dict.fromkeys(keys))
-    fresh_distinct = list(dict.fromkeys(fresh_keys))
-    return {"count": len(distinct), "fresh_count": len(fresh_distinct), "independent": True}
-
-
-def _rank(zone: Optional[str]) -> Optional[int]:
-    if zone not in ZONE_RANK:
-        return None
-    return ZONE_RANK[zone]
+def _rank(zone: Optional[str], config: Dict[str, Any]) -> Optional[int]:
+    return zone_rank(zone, config)
 
 
 def assess_fact(
@@ -249,13 +123,13 @@ def assess_fact(
     country: str,
     category: str,
     instruction_id: Optional[str] = None,
+    section_key: Optional[str] = None,
+    subsection: Optional[str] = None,
     http_by_url: Optional[Dict[str, Dict[str, Any]]] = None,
     check_http: bool = False,
 ) -> Dict[str, Any]:
     text = fact.get("text") or ""
     current = fact.get("zone")
-    kind = fact.get("source_kind")
-    agreement = fact.get("agreement")
     moment = fact_date(fact)
     days = age_days(moment, as_of)
     urls = http_urls(fact)
@@ -304,43 +178,55 @@ def assess_fact(
         "automatic": False,
         "upgrade_to": None,
         "owner_prompt": None,
+        "next_zone": None,
+        "drops_on": None,
+        "at_risk": False,
+        "at_risk_reason": None,
         "flags": flags,
     }
+    resolved = resolve_zone(
+        fact,
+        config=config,
+        as_of=as_of,
+        section_key=section_key,
+        subsection=subsection,
+        instruction_id=instruction_id,
+        http_results=http_results,
+    )
+    base["next_zone"] = resolved["next_zone"]
+    base["drops_on"] = resolved["drops_on"]
+    base["at_risk"] = resolved["at_risk"]
+    base["at_risk_reason"] = resolved["at_risk_reason"]
+    if resolved["at_risk"]:
+        flags.append("at_risk")
 
-    if gap:
-        base["reason"] = "Не исследовано: балл не ставится."
+    if gap or resolved["kind"] == "gap":
+        base["reason"] = resolved["reason"] or config["messages"]["gap"]
         base["suggested_action"] = "owner_decision"
-        return _finalize_http(base, flags)
-    if fact.get("fact_type") == "advice" or current == "advice-unsupported":
-        base["reason"] = "Совет: зона берётся из опор, формула баллов к нему не применяется."
+        return _finalize_http(base, flags, config)
+    if resolved["kind"] == "advice" or fact.get("fact_type") == "advice" or current in set(config["display"].get("extra_hidden_zones") or []):
+        base["reason"] = resolved["reason"] or config["messages"]["advice"]
         if fact.get("needs_owner_check"):
             base["suggested_action"] = "owner_manual_check"
         elif fact.get("decision_needed"):
             base["suggested_action"] = "owner_decision"
-        return _finalize_http(base, flags)
-
-    points = source_points(kind if isinstance(kind, str) else None, fact.get("reports"), config)
-    if points is None or agreement not in ("agree", "conflict"):
-        base["reason"] = "Не хватает типа источника или пометки согласия, зону по формуле не посчитать."
+        return _finalize_http(base, flags, config)
+    if resolved["kind"] != "scored":
+        base["reason"] = resolved["reason"] or config["messages"]["unscored"]
         base["suggested_action"] = "rerun"
-        return _finalize_http(base, flags)
+        return _finalize_http(base, flags, config)
 
-    fresh = freshness_points(days, config)
-    agree_points = int(config["agreement_points"][agreement])
-    score = points + fresh + agree_points
-    score_zone = zone_for_score(score, config)
-    computed = score_zone
-    if fact.get("refuted"):
-        computed = config["refuted_zone"]
-    elif fact.get("contradicted_by_own"):
-        cap = config["contradicted_by_own_zone"]
-        if _rank(score_zone) is not None and _rank(cap) is not None and _rank(score_zone) > _rank(cap):
-            computed = cap
-    elif fact.get("verified_by_us"):
-        limit = int(config["verified_by_us_max_days"])
-        if days is not None and 0 <= days <= limit:
-            computed = config["verified_by_us_zone"]
-            flags.append("own_experience_override")
+    score_zone = resolved["score_zone"]
+    computed = resolved["zone"]
+    score = resolved["score"]
+    fresh = (resolved["score_breakdown"] or {}).get("freshness")
+    if (
+        fact.get("verified_by_us")
+        and _rank(score_zone, config) is not None
+        and _rank(computed, config) is not None
+        and _rank(score_zone, config) < _rank(computed, config)
+    ):
+        flags.append("own_experience_override")
 
     stored_fresh = None
     breakdown = fact.get("score_breakdown")
@@ -355,9 +241,9 @@ def assess_fact(
     if computed != current:
         flags.append("zone_mismatch")
 
-    current_rank = _rank(current)
-    computed_rank = _rank(computed)
-    score_rank = _rank(score_zone)
+    current_rank = _rank(current, config)
+    computed_rank = _rank(computed, config)
+    score_rank = _rank(score_zone, config)
     if current_rank is None or computed_rank is None:
         base["status"] = "inconclusive"
         base["reason"] = "Записанная зона вне шкалы green/yellow/red/black."
@@ -385,51 +271,68 @@ def assess_fact(
         http_results=http_results,
         check_http=check_http,
     )
+    if resolved["at_risk"] and action not in ("downgrade", "upgrade_candidate"):
+        action = config["early_warning"]["refresh_action"]
+        automatic = False
+        reason = resolved["at_risk_reason"] or reason
+        prompt = resolved["owner_prompt"] or prompt
     base["suggested_action"] = action
     base["automatic"] = automatic
     base["upgrade_to"] = upgrade_to
-    base["owner_prompt"] = prompt
+    base["owner_prompt"] = prompt or resolved["owner_prompt"]
     base["reason"] = reason
-    if action == "owner_decision" and prompt:
+    if base["suggested_action"] == "owner_decision" and base["owner_prompt"]:
         flags.append("traveler_green_needs_owner")
-    return _finalize_http(base, flags)
+    return _finalize_http(base, flags, config)
 
 
-def _finalize_http(row: Dict[str, Any], flags: List[str]) -> Dict[str, Any]:
+def _finalize_http(row: Dict[str, Any], flags: List[str], config: Dict[str, Any]) -> Dict[str, Any]:
+    rules = config["http"]
+    excluded = set(rules["failure_exclude_statuses"])
+    minimum = int(rules["failure_min_status"])
     for result in row["http_results"]:
         code = result.get("status_code")
         error = result.get("error")
         if error and error != "not_checked":
             flags.append("http_inconclusive")
-        elif isinstance(code, int) and code >= 400 and code not in (401, 403):
-            flags.append("http_failed")
-        elif isinstance(code, int) and code in (401, 403):
+        elif isinstance(code, int) and code in excluded:
             flags.append("http_blocked")
+        elif isinstance(code, int) and code >= minimum:
+            flags.append("http_failed")
     row["flags"] = sorted(set(flags))
     if row["suggested_action"] is not None and row["suggested_action"] not in ACTIONS:
         raise RuntimeError(f"unexpected action {row['suggested_action']}")
     return row
 
 
-def _page_opened(results: Sequence[Dict[str, Any]]) -> bool:
-    return any(isinstance(item.get("status_code"), int) and 200 <= item["status_code"] < 300 for item in results)
+def _status_ok(code: Any, config: Dict[str, Any]) -> bool:
+    rules = config["http"]
+    return isinstance(code, int) and int(rules["success_min_status"]) <= code <= int(rules["success_max_status"])
 
 
-def _page_confirms(results: Sequence[Dict[str, Any]]) -> bool:
-    return any(item.get("content_confirmed") and isinstance(item.get("status_code"), int) and 200 <= item["status_code"] < 300 for item in results)
+def _page_opened(results: Sequence[Dict[str, Any]], config: Dict[str, Any]) -> bool:
+    return any(_status_ok(item.get("status_code"), config) for item in results)
 
 
-def _http_broken(results: Sequence[Dict[str, Any]]) -> bool:
-    return any(isinstance(item.get("status_code"), int) and item["status_code"] in (404, 410) for item in results)
+def _page_confirms(results: Sequence[Dict[str, Any]], config: Dict[str, Any]) -> bool:
+    return any(item.get("content_confirmed") and _status_ok(item.get("status_code"), config) for item in results)
 
 
-def _http_retry(results: Sequence[Dict[str, Any]]) -> bool:
+def _http_broken(results: Sequence[Dict[str, Any]], config: Dict[str, Any]) -> bool:
+    broken = set(config["http"]["broken_statuses"])
+    return any(isinstance(item.get("status_code"), int) and item["status_code"] in broken for item in results)
+
+
+def _http_retry(results: Sequence[Dict[str, Any]], config: Dict[str, Any]) -> bool:
+    rules = config["http"]
+    retry_codes = set(rules["retry_statuses"])
+    retry_min = int(rules["retry_min_status"])
     for item in results:
         code = item.get("status_code")
         error = item.get("error")
         if error and error != "not_checked":
             return True
-        if isinstance(code, int) and (code >= 500 or code == 429):
+        if isinstance(code, int) and (code >= retry_min or code in retry_codes):
             return True
     return False
 
@@ -447,14 +350,20 @@ def _action(
     http_results: Sequence[Dict[str, Any]],
     check_http: bool,
 ) -> tuple:
-    current_rank = _rank(current)
-    computed_rank = _rank(computed)
+    current_rank = _rank(current, config)
+    computed_rank = _rank(computed, config)
     fresh_days = fresh_limit_days(config)
     stats = confirmation_stats(fact, as_of, fresh_days)
-    official_urls = [url for url in urls if is_official_publisher(url)]
-    traveler_only = fact.get("source_kind") == "traveler" and not official_urls
+    official = [url for url in urls if is_official_publisher(url, config)]
+    traveler_kind = config["source_kinds"]["traveler"]
+    green = config["upgrade"]["green_zone"]
+    yellow = config["upgrade"]["yellow_zone"]
+    needed = int(config["upgrade"]["yellow_min_independent_confirmations"])
+    green_rank = _rank(green, config)
+    yellow_rank = _rank(yellow, config)
+    traveler_only = fact.get("source_kind") == traveler_kind and not official
     count_for_prompt = stats["fresh_count"] if stats["independent"] else stats["count"]
-    green_prompt = f"{count_for_prompt} подтверждений, поднять до зелёного?"
+    green_prompt = config["upgrade"]["owner_prompt_template"].format(n=count_for_prompt)
 
     if current_rank is not None and computed_rank is not None and current_rank > computed_rank:
         return (
@@ -462,41 +371,42 @@ def _action(
             True,
             None,
             None,
-            f"Записана зона {current}, формула на {as_of.isoformat()} даёт {computed}. Понижение автоматическое.",
+            config["messages"]["downgrade"].format(stored=current, zone=computed, as_of=as_of.isoformat()),
         )
 
-    raise_green = traveler_only and score_zone == "green" and current_rank is not None and current_rank < ZONE_RANK["green"]
+    raise_green = traveler_only and score_zone == green and current_rank is not None and green_rank is not None and current_rank < green_rank
+    score_rank = _rank(score_zone, config)
     auto_yellow = (
         stats["independent"]
-        and stats["fresh_count"] >= 3
+        and stats["fresh_count"] >= needed
         and current_rank is not None
-        and current_rank < ZONE_RANK["yellow"]
-        and _rank(score_zone) is not None
-        and _rank(score_zone) >= ZONE_RANK["yellow"]
+        and yellow_rank is not None
+        and current_rank < yellow_rank
+        and score_rank is not None
+        and score_rank >= yellow_rank
     )
     if raise_green and auto_yellow:
         return (
             "upgrade_candidate",
             True,
-            "yellow",
+            yellow,
             green_prompt,
-            "Три независимых свежих подтверждения позволяют поднять только до жёлтого. "
-            + green_prompt,
+            config["messages"]["upgrade"].format(stored=current, zone=yellow) + " " + green_prompt,
         )
     if raise_green:
         why = "Независимость людей и площадок в данных не размечена, поэтому жёлтый сам не ставится. " if not stats["independent"] else ""
         return ("owner_decision", False, None, green_prompt, why + green_prompt)
 
-    if official_urls and score_zone == "green" and current_rank is not None and current_rank < ZONE_RANK["green"]:
-        if _page_confirms(http_results):
+    if official and score_zone == green and current_rank is not None and green_rank is not None and current_rank < green_rank:
+        if _page_confirms(http_results, config):
             return (
                 "upgrade_candidate",
                 True,
-                "green",
+                green,
                 None,
                 "Официальная страница открылась и сверка текста разрешена. Повышение до зелёного автоматическое.",
             )
-        if check_http and _page_opened(http_results):
+        if check_http and _page_opened(http_results, config):
             return (
                 "owner_manual_check",
                 False,
@@ -504,30 +414,31 @@ def _action(
                 None,
                 "Официальная страница открылась. Текст факта со страницей не сверен, до зелёного автоматически не поднимаем.",
             )
-        if check_http and _http_broken(http_results):
+        if check_http and _http_broken(http_results, config):
             return ("fix_link", False, None, None, "Официальная ссылка не открывается.")
-        if check_http and _http_retry(http_results):
+        if check_http and _http_retry(http_results, config):
             return ("rerun", False, None, None, "Официальную страницу не удалось прочитать, прогон нужно повторить.")
         if not check_http:
             return ("rerun", False, None, None, "Чтобы решить зелёный, нужно открыть официальную страницу. В этом прогоне HTTP выключен.")
 
     if (
         stats["independent"]
-        and stats["fresh_count"] >= 3
+        and stats["fresh_count"] >= needed
         and current_rank is not None
-        and current_rank < ZONE_RANK["yellow"]
-        and _rank(score_zone) is not None
-        and _rank(score_zone) >= ZONE_RANK["yellow"]
+        and yellow_rank is not None
+        and current_rank < yellow_rank
+        and score_rank is not None
+        and score_rank >= yellow_rank
     ):
         return (
             "upgrade_candidate",
             True,
-            "yellow",
+            yellow,
             None,
-            "Три независимых свежих подтверждения. Повышение до жёлтого автоматическое. До зелёного этот порог не дотягивает.",
+            config["messages"]["upgrade"].format(stored=current, zone=yellow),
         )
 
-    if traveler_only and current == "green" and score_zone == "green":
+    if traveler_only and current == green and score_zone == green:
         shown = stats["fresh_count"] if stats["independent"] else stats["count"]
         return (
             "owner_decision",
@@ -543,7 +454,7 @@ def _action(
         return ("owner_decision", False, None, None, str(fact.get("decision_needed")))
     if fact.get("unknown_zone"):
         return ("owner_manual_check", False, None, None, "Внутренняя пометка, что проверку не закрыли.")
-    if fact.get("verified_by_us") and _rank(score_zone) is not None and current_rank is not None and _rank(score_zone) < current_rank:
+    if fact.get("verified_by_us") and score_rank is not None and current_rank is not None and score_rank < current_rank:
         return (
             "owner_manual_check",
             False,
@@ -551,11 +462,13 @@ def _action(
             None,
             f"По баллам зона {score_zone} (сумма без надбавки). В файле {current} из-за «проверено нами».",
         )
-    if not public_source_url(fact) and current in ("green", "yellow") and fact.get("source_kind") != "internal":
+    visible = {zone["name"] for zone in config["zones"] if zone["min"] >= config["display"]["default_min"]}
+    if not public_source_url(fact) and current in visible and fact.get("source_kind") != config["source_kinds"]["internal"]:
         return ("fix_link", False, None, None, "На карточке, которую видно сразу, нет публичной ссылки.")
-    if _http_broken(http_results):
-        return ("fix_link", False, None, None, "Ссылка источника отвечает 404 или 410.")
-    if _http_retry(http_results):
+    if _http_broken(http_results, config):
+        broken = ", ".join(str(code) for code in config["http"]["broken_statuses"])
+        return ("fix_link", False, None, None, f"Ссылка источника отвечает {broken}.")
+    if _http_retry(http_results, config):
         return ("rerun", False, None, None, "Источник не ответил, проверку ссылки нужно повторить.")
     if current != computed and current_rank is not None and computed_rank is not None and current_rank < computed_rank:
         return (
@@ -595,6 +508,8 @@ def iter_records(bundle: Dict[str, Any], *, scope: str, country: Optional[str]) 
                     "country": slug,
                     "category": SECTION_CATEGORY[key],
                     "scope": f"{slug}/{key}",
+                    "section_key": key,
+                    "subsection": None,
                     "instruction_id": None,
                 }
             subsections = section.get("subsections") or {}
@@ -607,21 +522,15 @@ def iter_records(bundle: Dict[str, Any], *, scope: str, country: Optional[str]) 
                             "country": slug,
                             "category": category,
                             "scope": f"{slug}/{key}/{name}",
+                            "section_key": key,
+                            "subsection": name,
                             "instruction_id": None,
                         }
         for instruction_id in sorted(instructions):
             instruction = instructions[instruction_id]
             if slug not in (instruction.get("countries") or []):
                 continue
-            section_key = {
-                "mts_tr_qr": "2_pay_on_site",
-                "tbank_qr_abroad": "2_pay_on_site",
-                "mts_china_wallets": "3_local_wallets_cards",
-                "vtb_china_wallets": "3_local_wallets_cards",
-                "wechat_pay": "3_local_wallets_cards",
-                "alipay": "3_local_wallets_cards",
-                "tbc_georgia": "3_local_wallets_cards",
-            }.get(instruction_id, "pay_on_site")
+            section_key = INSTRUCTION_SECTION.get(instruction_id)
             for index, step in enumerate(instruction.get("steps") or [], start=1):
                 if not isinstance(step, dict):
                     continue
@@ -629,8 +538,10 @@ def iter_records(bundle: Dict[str, Any], *, scope: str, country: Optional[str]) 
                 yield {
                     "fact": step,
                     "country": slug,
-                    "category": SECTION_CATEGORY.get(section_key, section_key),
+                    "category": SECTION_CATEGORY.get(section_key, section_key or ""),
                     "scope": f"instruction/{instruction_id}/{step_n}",
+                    "section_key": section_key,
+                    "subsection": None,
                     "instruction_id": instruction_id,
                 }
 
@@ -691,6 +602,8 @@ def build_report(
             country=record["country"],
             category=record["category"],
             instruction_id=record["instruction_id"],
+            section_key=record.get("section_key"),
+            subsection=record.get("subsection"),
             http_by_url=http_by_url,
             check_http=check_http,
         )
@@ -710,9 +623,12 @@ def build_report(
         "rules": "config/trust_config.json",
         "upgrade_rule": {
             "downgrade": "automatic",
-            "yellow": "automatic when at least 3 independent fresh confirmations",
+            "yellow_min_independent_confirmations": int(config["upgrade"]["yellow_min_independent_confirmations"]),
+            "yellow": "automatic when independent fresh confirmations reach yellow_min_independent_confirmations",
             "green": "automatic only when an official publisher page opens and content_confirmed is true",
             "traveler_green": "owner_decision, prompt '{n} подтверждений, поднять до зелёного?'",
+            "early_warning_share": config["early_warning"]["share"],
+            "refresh_action": config["early_warning"]["refresh_action"],
         },
         "summary": summary,
         "facts": facts,
@@ -735,7 +651,16 @@ def _summary(facts: Sequence[Dict[str, Any]]) -> Dict[str, int]:
         "unknown_zone": count(lambda fact: "unknown_zone" in fact["flags"]),
         "no_public_source": count(lambda fact: "no_public_source" in fact["flags"]),
         "green_prompts": count(lambda fact: bool(fact.get("owner_prompt"))),
+        "at_risk": count(lambda fact: fact.get("at_risk")),
     }
+
+
+def _yellow_upgrade_sentence(report: Dict[str, Any]) -> str:
+    rule = report.get("upgrade_rule") or {}
+    needed = rule.get("yellow_min_independent_confirmations")
+    if needed is None:
+        return ""
+    return f"До жёлтого само — только при {needed} независимых свежих подтверждениях. "
 
 
 def render_text(report: Dict[str, Any]) -> str:
@@ -744,9 +669,10 @@ def render_text(report: Dict[str, Any]) -> str:
         "Отчёт проверки фактов",
         f"Дата расчёта: {report['as_of']}",
         f"Охват: {report['scope_label']}",
-        "Данные не менялись. Понижение в подсказках автоматическое. "
-        "До жёлтого само — только при 3 независимых свежих подтверждениях. "
-        "До зелёного само — только если сайт банка, оператора или ведомства открылся и текст сверен. "
+        "Данные не менялись. Зона в приложении считается при выдаче, записанная зона — только вход. "
+        "Понижение в подсказках автоматическое. "
+        + _yellow_upgrade_sentence(report)
+        + "До зелёного само — только если сайт банка, оператора или ведомства открылся и текст сверен. "
         "Отзывы сами зелёный не ставят.",
         "",
         "Сводка",
@@ -761,6 +687,7 @@ def render_text(report: Dict[str, Any]) -> str:
         f"Без публичной ссылки: {summary['no_public_source']}",
         f"Внутренние пометки: {summary['unknown_zone']}",
         f"Вопросов «поднять до зелёного»: {summary['green_prompts']}",
+        f"Скоро съедут: {summary['at_risk']}",
         "",
     ]
     lines.extend(_section(report, "Не сошлось с формулой", lambda fact: fact["status"] == "fail"))
@@ -769,6 +696,7 @@ def render_text(report: Dict[str, Any]) -> str:
     lines.extend(_section(report, "Без публичной ссылки", lambda fact: "no_public_source" in fact["flags"]))
     lines.extend(_section(report, "Внутренние пометки", lambda fact: "unknown_zone" in fact["flags"]))
     lines.extend(_section(report, "Нужно решение", lambda fact: "decision_needed" in fact["flags"]))
+    lines.extend(_risk_lines(report))
     prompts = [fact for fact in report["facts"] if fact.get("owner_prompt")]
     lines.append("Поднять до зелёного?")
     if not prompts:
@@ -789,6 +717,23 @@ def render_text(report: Dict[str, Any]) -> str:
             lines.append(f"   {fact['text']}")
     lines.append("")
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _risk_lines(report: Dict[str, Any]) -> List[str]:
+    rows = [fact for fact in report["facts"] if fact.get("at_risk")]
+    lines = ["Скоро съедут"]
+    if not rows:
+        lines.append("Таких фактов нет.")
+    else:
+        for fact in rows:
+            shown = fact.get("computed_zone") or fact.get("current_zone")
+            lines.append(
+                f"- [{fact['fact_id']}] {shown} → {fact.get('next_zone') or '—'} · "
+                f"{fact.get('drops_on') or 'без даты'} · {fact.get('at_risk_reason') or ''}"
+            )
+            lines.append(f"   {fact['text']}")
+    lines.append("")
+    return lines
 
 
 def _section(report: Dict[str, Any], title: str, predicate) -> List[str]:

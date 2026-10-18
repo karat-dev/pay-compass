@@ -23,15 +23,15 @@ import {
 
 const ORDER_HINT = "Сначала подтверждённые, внутри группы — более свежая проверка выше.";
 
-function factCard(fact) {
-  const zone = fact.gap ? "gap" : (fact.zone || "yellow");
+function factCard(fact, catalog) {
+  const zone = fact.gap && catalog && catalog.gap_zone ? catalog.gap_zone : (fact.zone || (catalog && catalog.missing_zone) || "");
   const source = fact.source_url
     ? `<a class="source-link" href="${esc(fact.source_url)}" data-action="link" data-url="${esc(fact.source_url)}">Источник</a>`
     : `<span>Официальной ссылки нет.</span>`;
   return `<article class="fact${fact.hidden ? " is-unverified" : ""}${fact.gap ? " is-gap" : ""}" data-zone="${esc(zone)}" data-fact-id="${esc(fact.id)}">
     <div class="fact-top">
       <span class="zone-dot" aria-hidden="true"></span>
-      <span class="zone-name">${esc(zoneName(zone))}</span>
+      <span class="zone-name">${esc(zoneName(zone, catalog))}</span>
       <span class="fact-meta">${esc(factMeta(fact))}</span>
     </div>
     <p class="fact-text">${esc(fact.text)}</p>
@@ -147,11 +147,10 @@ function introScreen(state) {
     body = `<h2>Платите за границей без сюрпризов</h2>
       <p class="lead">Подскажем, как платить в стране поездки именно вам: что работает с вашим банком, где нужна зарубежная карта или наличные, как перевести деньги. У каждого факта — дата проверки и источник.</p>`;
   } else if (step === 1) {
+    const legend = (state.catalog && state.catalog.zone_legend) || [];
     body = `<h2>Мы честно показываем, насколько уверены</h2>
       <ul class="intro-zones">
-        <li>${zoneMarks(["green"])}<span>Зелёный — подтверждено официальным источником или нашим личным опытом, проверено недавно.</span></li>
-        <li>${zoneMarks(["yellow"])}<span>Жёлтый — скорее всего верно, но источник слабее или проверка давняя.</span></li>
-        <li>${zoneMarks(["red", "black"])}<span>Красный и чёрный — мало подтверждений, устарело или опровергнуто. Скрыты, открываются кнопкой «Показать непроверенное».</span></li>
+        ${legend.map((item) => `<li>${zoneMarks(item.zones)}<span>${esc(item.text)}</span></li>`).join("")}
       </ul>
       <p class="intro-fine">Рядом с каждым фактом — дата проверки. Где данных нет, честно пишем «не исследовано».</p>`;
   } else if (step === 2) {
@@ -390,8 +389,8 @@ function groupTitle(group) {
   return `<p class="fact-group-title"><span class="zone-dot" data-zone="${esc(group.zone)}" aria-hidden="true"></span><span>${esc(group.title)}</span><span class="count">${group.facts.length}</span></p>`;
 }
 
-function factGroupHtml(facts, renderFact) {
-  return groupFacts(facts).map((group) => `<div class="fact-group" data-zone="${esc(group.zone)}">${groupTitle(group)}${group.facts.map(renderFact).join("")}</div>`).join("");
+function factGroupHtml(facts, renderFact, catalog) {
+  return groupFacts(facts, catalog).map((group) => `<div class="fact-group" data-zone="${esc(group.zone)}">${groupTitle(group)}${group.facts.map(renderFact).join("")}</div>`).join("");
 }
 
 function orderHint() {
@@ -414,14 +413,15 @@ function checklist(state, country) {
     const checked = Boolean(state.progress[fact.id] && state.progress[fact.id].completed);
     return `<div class="check${checked ? " is-done" : ""}">
       <button type="button" class="tick" data-action="check" data-id="${esc(fact.id)}" aria-pressed="${checked ? "true" : "false"}" aria-label="Отметить пункт">${checked ? icon("check") : ""}</button>
-      <div class="check-body">${factCard(fact)}</div>
+      <div class="check-body">${factCard(fact, state.catalog)}</div>
     </div>`;
   };
   const visibleRows = factGroupHtml(
     visibleFacts(facts.filter((fact) => !fact.gap), false).concat(facts.filter((fact) => fact.gap)),
-    (fact) => (fact.gap ? factCard(fact) : checkRow(fact)),
+    (fact) => (fact.gap ? factCard(fact, state.catalog) : checkRow(fact)),
+    state.catalog,
   );
-  const hiddenRows = show ? factGroupHtml(facts.filter((fact) => !fact.gap && fact.hidden), checkRow) : "";
+  const hiddenRows = show ? factGroupHtml(facts.filter((fact) => !fact.gap && fact.hidden), checkRow, state.catalog) : "";
   const toggle = hasHidden(facts)
     ? `<button type="button" class="ghost wide" data-action="unverified" data-scope="checklist">${show ? "Скрыть непроверенное" : "Показать непроверенное"}</button>`
     : "";
@@ -499,8 +499,8 @@ function sectionScreen(state, screen) {
     })),
   );
   const hidden = pools.some((pool) => hasHidden(pool.facts));
-  const visibleBlocks = pools.map((pool) => poolMarkup(pool)).join("");
-  const hiddenBlocks = show ? pools.map((pool) => hiddenMarkup(pool)).join("") : "";
+  const visibleBlocks = pools.map((pool) => poolMarkup(pool, state.catalog)).join("");
+  const hiddenBlocks = show ? pools.map((pool) => hiddenMarkup(pool, state.catalog)).join("") : "";
   const guides = (section.instructions || []).map((id) => instructionTeaser(state, country.slug, id)).join("");
   const toggle = hidden
     ? `<button type="button" class="ghost wide" data-action="unverified" data-scope="${esc(scope)}">${show ? "Скрыть непроверенное" : "Показать непроверенное"}</button>`
@@ -522,7 +522,7 @@ function sectionScreen(state, screen) {
   </section>`;
 }
 
-function poolMarkup(pool) {
+function poolMarkup(pool, catalog) {
   const title = pool.title ? `<h3>${esc(pool.title)}</h3>` : "";
   if (pool.note) return `${title}<p class="hint">${esc(pool.note)}</p>`;
   const facts = (pool.facts || []).filter((fact) => !fact.hidden);
@@ -530,14 +530,14 @@ function poolMarkup(pool) {
     if (!pool.title || (pool.facts || []).some((fact) => fact.hidden)) return "";
     return `${title}<p class="hint">В зелёной и жёлтой зоне фактов нет.</p>`;
   }
-  return `${title}${factGroupHtml(facts, factCard)}`;
+  return `${title}${factGroupHtml(facts, (fact) => factCard(fact, catalog), catalog)}`;
 }
 
-function hiddenMarkup(pool) {
+function hiddenMarkup(pool, catalog) {
   const facts = (pool.facts || []).filter((fact) => fact.hidden);
   if (!facts.length) return "";
   const title = pool.title ? `<h3>${esc(pool.title)}</h3>` : "";
-  return `${title}${factGroupHtml(facts, factCard)}`;
+  return `${title}${factGroupHtml(facts, (fact) => factCard(fact, catalog), catalog)}`;
 }
 
 function instructionTeaser(state, slug, id) {
@@ -587,7 +587,7 @@ function instructionScreen(state, screen) {
     ${step.stage ? `<p class="stage">${esc(step.stage)}</p>` : ""}
     ${intro}
     ${prereq}
-    ${factCard(step)}
+    ${factCard(step, state.catalog)}
     <button type="button" class="ghost wide" data-action="step-done" data-id="${esc(step.id)}" data-instruction="${esc(instruction.id)}" aria-pressed="${checked ? "true" : "false"}">${checked ? "Шаг сделан" : "Отметить шаг"}</button>
     ${hasHidden(instruction.steps) ? `<button type="button" class="text-btn" data-action="unverified" data-scope="${esc(scope)}">${show ? "Скрыть непроверенное" : "Показать непроверенное"}</button>` : ""}
     ${footerBits.length ? `<div class="note">${footerBits.join("")}</div>` : ""}
