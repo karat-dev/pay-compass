@@ -321,11 +321,25 @@ def test_telegram_message_has_counts_and_stays_within_limit():
     assert any("https://example.test/run/99" in part for part in parts)
 
 
-def test_workflow_is_manual_and_does_not_enable_dev_auth():
+def test_blank_scope_means_the_whole_guide(monkeypatch):
+    monkeypatch.setenv("FACT_CHECK_SCOPE", "")
+    monkeypatch.setenv("FACT_CHECK_COUNTRY", "")
+    args = report.parse_args([])
+    assert args.scope == "all"
+    assert args.country == ""
+
+
+def test_workflow_schedule_and_push_stay_read_only():
     text = WORKFLOW.read_text(encoding="utf-8")
     script = (ROOT / "scripts" / "fact_check_report.py").read_text(encoding="utf-8")
     assert "workflow_dispatch:" in text
-    assert "schedule:" not in text
+    assert "cron: '0 6 * * 1'" in text
+    assert "branches:\n      - main" in text
+    assert "database/data/countries.json" in text
+    assert "config/trust_config.json" in text
+    assert "inputs.scope || 'all'" in text
+    assert "contents: read" in text
+    assert "contents: write" not in text
     assert "upload-artifact@v4" in text
     assert "TELEGRAM_BOT_TOKEN" in text
     assert "OWNER_TELEGRAM_CHAT_ID" in text

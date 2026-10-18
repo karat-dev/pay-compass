@@ -16,6 +16,15 @@ on:
         required: false
         type: string
         default: ""
+  schedule:
+    # Monday 09:00 Moscow (UTC+3). GitHub Actions cron is UTC.
+    - cron: '0 6 * * 1'
+  push:
+    branches:
+      - main
+    paths:
+      - database/data/countries.json
+      - config/trust_config.json
 
 permissions:
   contents: read
@@ -29,8 +38,9 @@ jobs:
 
       - name: Build fact-check report
         env:
-          FACT_CHECK_SCOPE: ${{ inputs.scope }}
-          FACT_CHECK_COUNTRY: ${{ inputs.country }}
+          # schedule and push have no inputs; a blank scope means the whole guide
+          FACT_CHECK_SCOPE: ${{ github.event_name == 'workflow_dispatch' && inputs.scope || 'all' }}
+          FACT_CHECK_COUNTRY: ${{ github.event_name == 'workflow_dispatch' && inputs.country || '' }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           OWNER_TELEGRAM_CHAT_ID: ${{ secrets.OWNER_TELEGRAM_CHAT_ID }}
         run: python3 scripts/fact_check_report.py --json fact_check_report.json --text fact_check_report.txt --http --send-telegram
