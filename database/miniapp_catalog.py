@@ -294,9 +294,14 @@ def _public_route(route_id: str = "mow_hkg_via_pek") -> Dict[str, Any]:
     partner_urls = {offer["url"] for offer in public_offers()}
     plain, links = html_to_plain(route.get("text") or "")
     airlines = []
+    seen_airlines = set()
     for link in links:
+        name = link["label"]
+        if name in seen_airlines:
+            continue
+        seen_airlines.add(name)
         airlines.append({
-            "name": link["label"],
+            "name": name,
             "url": link["url"],
             "placeholder": _is_placeholder_url(link["url"]),
         })

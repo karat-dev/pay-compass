@@ -286,12 +286,47 @@ function unmatchedRoute(state, trip) {
   </article>`;
 }
 
-function routeCard(state, route) {
-  if (!route) return "";
-  const names = route.airlines.map((item) => `<span>${esc(item.name)}</span>`).join('<span class="dot">·</span>');
-  const placeholder = route.airlines.some((item) => item.placeholder)
+function passportLine(text, profile) {
+  const citizenship = (profile && profile.citizenship) || "ru";
+  if (citizenship !== "ru" || !text || text.includes("паспорта РФ")) return text || "";
+  return text.replaceAll("Виза не нужна", "Виза не нужна для паспорта РФ");
+}
+
+function airlineFold(route) {
+  const airlines = route.airlines || [];
+  if (!airlines.length) return "";
+  const names = airlines.map((item) => `<span>${esc(item.name)}</span>`).join('<span class="dot">·</span>');
+  const placeholder = airlines.some((item) => item.placeholder)
     ? `<p class="hint">Страницы авиакомпаний ещё не подключены — пока только названия.</p>`
     : "";
+  return `<details class="airline-fold">
+    <summary>Авиакомпании на маршруте (${airlines.length})</summary>
+    <div class="airline-row">${names}</div>
+    ${placeholder}
+  </details>`;
+}
+
+function compassText(state, text) {
+  const pattern = /Компас оплаты\s*→\s*([^.\n]+)/g;
+  let html = "";
+  let cursor = 0;
+  for (const match of String(text || "").matchAll(pattern)) {
+    html += esc(text.slice(cursor, match.index));
+    const name = match[1].trim();
+    const country = (state.catalog.countries || []).find((item) => splitName(item.name).title === name);
+    if (country) {
+      html += `<button type="button" class="jump" data-action="open-section" data-slug="${esc(country.slug)}" data-key="2_pay_on_site">${esc(match[0].trim())}</button>`;
+    } else {
+      html += esc(match[0]);
+    }
+    cursor = match.index + match[0].length;
+  }
+  html += esc(String(text || "").slice(cursor));
+  return html;
+}
+
+function routeCard(state, route) {
+  if (!route) return "";
   const open = state.openRoute;
   const chips = route.sections.map((section) => {
     const on = open === section.id;
@@ -308,9 +343,8 @@ function routeCard(state, route) {
     <h2>${esc(route.title)}</h2>
     ${iata}
     <div class="ticket-rule"></div>
-    ${route.summary.map((paragraph) => `<p class="ticket-copy">${esc(paragraph)}</p>`).join("")}
-    <div class="airline-row">${names}</div>
-    ${placeholder}
+    ${route.summary.map((paragraph) => `<p class="ticket-copy">${esc(passportLine(paragraph, state.profile))}</p>`).join("")}
+    ${airlineFold(route)}
     ${link}
     <div class="chip-row">${chips}</div>
     ${current ? routeCopy(state, current) : ""}
@@ -338,7 +372,7 @@ function routeCopy(state, current) {
     text = text.slice(0, at).trim();
   }
   const disclosure = links.some((link) => link.partner) ? `<p class="partner-line">${partnerNote(state)}</p>` : "";
-  return `<div class="route-copy"><p>${esc(text)}</p>${anchors ? `<p class="source">${anchors}</p>` : ""}${disclosure}${tail ? `<p>${esc(tail)}</p>` : ""}</div>`;
+  return `<div class="route-copy"><p>${compassText(state, passportLine(text, state.profile))}</p>${anchors ? `<p class="source">${anchors}</p>` : ""}${disclosure}${tail ? `<p>${compassText(state, passportLine(tail, state.profile))}</p>` : ""}</div>`;
 }
 
 function checklistOffers(state) {
@@ -597,6 +631,9 @@ function profileScreen(state) {
     ["notify_alerts", "Изменения по оплате"],
   ].map(([key, label]) => `<button type="button" class="choice${profile[key] ? " is-on" : ""}" data-action="notify" data-key="${key}" aria-pressed="${profile[key] ? "true" : "false"}"><span>${esc(label)}</span>${profile[key] ? icon("check") : ""}</button>`).join("");
   return `<section class="screen">
+    <h2>Паспорт</h2>
+    <div class="stack">${choice("citizenship", "ru", "Гражданство РФ", (profile.citizenship || "ru") === "ru")}</div>
+    <p class="hint">Визы и правила въезда считаем для граждан РФ. Другие паспорта появятся позже.</p>
     <h2>Банк</h2>
     <div class="stack">${banks}</div>
     <h2>Город вылета</h2>
