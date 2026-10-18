@@ -176,6 +176,9 @@ def _render_fields(measurement: Dict[str, Any], rules: Dict[str, Any]) -> Dict[s
         fields["slot_label"] = measurement["slot_label"]
     if measurement.get("service"):
         fields["service"] = measurement["service"]
+    for key in ("direction", "pickup", "distance", "tolls_label"):
+        if measurement.get(key):
+            fields[key] = measurement[key]
     _extra_numbers(measurement, rules, fields)
     kind = measurement.get("kind")
     if kind == "date":
@@ -238,6 +241,7 @@ def measurement_fact(measurement_id: str, measurement: Dict[str, Any], rules: Di
         "date_basis": measurement.get("date_basis"),
         "agreement": measurement.get("agreement") or "agree",
         "reports": measurement.get("reports") or 0,
+        "verified_by_us": bool(measurement.get("verified_by_us")),
         "source_user_facing": measurement.get("source_user_facing", True),
         "checked_at": as_of.isoformat(),
         "volatility_class": _engine_class(measurement, rules),
@@ -428,6 +432,81 @@ def _spec_id(spec: Any) -> str:
     return spec["id"]
 
 
+def _grab_minutes(fact: Dict[str, Any]) -> Optional[int]:
+    if fact.get("value_min") is not None and fact.get("value_max") is not None:
+        return None
+    value = fact.get("value")
+    if isinstance(value, int):
+        return value
+    return None
+
+
+def _cross_check_fact(spec: Dict[str, Any], facts: Dict[str, Dict[str, Any]], rules: Dict[str, Any], as_of: date) -> Dict[str, Any]:
+    """Say whether every Grab route minute sits inside each named map range."""
+    supports = []
+    grab_minutes = []
+    for measurement_id in spec["grab_inputs"]:
+        fact = facts.get(measurement_id)
+        minutes = _grab_minutes(fact) if fact is not None else None
+        if fact is None or is_gap(fact) or minutes is None:
+            gap = _gap(rules["formulas"]["allowance_gap"].format(pair=spec["direction"]))
+            gap["rule_id"] = spec["id"]
+            return gap
+        supports.append(fact)
+        grab_minutes.append(minutes)
+    phrases = []
+    for measurement_id in spec["map_inputs"]:
+        fact = facts.get(measurement_id)
+        if fact is None or is_gap(fact) or fact.get("value_min") is None or fact.get("value_max") is None:
+            gap = _gap(rules["formulas"]["allowance_gap"].format(pair=spec["direction"]))
+            gap["rule_id"] = spec["id"]
+            return gap
+        supports.append(fact)
+        low = int(fact["value_min"])
+        high = int(fact["value_max"])
+        inside = all(low <= minutes <= high for minutes in grab_minutes)
+        key = "grab_inside_map" if inside else "grab_outside_map"
+        phrases.append(rules["formulas"][key].format(slot=fact.get("slot_label") or ""))
+    text = rules["formulas"]["grab_cross_check"].format(
+        direction=spec["direction"],
+        when_label=spec.get("when_label") or "",
+        slots=rules["slot_joiner"].join(phrases),
+    )
+    zone = _worst_zone([fact.get("zone") for fact in supports], TRUST_CONFIG)
+    dates = [fact_moment(fact) for fact in supports]
+    dates = [item for item in dates if item is not None]
+    verified = min(dates).isoformat() if dates else as_of.isoformat()
+    source = next((fact.get("source") for fact in supports if fact.get("source")), None)
+    raw = {
+        "text": text,
+        "status": _status_for(zone),
+        "fact_type": "advice",
+        "zone": zone,
+        "score": None,
+        "score_breakdown": None,
+        "date_verified": verified,
+        "source": source,
+        "source_kind": TRUST_CONFIG["source_kinds"].get("internal"),
+        "source_user_facing": False,
+        "verified_by_us": True,
+        "agreement": "agree",
+        "supports_resolved": [
+            {"text": fact.get("text"), "zone": fact.get("zone"), "score": fact.get("score")}
+            for fact in supports
+        ],
+        "status_derived_from": "advice_supports",
+        "reason": "сверка котировки и диапазона карты; зона = наихудшая из опор",
+        "checked_at": as_of.isoformat(),
+        "volatility_class": supports[0].get("volatility_class"),
+    }
+    fact = normalize_fact(raw, as_of=as_of)
+    fact["rule_id"] = spec["id"]
+    if "owner" in rules["volatility_classes"]:
+        fact["volatility"] = "owner"
+        fact["volatility_label"] = rules["volatility_classes"]["owner"]
+    return fact
+
+
 def _resolve(spec: Any, measurements: Dict[str, Any], built: Dict[str, Dict[str, Any]], rules: Dict[str, Any], as_of: date) -> Dict[str, Any]:
     if isinstance(spec, str):
         if spec not in built:
@@ -439,6 +518,12 @@ def _resolve(spec: Any, measurements: Dict[str, Any], built: Dict[str, Dict[str,
                 built[measurement_id] = measurement_fact(measurement_id, measurements[measurement_id], rules, as_of)
         template_key = "driving_summary" if spec.get("rule") == "driving_summary" else "transit_summary"
         return _summary_fact(spec, built, rules, as_of, template_key=template_key)
+    if spec.get("rule") == "time_cross_check":
+        needed = list(spec["grab_inputs"]) + list(spec["map_inputs"])
+        for measurement_id in needed:
+            if measurement_id not in built:
+                built[measurement_id] = measurement_fact(measurement_id, measurements[measurement_id], rules, as_of)
+        return _cross_check_fact(spec, built, rules, as_of)
     if spec.get("rule") != "airport_change_allowance":
         raise ValueError(f"Unknown route rule: {spec!r}")
     needed = list(spec["inputs"]) + list(spec.get("driving_inputs") or [])

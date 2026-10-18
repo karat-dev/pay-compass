@@ -265,6 +265,48 @@ def test_map_estimates_render_from_slots_and_stay_out_of_the_allowance_until_ena
         flag["allow_map_estimate_in_allowance"] = previous
 
 
+def test_owner_grab_quotes_are_green_and_checked_against_the_evening_map():
+    rules = json.loads((MODEL_DIR / "rules.json").read_text(encoding="utf-8"))
+    measurements = json.loads((MODEL_DIR / "measurements.json").read_text(encoding="utf-8"))
+    price_class = TRUST_CONFIG["volatility"]["transfer_measures"]["price_schedule"]
+    time_class = TRUST_CONFIG["volatility"]["transfer_measures"]["travel_time"]
+    justgrab = measurement_fact("bkk_dmk_grab_justgrab", measurements["bkk_dmk_grab_justgrab"], rules, AS_OF)
+    assert justgrab["volatility_class"] == price_class
+    assert justgrab["verified_by_us"] is True
+    assert justgrab["source_kind"] == TRUST_CONFIG["source_kinds"]["internal"]
+    assert justgrab["zone"] == TRUST_CONFIG["verified_by_us_zone"]
+    assert "JustGrab" in justgrab["text"] and "652 бата" in justgrab["text"]
+    assert "не поездка" in justgrab["text"]
+    assert justgrab["source"] == "owner Grab screenshots 2026-10-18"
+    taxi = measurement_fact("bkk_dmk_grab_taxi", measurements["bkk_dmk_grab_taxi"], rules, AS_OF)
+    assert "от 567 до 851 бат" in taxi["text"]
+    van = measurement_fact("dmk_bkk_grab_van", measurements["dmk_bkk_grab_van"], rules, AS_OF)
+    assert "1 038 батов" in van["text"] and "10 мест" in van["text"]
+    standard = measurement_fact("dmk_bkk_grab_standard", measurements["dmk_bkk_grab_standard"], rules, AS_OF)
+    assert "623 бата" in standard["text"] and "8 минут" in standard["text"]
+    route = measurement_fact("bkk_dmk_grab_route_tolls", measurements["bkk_dmk_grab_route_tolls"], rules, AS_OF)
+    assert route["volatility_class"] == time_class
+    assert route["zone"] == TRUST_CONFIG["verified_by_us_zone"]
+    assert "52 минуты" in route["text"] and "50,2 км" in route["text"]
+    cards = build_routes()
+    thailand = next(card for card in cards if card["id"] == "mow_thailand")
+    connection = thailand["section_facts"]["route:mow_thailand:connection"]
+    outbound = next(fact for fact in connection if fact.get("rule_id") == "bkk_dmk_grab_time_check")
+    inbound = next(fact for fact in connection if fact.get("rule_id") == "dmk_bkk_grab_time_check")
+    assert "воскресный вечер" in outbound["text"]
+    assert "не целиком внутри диапазона карты (в 18:00)" in outbound["text"]
+    assert "внутри диапазона карты (ночью)" in outbound["text"]
+    assert "не целиком" not in inbound["text"]
+    assert "внутри диапазона карты (в 18:00)" in inbound["text"]
+    assert "внутри диапазона карты (ночью)" in inbound["text"]
+    assert outbound["zone"] == "yellow"
+    transfer = thailand["section_facts"]["route:mow_thailand:transfer"]
+    names = " ".join(fact["text"] for fact in transfer)
+    assert "названия тарифов" in names
+    assert "Floor 1" in names and "Exit 14" in names
+    assert any(fact["text"].startswith("Тариф такси из BKK") for fact in transfer)
+
+
 def test_unknown_volatility_is_rejected_and_notes_stay_out_of_the_catalog():
     rules = json.loads((MODEL_DIR / "rules.json").read_text(encoding="utf-8"))
     measurements = json.loads((MODEL_DIR / "measurements.json").read_text(encoding="utf-8"))

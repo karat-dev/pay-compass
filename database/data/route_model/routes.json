@@ -179,6 +179,14 @@
           {"rule": "transit_summary", "id": "dmk_bkk_transit", "direction": "DMK → BKK", "inputs": ["dmk_bkk_transit_interval", "dmk_bkk_transit_0800", "dmk_bkk_transit_other"]},
           "dmk_bkk_transit_2300",
           "bkk_dmk_transit_fare",
+          "bkk_dmk_grab_route_tolls",
+          "bkk_dmk_grab_route_notolls_longer",
+          "bkk_dmk_grab_route_notolls_shorter",
+          {"rule": "time_cross_check", "id": "bkk_dmk_grab_time_check", "direction": "BKK → DMK", "when_label": "воскресный вечер", "grab_inputs": ["bkk_dmk_grab_route_tolls", "bkk_dmk_grab_route_notolls_longer", "bkk_dmk_grab_route_notolls_shorter"], "map_inputs": ["bkk_dmk_drive_1800", "bkk_dmk_drive_2300"]},
+          "dmk_bkk_grab_route_tolls",
+          "dmk_bkk_grab_route_notolls_longer",
+          "dmk_bkk_grab_route_notolls_shorter",
+          {"rule": "time_cross_check", "id": "dmk_bkk_grab_time_check", "direction": "DMK → BKK", "when_label": "воскресный вечер", "grab_inputs": ["dmk_bkk_grab_route_tolls", "dmk_bkk_grab_route_notolls_longer", "dmk_bkk_grab_route_notolls_shorter"], "map_inputs": ["dmk_bkk_drive_1800", "dmk_bkk_drive_2300"]},
           {"rule": "airport_change_allowance", "id": "bkk_dmk_allowance", "pair": "BKK и DMK", "inputs": ["bkk_dmk_shuttle_minutes", "bkk_dmk_mct"], "driving_inputs": ["bkk_dmk_drive_0800_ramintra", "bkk_dmk_drive_0800_ring", "bkk_dmk_drive_1300", "bkk_dmk_drive_1800", "bkk_dmk_drive_2300", "bkk_dmk_drive_sat_1300", "dmk_bkk_drive_0800", "dmk_bkk_drive_1300", "dmk_bkk_drive_1800", "dmk_bkk_drive_2300", "dmk_bkk_drive_sat_1300"], "driving_replaces": ["bkk_dmk_shuttle_minutes"]},
           "direct_connect_thailand",
           "separate_ticket_baggage"
@@ -197,7 +205,7 @@
       {
         "id": "transfer",
         "title": "Трансфер",
-        "facts": ["city_transfer_thailand", "bkk_taxi_airport_surcharge", "bkk_taxi_luggage", "bkk_taxi_sports", "bkk_taxi_tolls", "bkk_taxi_fare", "dmk_taxi_fare"],
+        "facts": ["city_transfer_thailand", "bkk_taxi_airport_surcharge", "bkk_taxi_luggage", "bkk_taxi_sports", "bkk_taxi_tolls", "bkk_taxi_fare", "dmk_taxi_fare", "bkk_dmk_grab_pickup", "dmk_bkk_grab_pickup", "grab_product_names_differ", "bkk_dmk_grab_justgrab", "bkk_dmk_grab_grabcar", "bkk_dmk_grab_taxi", "dmk_bkk_grab_standard", "dmk_bkk_grab_van", "dmk_bkk_grab_plus"],
         "partners": ["kiwitaxi", "gettransfer"]
       },
       {
