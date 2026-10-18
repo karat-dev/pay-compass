@@ -232,6 +232,171 @@ def test_intro_reset_workflow_updates_one_user():
     assert "303653591" not in text
 
 
+BACK_AND_FACTS = r"""
+import { backPlan } from "./miniapp/js/flow.js";
+import { groupFacts, parseRoute } from "./miniapp/js/ui.js";
+import { render } from "./miniapp/js/screens.js";
+
+const chunks = [];
+for await (const chunk of process.stdin) chunks.push(chunk);
+const catalog = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+globalThis.location = { hash: "#/trip", search: "", hostname: "127.0.0.1" };
+globalThis.document = { documentElement: { dataset: {}, style: {} }, querySelector() { return null; } };
+
+function plan(hash, extra = {}) {
+  const screen = parseRoute(hash);
+  if (extra.instructionSection) screen.instructionSection = extra.instructionSection;
+  return backPlan({
+    screen,
+    stackDepth: extra.stackDepth == null ? 1 : extra.stackDepth,
+    introSeen: Boolean(extra.introSeen),
+    introStep: extra.introStep || 0,
+    pickStep: extra.pickStep || 0,
+    instructionIndex: extra.instructionIndex || 0,
+    openRoute: extra.openRoute || "",
+    sheet: Boolean(extra.sheet),
+    returnTo: extra.returnTo || "",
+  });
+}
+
+const plans = {
+  deepCountry: plan("#/guide/china", { introSeen: true }),
+  deepSection: plan("#/guide/hong_kong/2_pay_on_site", { introSeen: true }),
+  deepFact: plan("#/guide/china/2_pay_on_site?fact=abc", { introSeen: true }),
+  deepInstruction: plan("#/guide/turkey/i/mts_tr_qr", { introSeen: true, instructionSection: "2_pay_on_site" }),
+  deepPick: plan("#/pick"),
+  deepIntroReplay: plan("#/intro", { introSeen: true }),
+  firstIntro: plan("#/intro", { introSeen: false }),
+  guide: plan("#/guide", { stackDepth: 4 }),
+  trip: plan("#/trip", { stackDepth: 3 }),
+  history: plan("#/guide/china", { stackDepth: 2, introSeen: true }),
+  introStep: plan("#/intro", { introStep: 2, stackDepth: 3 }),
+  pickStep: plan("#/pick", { pickStep: 1, stackDepth: 3 }),
+  instructionStep: plan("#/guide/turkey/i/mts_tr_qr", { instructionIndex: 2, stackDepth: 3, instructionSection: "2_pay_on_site" }),
+  route: plan("#/trip", { openRoute: "route:mow_hkg_via_pek:5", stackDepth: 2 }),
+  sheet: plan("#/profile", { sheet: true }),
+};
+
+const groups = groupFacts([
+  { id: "old-green", zone: "green", date: "01.01.2024" },
+  { id: "new-green", zone: "green", date: "02.03.2026" },
+  { id: "yellow", zone: "yellow", date: "01.06.2025" },
+  { id: "red", zone: "red", date: "01.01.2020" },
+  { id: "black", zone: "black", date: "01.02.2020" },
+]);
+
+function paint(hash, extra = {}) {
+  location.hash = hash;
+  return render({
+    catalog,
+    introSeen: extra.introSeen !== false,
+    introStep: extra.introStep || 0,
+    step: extra.step || 0,
+    stackDepth: extra.stackDepth == null ? 1 : extra.stackDepth,
+    unverified: extra.unverified || {},
+    progress: {},
+    openRoute: extra.openRoute || "",
+    trip: extra.trip || null,
+    profile: { favorite_countries: [], bank_id: "tbank", departure_city_id: "mow" },
+    draft: extra.draft || { bank_id: "tbank", departure_city_id: "mow", destination_slug: "turkey", consent: true },
+    cursor: {},
+    sheet: null,
+  });
+}
+
+const closed = paint("#/guide/turkey/2_pay_on_site");
+const opened = paint("#/guide/turkey/2_pay_on_site", { unverified: { "turkey/2_pay_on_site": true } });
+const headers = {
+  guide: paint("#/guide").match(/<header class="header">[\s\S]*?<\/header>/)[0],
+  country: paint("#/guide/turkey").match(/<header class="header">[\s\S]*?<\/header>/)[0],
+  section: paint("#/guide/turkey/2_pay_on_site").match(/<header class="header">[\s\S]*?<\/header>/)[0],
+  trip: paint("#/trip", { trip: { destination_slug: "hong_kong", departure_city_id: "mow", depart_date: "2026-11-12", return_date: "2026-11-20" } }).match(/<header class="header">[\s\S]*?<\/header>/)[0],
+  route: paint("#/trip", { openRoute: "route:mow_hkg_via_pek:5", trip: { destination_slug: "hong_kong", departure_city_id: "mow", depart_date: "2026-11-12", return_date: "2026-11-20" } }).match(/<header class="header">[\s\S]*?<\/header>/)[0],
+  pick: paint("#/pick").match(/<header class="header">[\s\S]*?<\/header>/)[0],
+  intro: paint("#/intro", { introSeen: false, introStep: 0 }).match(/<header class="header">[\s\S]*?<\/header>/)[0],
+  replay: paint("#/intro", { introSeen: true, introStep: 0 }).match(/<header class="header">[\s\S]*?<\/header>/)[0],
+};
+
+process.stdout.write(JSON.stringify({ plans, groups, closed, opened, headers }));
+"""
+
+
+def _zones(html):
+    return __import__("re").findall(r'<div class="fact-group" data-zone="([^"]+)">', html)
+
+
+def _ids_in_zone(html, zone, following):
+    import re
+    start = html.index(f'<div class="fact-group" data-zone="{zone}">')
+    end = html.index(following, start) if following else len(html)
+    return re.findall(r'data-fact-id="([^"]+)"', html[start:end])
+
+
+def test_back_from_a_deep_link_goes_to_the_parent_screen():
+    painted = _render_catalog(get_catalog(), BACK_AND_FACTS)
+    plans = painted["plans"]
+    assert plans["deepCountry"] == {"type": "parent", "path": "/guide"}
+    assert plans["deepSection"] == {"type": "parent", "path": "/guide/hong_kong"}
+    assert plans["deepFact"] == {"type": "parent", "path": "/guide/china/2_pay_on_site"}
+    assert plans["deepInstruction"] == {"type": "parent", "path": "/guide/turkey/2_pay_on_site"}
+    assert plans["deepPick"] == {"type": "parent", "path": "/trip"}
+    assert plans["deepIntroReplay"] == {"type": "parent", "path": "/profile"}
+    assert plans["firstIntro"] == {"type": "none"}
+    assert plans["guide"] == {"type": "none"}
+    assert plans["trip"] == {"type": "none"}
+    assert plans["history"] == {"type": "history"}
+    assert plans["introStep"] == {"type": "intro-step"}
+    assert plans["pickStep"] == {"type": "pick-step"}
+    assert plans["instructionStep"] == {"type": "instruction-step"}
+    assert plans["route"] == {"type": "route"}
+    assert plans["sheet"] == {"type": "sheet"}
+    assert 'data-action="back"' in painted["headers"]["country"]
+    assert 'data-action="back"' in painted["headers"]["section"]
+    assert 'data-action="back"' in painted["headers"]["pick"]
+    assert 'data-action="back"' in painted["headers"]["replay"]
+    assert 'data-action="back"' in painted["headers"]["route"]
+    assert 'data-action="back"' not in painted["headers"]["guide"]
+    assert 'data-action="back"' not in painted["headers"]["trip"]
+    assert 'data-action="back"' not in painted["headers"]["intro"]
+
+
+def test_section_facts_are_grouped_by_confidence_and_date():
+    catalog = get_catalog()
+    painted = _render_catalog(catalog, BACK_AND_FACTS)
+    closed = painted["closed"]
+    opened = painted["opened"]
+    assert _zones(closed) == ["green", "yellow"]
+    assert "Подтверждено" in closed
+    assert "Скорее всего верно" in closed
+    assert "Сначала подтверждённые, внутри группы — более свежая проверка выше." in closed
+    assert "Мало подтверждений" not in closed
+    assert "Устарело или опровергнуто" not in closed
+    assert _zones(opened)[:2] == ["green", "yellow"]
+    assert "red" in _zones(opened)
+    assert "black" in _zones(opened)
+    assert opened.index("Скрыть непроверенное") < opened.index('<div class="fact-group" data-zone="red">')
+    assert opened.index('<div class="instruction-block">') > opened.index('data-zone="black"')
+    assert "По шагам" in opened.split('<div class="instruction-block">')[1]
+
+    section = next(item for item in next(country for country in catalog["countries"] if country["slug"] == "turkey")["sections"] if item["key"] == "2_pay_on_site")
+    green_ids = _ids_in_zone(closed, "green", '<div class="fact-group" data-zone="yellow">')
+
+    def checked(fact):
+        day, month, year = fact["date"].split(".")
+        return (year, month, day)
+
+    expected = sorted(
+        [fact for fact in section["facts"] if fact["zone"] == "green" and not fact["hidden"]],
+        key=checked,
+        reverse=True,
+    )
+    assert green_ids == [fact["id"] for fact in expected]
+    assert [group["title"] for group in painted["groups"]] == [
+        "Подтверждено", "Скорее всего верно", "Мало подтверждений", "Устарело или опровергнуто",
+    ]
+    assert [fact["id"] for fact in painted["groups"][0]["facts"]] == ["new-green", "old-green"]
+
+
 def test_georgia_country_page_does_not_scroll_at_320px():
     chrome = shutil.which("google-chrome") or shutil.which("google-chrome-stable")
     if chrome is None and Path("/usr/local/bin/google-chrome").is_file():

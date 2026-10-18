@@ -54,7 +54,17 @@
         offEvent: function () {},
         setHeaderColor: function () {},
         setBackgroundColor: function () {},
-        openLink: function (url) { window.open(url, "_blank", "noopener"); }
+        openLink: function (url) { window.open(url, "_blank", "noopener"); },
+        BackButton: (function () {
+          var handlers = [];
+          return {
+            show: function () { document.documentElement.dataset.tgBack = "1"; },
+            hide: function () { document.documentElement.dataset.tgBack = "0"; },
+            onClick: function (fn) { handlers.push(fn); },
+            offClick: function (fn) { handlers = handlers.filter(function (item) { return item !== fn; }); },
+            click: function () { handlers.slice().forEach(function (fn) { fn(); }); }
+          };
+        })()
       };
     })();
   </script>

@@ -315,6 +315,25 @@ textarea { width: 100%; min-height: 110px; resize: vertical; }
 .block-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
 .block h2 { font-size: 22px; }
 
+.order-hint { margin: 0 0 12px; }
+.fact-group { margin: 14px 0; min-width: 0; }
+.fact-group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.fact-group[data-zone="green"] .fact-group-title { color: var(--green); }
+.fact-group[data-zone="yellow"] .fact-group-title { color: var(--yellow); }
+.fact-group[data-zone="red"] .fact-group-title,
+.fact-group[data-zone="advice-unsupported"] .fact-group-title { color: var(--red); }
+.fact-group[data-zone="black"] .fact-group-title { color: var(--black); }
+.fact-group[data-zone="gap"] .fact-group-title { color: var(--gap); }
+.fact-group-title .count { margin-left: auto; color: var(--hint); font-weight: 700; }
+.instruction-block:empty { display: none; }
+.instruction-block .instruction-card { margin-top: 12px; }
 .fact {
   margin: 10px 0;
   border-left: 4px solid var(--zone, var(--hint));

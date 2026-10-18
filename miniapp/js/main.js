@@ -1,4 +1,4 @@
-import { afterPick, beginIntroReplay, bootTarget, introExit } from "./flow.js";
+import { afterPick, backPlan, beginIntroReplay, bootTarget, introExit } from "./flow.js";
 import { render, parseRoute } from "./screens.js";
 import {
   applyTheme,
@@ -145,24 +145,131 @@ function findFact(id) {
   return null;
 }
 
-function parentHash(screen) {
-  if (screen.name === "search") return state.returnTo || "/trip";
-  if (screen.name === "trip-edit") return "/trip";
-  if (screen.name === "country") return "/guide";
-  if (screen.name === "section") return `/guide/${screen.slug}`;
-  if (screen.name === "instruction") {
-    const instruction = state.catalog.instructions[screen.instructionId];
-    if (instruction && instruction.section) return `/guide/${screen.slug}/${instruction.section}`;
-    return `/guide/${screen.slug}`;
-  }
-  return "/trip";
+const appStack = [];
+let navLock = 0;
+
+function pathFromHash(hash) {
+  const clean = String(hash || "").replace(/^#/, "");
+  if (!clean) return "/trip";
+  return clean.startsWith("/") ? clean : `/${clean}`;
 }
 
-function navigate(hash) {
-  const path = hash.startsWith("/") ? hash : `/${hash}`;
+function currentPlan() {
+  const screen = parseRoute(location.hash);
+  let instructionIndex = 0;
+  let instructionSection = "";
+  if (screen.name === "instruction" && state.catalog) {
+    const instruction = state.catalog.instructions[screen.instructionId];
+    instructionSection = (instruction && instruction.section) || "";
+    const steps = visibleSteps(instruction, Boolean(state.unverified[`instruction:${instruction && instruction.id}`]));
+    instructionIndex = stepPosition(steps, state.progress, instruction && state.cursor[instruction.id]);
+  }
+  return backPlan({
+    screen: Object.assign({}, screen, { instructionSection }),
+    stackDepth: appStack.length || 1,
+    introSeen: state.introSeen,
+    introStep: state.introStep || 0,
+    pickStep: state.step || 0,
+    instructionIndex,
+    openRoute: state.openRoute || "",
+    sheet: Boolean(state.sheet),
+    returnTo: state.returnTo || "",
+  });
+}
+
+function syncBackButton() {
+  const button = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.BackButton;
+  const plan = currentPlan();
+  document.documentElement.dataset.tgBack = plan.type === "none" ? "0" : "1";
+  if (!button) return;
+  if (plan.type === "none") {
+    if (button.hide) button.hide();
+  } else if (button.show) button.show();
+}
+
+function wireBackButton() {
+  const button = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.BackButton;
+  if (!button || button.__wired || !button.onClick) return;
+  button.onClick(() => goBack());
+  button.__wired = true;
+}
+
+function navigate(hash, mode) {
+  const path = pathFromHash(hash);
   const next = `#${path}`;
-  if (location.hash === next) draw();
-  else location.hash = next;
+  const same = pathFromHash(location.hash) === path && location.hash === next;
+  const replace = mode === "replace" || appStack.length === 0;
+  if (same) {
+    if (!appStack.length) appStack.push(path);
+    draw();
+    return;
+  }
+  navLock += 1;
+  try {
+    if (replace) {
+      history.replaceState({ miniapp: true }, "", next);
+      if (!appStack.length) appStack.push(path);
+      else appStack[appStack.length - 1] = path;
+    } else {
+      history.pushState({ miniapp: true }, "", next);
+      appStack.push(path);
+    }
+  } finally {
+    navLock -= 1;
+  }
+  syncDeepFact();
+  guard();
+  draw();
+}
+
+function adoptPath(path, reason) {
+  if (reason === "pop") {
+    if (appStack[appStack.length - 2] === path) appStack.pop();
+    else if (appStack[appStack.length - 1] !== path) appStack.splice(0, appStack.length, path);
+    return;
+  }
+  if (appStack[appStack.length - 1] !== path) appStack.push(path);
+}
+
+function goBack() {
+  const screen = parseRoute(location.hash);
+  const plan = currentPlan();
+  if (plan.type === "sheet") {
+    state.sheet = null;
+    draw();
+    return;
+  }
+  if (plan.type === "intro-step") {
+    state.introStep = Math.max(0, (state.introStep || 0) - 1);
+    draw();
+    return;
+  }
+  if (plan.type === "pick-step") {
+    state.step = Math.max(0, (state.step || 0) - 1);
+    state.message = "";
+    draw();
+    return;
+  }
+  if (plan.type === "instruction-step") {
+    const instruction = state.catalog && state.catalog.instructions[screen.instructionId];
+    if (instruction) {
+      const steps = visibleSteps(instruction, Boolean(state.unverified[`instruction:${instruction.id}`]));
+      const index = stepPosition(steps, state.progress, state.cursor[instruction.id]);
+      state.cursor[instruction.id] = Math.max(0, index - 1);
+    }
+    draw();
+    return;
+  }
+  if (plan.type === "route") {
+    state.openRoute = "";
+    draw();
+    return;
+  }
+  if (plan.type === "history") {
+    history.back();
+    return;
+  }
+  if (plan.type === "parent" && plan.path) navigate(plan.path, "replace");
 }
 
 function guard() {
@@ -194,6 +301,7 @@ function syncDeepFact() {
 }
 
 function draw() {
+  state.stackDepth = appStack.length || 1;
   const active = document.activeElement;
   const searching = active && active.id === "search-input";
   const selection = searching ? [active.selectionStart, active.selectionEnd] : null;
@@ -210,6 +318,7 @@ function draw() {
     if (node) node.scrollIntoView({ block: "center" });
     state.scrolledFact = location.hash;
   }
+  syncBackButton();
 }
 
 function seedPreview(name) {
@@ -417,7 +526,7 @@ app.addEventListener("click", (event) => {
     return;
   }
   if (action === "back") {
-    navigate(parentHash(parseRoute(location.hash)));
+    goBack();
     return;
   }
   if (action === "search") {
@@ -460,9 +569,7 @@ app.addEventListener("click", (event) => {
     return;
   }
   if (action === "pick-back") {
-    state.step = Math.max(0, state.step - 1);
-    state.message = "";
-    draw();
+    goBack();
     return;
   }
   if (action === "pick-next") {
@@ -625,7 +732,17 @@ app.addEventListener("change", (event) => {
   }
 });
 
+window.addEventListener("popstate", () => {
+  if (navLock) return;
+  adoptPath(pathFromHash(location.hash), "pop");
+  syncDeepFact();
+  guard();
+  draw();
+});
+
 window.addEventListener("hashchange", () => {
+  if (navLock) return;
+  adoptPath(pathFromHash(location.hash), "hash");
   syncDeepFact();
   guard();
   draw();
@@ -646,6 +763,7 @@ async function boot() {
     if (tg.expand) tg.expand();
     if (tg.onEvent) tg.onEvent("themeChanged", () => { applyTheme(); draw(); });
   }
+  wireBackButton();
   try {
     state.catalog = await getJSON("/api/catalog");
   } catch (error) {
