@@ -160,6 +160,46 @@ def test_language_cards_use_the_softer_sentence():
     cards = _cards(_bundle())
     assert cards[2]["text"] == LANGUAGE
     assert cards[7]["text"] == "Поставить приложение-переводчик. " + LANGUAGE
+    for number in (2, 7):
+        for host in ("madloba.info", "t-j.ru"):
+            item = next(row for row in cards[number]["confirmations"] if host in row["url"])
+            assert item["verdict"] == "partial"
+            assert "по-русски — не везде" in item["note"]
+
+
+def test_research_counts_of_three_stay_outside_the_medium_window():
+    """The research 90-day count is not the medium-class window of 30 days.
+
+    Cards 1, 2, 7 and 9 each have three confirms inside that research cutoff.
+    Only dates on or after 2026-09-18 count. Partial and contradicting rows
+    never count. Same Yandex host with a different person stays independent.
+    A date_estimated flag does not drop a parseable date. Cards 3 and 6 stay
+    on the July observation.
+    """
+    cards = _cards(_bundle())
+    window = CONFIG["volatility"]["classes"]["medium"]["fresh_days"]
+    assert window == 30
+    expected = {1: 2, 2: 1, 7: 1, 9: 1}
+    floor = lowest_zone(CONFIG)
+    for number, fresh in expected.items():
+        fact = cards[number]
+        stats = confirmation_stats(fact, AS_OF, window, CONFIG)
+        assert stats["fresh_count"] == fresh
+        assert fact["zone"] == floor
+        confirms = [item for item in fact["confirmations"] if item["verdict"] == "confirms"]
+        assert len(confirms) >= 3
+        outside = [
+            item for item in confirms
+            if item.get("date") and item["date"] < "2026-09-18"
+        ]
+        assert outside
+        assert len({item.get("person") or item["outlet"] for item in confirms}) == len(confirms)
+    assert cards[3]["zone"] == floor
+    assert cards[3]["verified_by_us"] is True
+    assert cards[3]["date_verified"] == "2026-07-16"
+    assert cards[6]["zone"] == floor
+    assert cards[6]["verified_by_us"] is False
+    assert cards[6]["own_date"] == "2026-07-16"
 
 
 def test_monthly_fee_has_no_hardcoded_ruble_figure():

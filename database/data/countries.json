@@ -4799,17 +4799,17 @@
                   "url": "https://madloba.info/en/tbilisi/banks/tbc-bank/",
                   "date": "2026-09-24",
                   "type": "independent",
-                  "verdict": "contradicts",
+                  "verdict": "partial",
                   "outlet": "madloba.info",
-                  "note": "В отделении Чавчавадзе 33 указан русский язык; отзыв 22.05 — английский."
+                  "note": "В отделении Чавчавадзе 33 указан русский язык; отзыв 22.05 — английский. Это совпадает с «по-русски — не везде» и не подтверждает фразу целиком."
                 },
                 {
                   "url": "https://t-j.ru/georgia-card/",
                   "date": "2026-05-18",
                   "type": "independent",
-                  "verdict": "contradicts",
+                  "verdict": "partial",
                   "outlet": "t-j.ru",
-                  "note": "Если сотрудник знает русский, может перейти на него."
+                  "note": "Если сотрудник знает русский, может перейти на него. Это частный случай «по-русски — не везде», не подтверждение фразы целиком."
                 }
               ],
               "owner_approved": false,
@@ -8768,17 +8768,17 @@
               "url": "https://madloba.info/en/tbilisi/banks/tbc-bank/",
               "date": "2026-09-24",
               "type": "independent",
-              "verdict": "contradicts",
+              "verdict": "partial",
               "outlet": "madloba.info",
-              "note": "Русский указан среди языков отделения."
+              "note": "Русский указан среди языков отделения. Это совпадает с «по-русски — не везде» и не подтверждает фразу целиком."
             },
             {
               "url": "https://t-j.ru/georgia-card/",
               "date": "2026-05-18",
               "type": "independent",
-              "verdict": "contradicts",
+              "verdict": "partial",
               "outlet": "t-j.ru",
-              "note": "Сотрудник может перейти на русский."
+              "note": "Сотрудник может перейти на русский. Это частный случай «по-русски — не везде», не подтверждение фразы целиком."
             }
           ],
           "owner_approved": false,
