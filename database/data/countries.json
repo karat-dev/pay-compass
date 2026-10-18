@@ -920,6 +920,7 @@
           "facts": [
             {
               "text": "Возврат НДС иностранцам: покупки от ¥200 в одном магазине с табличкой tax refund за день; товар не использован; вывоз ≤90 дней.",
+              "short_label": "покупки от ¥200",
               "status": "confirmed",
               "checked_at": "2026-10-18",
               "source": "https://www.szlhq.gov.cn/english/licc/newsevents/newsevent/content/post_12226136.html",
@@ -950,6 +951,7 @@
             },
             {
               "text": "Ставка возврата 11% от суммы чека с НДС, если НДС товара 13%, и 8%, если НДС 9%.",
+              "short_label": "Ставка возврата",
               "status": "confirmed",
               "checked_at": "2026-10-18",
               "source": "https://www.szlhq.gov.cn/english/licc/newsevents/newsevent/content/post_12226136.html",
@@ -980,6 +982,7 @@
             },
             {
               "text": "В Шанхае агент удерживает комиссию 2% от суммы чека с НДС.",
+              "short_label": "комиссию 2%",
               "status": "confirmed",
               "checked_at": "2026-10-18",
               "source": "https://english.shanghai.gov.cn/en-TaxRefundandDutyFree/20250813/0d748ad7eec4436bba3ad195f60588bc.html",
@@ -1040,6 +1043,7 @@
             },
             {
               "text": "С 1 июля 2026 бумажные бланки возврата и чеки сдавать не нужно при любой сумме. 10 000 юаней — только порог, ниже которого таможня проверяет заявку выборочно. Срок выезда для мгновенного возврата — 28 дней.",
+              "short_label": "порог",
               "status": "confirmed",
               "checked_at": "2026-10-18",
               "source": "https://www.chinatax.gov.cn/eng/c101269/c5250095/content.html",
@@ -1190,6 +1194,7 @@
             },
             {
               "text": "Киоски Bank of China в Шэньчжэне (КПП Лоху и аэропорт Баоань) возвращают налог на карты UnionPay, Visa, Mastercard, JCB и Diners, а также на Alipay, AlipayHK и WeChat.",
+              "short_label": "карты UnionPay",
               "status": "confirmed",
               "checked_at": "2026-10-18",
               "source": "https://www.boc.cn/aboutboc/bi1/202604/t20260402_25658187.html",
@@ -1242,6 +1247,7 @@
             },
             {
               "text": "Возврат на карту российского банка не оформить — выбирайте наличные или карту иностранного банка",
+              "short_label": "карту российского банка",
               "status": "outdated_or_refuted",
               "checked_at": "2026-10-18",
               "source": null,
@@ -2499,6 +2505,7 @@
             },
             {
               "text": "Порядок: таможня до регистрации (обязательно при покупках от 20 000 THB) → регистрация → паспортный контроль → стойка VAT Refund; дорогие вещи (от 40 000 THB/шт.) показать ещё раз.",
+              "short_label": "таможня до регистрации",
               "status": "confirmed",
               "checked_at": "2026-10-18",
               "source": "https://vrtweb2.rd.go.th/81.html",
@@ -2529,6 +2536,7 @@
             },
             {
               "text": "Наличными до 30 000 THB с комиссией 100 THB; больше — на карту или банковским чеком.",
+              "short_label": "Наличными до 30 000 THB",
               "status": "confirmed",
               "checked_at": "2026-10-18",
               "source": "https://vrtmap.rd.go.th/gps/rd/lang/en/id_article_16.aspx",
@@ -2559,6 +2567,7 @@
             },
             {
               "text": "Возврат на карту — только Visa, Mastercard, Diners или JCB. Alipay и WeChat Pay — если сумма не больше 30 000 THB. UnionPay и «Мир» в списке Налогового департамента нет.",
+              "short_label": "UnionPay и «Мир»",
               "status": "confirmed",
               "checked_at": "2026-10-18",
               "source": "https://vrtweb2.rd.go.th/69.html",
@@ -2589,6 +2598,7 @@
             },
             {
               "text": "Возврат на карту российского банка не оформить — выбирайте наличные или карту иностранного банка",
+              "short_label": "карту российского банка",
               "status": "outdated_or_refuted",
               "checked_at": "2026-10-18",
               "source": null,
@@ -3358,6 +3368,7 @@
             },
             {
               "text": "Возврат на карту российского банка не оформить — выбирайте наличные или карту иностранного банка",
+              "short_label": "карту российского банка",
               "status": "outdated_or_refuted",
               "checked_at": "2026-10-18",
               "source": null,
@@ -4469,6 +4480,7 @@
             },
             {
               "text": "Возврат на карту российского банка не оформить — выбирайте наличные или карту иностранного банка",
+              "short_label": "карту российского банка",
               "status": "outdated_or_refuted",
               "checked_at": "2026-10-18",
               "source": null,
@@ -6878,6 +6890,7 @@
           "facts": [
             {
               "text": "Tax free для граждан иностранных государств: специальный чек магазина, уполномоченного Налоговой службой; сумма по одному чеку больше 200 GEL без НДС; вывоз в течение 3 месяцев.",
+              "short_label": "больше 200 GEL",
               "status": "confirmed",
               "checked_at": "2026-10-18",
               "source": "https://matsne.gov.ge/en/document/view/1043717",
@@ -6938,6 +6951,7 @@
             },
             {
               "text": "На руки остаётся не весь НДС. Правило Налоговой службы: НДС 18% цены без НДС, минус сбор службы 4% той же цены, минус комиссия банка 3% от оставшейся суммы. Получается ≈11,5% от цены на ценнике (≈13,6% от цены без НДС).",
+              "short_label": "≈11,5%",
               "status": "confirmed",
               "checked_at": "2026-10-18",
               "source": "https://www.rs.ge/Media/Default/Images/CustomsBrochures/TAX%20FREE.pdf",
@@ -7020,6 +7034,7 @@
             },
             {
               "text": "Возврат на карту российского банка не оформить — выбирайте наличные или карту иностранного банка",
+              "short_label": "карту российского банка",
               "status": "outdated_or_refuted",
               "checked_at": "2026-10-18",
               "source": null,

@@ -148,7 +148,7 @@ def normalize_fact(
     if not isinstance(breakdown, dict):
         stored_breakdown = raw.get("score_breakdown")
         breakdown = stored_breakdown if isinstance(stored_breakdown, dict) else None
-    return {
+    fact = {
         "text": raw["text"],
         "type": fact_type,
         "fact_type": fact_type,
@@ -180,6 +180,13 @@ def normalize_fact(
         "at_risk": resolved["at_risk"],
         "at_risk_reason": resolved["at_risk_reason"],
     }
+    label = raw.get("short_label")
+    if isinstance(label, str) and label.strip():
+        fact["short_label"] = label.strip()
+    topic = raw.get("topic")
+    if isinstance(topic, str) and topic.strip():
+        fact["topic"] = topic.strip()
+    return fact
 
 
 def _normalize_subsection(raw_facts: List[Dict[str, Any]], *, section_key: str, subsection: str) -> Dict[str, Any]:

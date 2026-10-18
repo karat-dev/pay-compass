@@ -7,8 +7,11 @@ import {
   mapStart,
   sectionOf,
   stepPosition,
+  groupDomIdForFact,
+  readExpanded,
   visibleFacts,
   visibleSteps,
+  writeExpanded,
 } from "./ui.js";
 
 const state = {
@@ -26,6 +29,10 @@ const state = {
   },
   step: 0,
   unverified: {},
+  openGroups: {},
+  openFacts: {},
+  openSummaries: {},
+  scrollTo: "",
   cursor: {},
   openRoute: "",
   query: "",
@@ -280,6 +287,29 @@ function guard() {
   if (!state.introSeen && screen.name !== "intro") navigate("/intro");
 }
 
+function persistExpanded() {
+  try {
+    writeExpanded(window.sessionStorage, {
+      groups: state.openGroups,
+      facts: state.openFacts,
+      summaries: state.openSummaries,
+    });
+  } catch (error) {
+    /* session storage can be unavailable in private mode */
+  }
+}
+
+function loadExpanded() {
+  try {
+    const saved = readExpanded(window.sessionStorage);
+    state.openGroups = saved.groups;
+    state.openFacts = saved.facts;
+    state.openSummaries = saved.summaries;
+  } catch (error) {
+    /* keep the empty in-memory session */
+  }
+}
+
 function syncDeepFact() {
   const screen = parseRoute(location.hash);
   const fact = screen.params.get("fact");
@@ -292,6 +322,7 @@ function syncDeepFact() {
     const steps = visibleSteps(instruction, Boolean(state.unverified[`instruction:${instruction.id}`]));
     const index = steps.findIndex((step) => step.id === fact);
     if (index >= 0) state.cursor[instruction.id] = index;
+    state.openFacts[fact] = true;
   }
   if (screen.name === "section") {
     const country = countryBySlug(state.catalog, screen.slug);
@@ -299,6 +330,9 @@ function syncDeepFact() {
     const pools = section ? [section.facts || []].concat((section.subsections || []).map((sub) => sub.facts || [])) : [];
     const hidden = pools.some((pool) => pool.some((item) => item.id === fact && item.hidden));
     if (hidden) state.unverified[`${screen.slug}/${screen.sectionKey}`] = true;
+    const domId = groupDomIdForFact(section, fact, state.catalog, `${screen.slug}/${screen.sectionKey}`);
+    if (domId) state.openGroups[domId] = true;
+    state.openFacts[fact] = true;
   }
 }
 
@@ -314,11 +348,17 @@ function draw() {
     if (searching && selection) input.setSelectionRange(selection[0], selection[1]);
   }
   const screen = parseRoute(location.hash);
-  const fact = screen.params.get("fact");
-  if (fact && state.scrolledFact !== location.hash) {
-    const node = document.querySelector(`[data-fact-id="${CSS.escape(fact)}"]`);
-    if (node) node.scrollIntoView({ block: "center" });
-    state.scrolledFact = location.hash;
+  if (state.scrollTo) {
+    const group = document.querySelector(`[data-group="${CSS.escape(state.scrollTo)}"]`);
+    if (group) group.scrollIntoView({ block: "start" });
+    state.scrollTo = "";
+  } else {
+    const fact = screen.params.get("fact");
+    if (fact && state.scrolledFact !== location.hash) {
+      const node = document.querySelector(`[data-fact-id="${CSS.escape(fact)}"]`);
+      if (node) node.scrollIntoView({ block: "center" });
+      state.scrolledFact = location.hash;
+    }
   }
   syncBackButton();
 }
@@ -647,6 +687,33 @@ app.addEventListener("click", (event) => {
     draw();
     return;
   }
+  if (action === "toggle-group") {
+    const id = el.dataset.group;
+    state.openGroups[id] = !state.openGroups[id];
+    persistExpanded();
+    draw();
+    return;
+  }
+  if (action === "toggle-fact") {
+    const id = el.dataset.id;
+    state.openFacts[id] = !state.openFacts[id];
+    persistExpanded();
+    draw();
+    return;
+  }
+  if (action === "summary-item") {
+    state.openGroups[el.dataset.group] = true;
+    state.scrollTo = el.dataset.group;
+    persistExpanded();
+    draw();
+    return;
+  }
+  if (action === "summary-more") {
+    state.openSummaries[el.dataset.card] = true;
+    persistExpanded();
+    draw();
+    return;
+  }
   if (action === "route-section") {
     state.openRoute = state.openRoute === el.dataset.id ? "" : el.dataset.id;
     draw();
@@ -772,6 +839,7 @@ async function boot() {
     if (tg.onEvent) tg.onEvent("themeChanged", () => { applyTheme(); draw(); });
   }
   wireBackButton();
+  loadExpanded();
   try {
     state.catalog = await getJSON("/api/catalog");
   } catch (error) {

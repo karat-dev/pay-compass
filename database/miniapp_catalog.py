@@ -175,6 +175,69 @@ def _is_placeholder_url(url: str) -> bool:
     return host == "example" or host.endswith(".example") or host == "example.com"
 
 
+def _collapse_spaces(value: str) -> str:
+    return re.sub(r"\s+", " ", value or "").strip()
+
+
+def _clip_label(label: str, max_chars: int) -> str:
+    """Shorten on a word boundary. A non-positive max leaves the label whole."""
+    label = label.strip(" ,;.—:")
+    if max_chars <= 0 or len(label) <= max_chars:
+        return label
+    clipped = label[:max_chars]
+    if " " in clipped:
+        clipped = clipped.rsplit(" ", 1)[0]
+    clipped = clipped.strip(" ,;.—:")
+    return clipped or label[:max_chars].strip()
+
+
+def _grounded_label(label: str, text: str) -> bool:
+    """A label may only repeat words and numbers already in the fact."""
+    candidate = _collapse_spaces(label).casefold()
+    folded = _collapse_spaces(text).casefold()
+    if not candidate or candidate not in folded:
+        return False
+    return all(number in text for number in re.findall(r"\d+", label))
+
+
+def derive_short_label(text: str, *, max_chars: int, prefix_max: int) -> str:
+    """Label from the fact text: the heading before a colon, otherwise the first clause."""
+    cleaned = _collapse_spaces(text)
+    if not cleaned:
+        return ""
+    colon = cleaned.find(":")
+    if prefix_max > 0 and 0 < colon <= prefix_max:
+        head = cleaned[:colon].strip()
+        if head:
+            return _clip_label(head, max_chars)
+    cut = len(cleaned)
+    for sep in (";", "."):
+        index = cleaned.find(sep)
+        if 0 < index < cut:
+            cut = index
+    clause = cleaned[:cut].strip(" ,;")
+    if len(clause) > max_chars:
+        for sep in (" — ", ","):
+            index = clause.find(sep)
+            if 0 < index <= max_chars:
+                clause = clause[:index]
+                break
+    return _clip_label(clause, max_chars)
+
+
+def public_short_label(fact: Dict[str, Any]) -> str:
+    text = fact.get("text") or ""
+    summary = TRUST_CONFIG["display"]["summary"]
+    stored = fact.get("short_label")
+    if isinstance(stored, str) and _grounded_label(stored, text):
+        return _collapse_spaces(stored)
+    return derive_short_label(
+        text,
+        max_chars=int(summary["label_max_chars"]),
+        prefix_max=int(summary["prefix_max_chars"]),
+    )
+
+
 def publish_fact(
     fact: Dict[str, Any],
     scope: str,
@@ -204,7 +267,10 @@ def publish_fact(
         "section_key": section_key,
         "instruction_id": instruction_id,
         "subsection": subsection,
+        "short_label": public_short_label(fact),
     }
+    if fact.get("topic"):
+        published["topic"] = fact["topic"]
     if step_n is not None:
         published["n"] = step_n
     if stage:
@@ -452,6 +518,12 @@ def build_catalog() -> Dict[str, Any]:
         ],
         "zone_titles": dict(TRUST_CONFIG["display"]["zone_titles"]),
         "zone_legend": [dict(item) for item in TRUST_CONFIG["display"]["legend"]],
+        "summary": {
+            "preview_items": int(TRUST_CONFIG["display"]["summary"]["preview_items"]),
+            "label_max_chars": int(TRUST_CONFIG["display"]["summary"]["label_max_chars"]),
+            "prefix_max_chars": int(TRUST_CONFIG["display"]["summary"]["prefix_max_chars"]),
+            "min_facts": int(TRUST_CONFIG["display"]["summary"]["min_facts"]),
+        },
         "sources": [
             "database/data/countries.json",
             "config/trust_config.json",

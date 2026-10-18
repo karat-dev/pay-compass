@@ -1,42 +1,59 @@
 import { backPlan, routeForTrip, searchTicketsUrl, tripCountdown, tripWhen } from "./flow.js";
 import {
+  cardSummary,
   countryBySlug,
   daysUntil,
   esc,
   factMeta,
   formatDay,
-  groupFacts,
   hasHidden,
   icon,
   nightsBetween,
   parseRoute,
+  presentationLimits,
   searchRows,
   sectionOf,
+  sectionPools,
+  sectionTopicGroups,
   splitName,
   stepPosition,
+  summaryPlain,
   ruCount,
   ticketLinks,
+  topicGroups,
   visibleFacts,
   visibleSteps,
+  zoneMix,
   zoneName,
+  zoneReason,
 } from "./ui.js";
 
 const ORDER_HINT = "Сначала подтверждённые, внутри группы — более свежая проверка выше.";
 
-function factCard(fact, catalog) {
-  const zone = fact.gap && catalog && catalog.gap_zone ? catalog.gap_zone : (fact.zone || (catalog && catalog.missing_zone) || "");
+function factZone(fact, catalog) {
+  return fact.gap && catalog && catalog.gap_zone ? catalog.gap_zone : (fact.zone || (catalog && catalog.missing_zone) || "");
+}
+
+function factCard(fact, state) {
+  const catalog = state.catalog;
+  const zone = factZone(fact, catalog);
+  const open = Boolean(state.openFacts && state.openFacts[fact.id]);
   const source = fact.source_url
     ? `<a class="source-link" href="${esc(fact.source_url)}" data-action="link" data-url="${esc(fact.source_url)}">Источник</a>`
     : `<span>Официальной ссылки нет.</span>`;
+  const reason = zoneReason(zone, catalog);
+  const meta = factMeta(fact);
+  const details = [reason, meta].filter((item, index, list) => item && list.indexOf(item) === index);
   return `<div class="fact${fact.hidden ? " is-unverified" : ""}${fact.gap ? " is-gap" : ""}" data-zone="${esc(zone)}" data-fact-id="${esc(fact.id)}">
-    <div class="fact-top">
-      <span class="zone-dot" aria-hidden="true"></span>
-      <span class="zone-name">${esc(zoneName(zone, catalog))}</span>
-      <span class="fact-meta">${esc(factMeta(fact))}</span>
+    <button type="button" class="fact-key" data-action="toggle-fact" data-id="${esc(fact.id)}" aria-expanded="${open ? "true" : "false"}">
+      <span class="zone-dot" data-zone="${esc(zone)}" aria-hidden="true"></span>
+      <span class="fact-text">${esc(fact.text)}</span>
+    </button>
+    <div class="fact-details"${open ? "" : " hidden"}>
+      <p class="fact-meta">${esc(details.join(" · "))}</p>
+      <p class="source">${source}</p>
+      <button type="button" class="text-btn" data-action="report" data-id="${esc(fact.id)}">Сообщить о неточности</button>
     </div>
-    <p class="fact-text">${esc(fact.text)}</p>
-    <p class="source">${source}</p>
-    <button type="button" class="text-btn" data-action="report" data-id="${esc(fact.id)}">Сообщить о неточности</button>
   </div>`;
 }
 
@@ -341,7 +358,7 @@ function routeCard(state, route) {
   const iata = route.iata ? `<p class="iata">${esc(route.iata)}</p>` : "";
   const link = links.map((item) => `<a class="primary tickets" href="${esc(item.url)}" data-action="link" data-url="${esc(item.url)}">${esc(item.label)}</a>`).join("");
   const lead = (route.lead_facts || []).length
-    ? `${orderHint()}${factGroupHtml(route.lead_facts, (fact) => factCard(fact, state.catalog), state.catalog)}`
+    ? routeLeadHtml(state, route)
     : route.summary.map((paragraph) => `<p class="ticket-copy">${esc(passportLine(paragraph, state.profile))}</p>`).join("");
   return `<article class="ticket">
     <p class="eyebrow">Разбор маршрута</p>
@@ -377,19 +394,56 @@ function routeCopy(state, current) {
     text = text.slice(0, at).trim();
   }
   const facts = current.facts || [];
-  const show = Boolean(state.unverified[current.id]);
-  const visible = facts.filter((fact) => show || !fact.hidden);
-  const hidden = facts.some((fact) => fact.hidden);
-  const groups = visible.length ? factGroupHtml(visible, (fact) => factCard(fact, state.catalog), state.catalog) : "";
-  const toggle = hidden
-    ? `<button type="button" class="ghost wide" data-action="unverified" data-scope="${esc(current.id)}">${show ? "Скрыть непроверенное" : "Показать непроверенное"}</button>`
-    : "";
+  const blocks = routeFactBlocks(state, facts, current.id, current.title);
   const showProse = current.role === "payment" || !facts.length;
   const prose = showProse && text
     ? `<p>${compassText(state, passportLine(text, state.profile))}</p>`
     : "";
   const disclosure = links.some((link) => link.partner) ? `<p class="partner-line">${partnerNote(state)}</p>` : "";
-  return `<div class="route-copy">${groups}${prose}${anchors ? `<p class="source">${anchors}</p>` : ""}${disclosure}${tail && showProse ? `<p>${compassText(state, passportLine(tail, state.profile))}</p>` : ""}${toggle}</div>`;
+  const tailHtml = tail && showProse ? `<p>${compassText(state, passportLine(tail, state.profile))}</p>` : "";
+  const linksHtml = anchors ? `<p class="source">${anchors}</p>` : "";
+  return `<div class="route-copy">${blocks.summary}${blocks.visible}${prose}${linksHtml}${disclosure}${tailHtml}${blocks.toggle}${blocks.hidden}</div>`;
+}
+
+function routeLeadHtml(state, route) {
+  const blocks = routeFactBlocks(state, route.lead_facts, `route:${route.id}:lead`, route.title);
+  return `${blocks.summary}${blocks.visible}${blocks.toggle}${blocks.hidden}`;
+}
+
+function routeFactBlocks(state, facts, cardId, title) {
+  const show = Boolean(state.unverified && state.unverified[cardId]);
+  const renderFact = (fact) => factCard(fact, state);
+  const visible = factPool(facts, state, cardId, title, false, renderFact);
+  const hidden = show ? factPool(facts, state, cardId, title, true, renderFact) : { html: "", groups: [] };
+  const toggle = (facts || []).some((fact) => fact.hidden)
+    ? `<button type="button" class="ghost wide" data-action="unverified" data-scope="${esc(cardId)}">${show ? "Скрыть непроверенное" : "Показать непроверенное"}</button>`
+    : "";
+  return {
+    summary: cardSummaryHtml(visible.groups.concat(hidden.groups), state, cardId),
+    visible: visible.html ? `${orderHint()}${visible.html}` : "",
+    toggle,
+    hidden: hidden.html,
+  };
+}
+
+function factPool(facts, state, cardId, title, hiddenOnly, renderFact) {
+  const limits = presentationLimits(state.catalog);
+  const selected = (facts || []).filter((fact) => (hiddenOnly ? fact.hidden : !fact.hidden));
+  if (!selected.length) return { html: "", groups: [] };
+  const groups = topicGroups(selected, {
+    fallbackId: "all",
+    fallbackTitle: title,
+    prefixMax: limits.prefixMax,
+    minFacts: limits.minFacts,
+    catalog: state.catalog,
+  }).map((group) => ({
+    ...group,
+    domId: `${cardId}:${group.id}${hiddenOnly ? ":hidden" : ""}`,
+  }));
+  return {
+    html: groups.map((group) => topicGroupHtml(group, state, renderFact)).join(""),
+    groups,
+  };
 }
 
 function checklistOffers(state) {
@@ -403,12 +457,79 @@ function checklistOfferRow(state) {
   return `<div class="partner-row">${links}${partnerNote(state)}</div>`;
 }
 
-function groupTitle(group) {
-  return `<p class="fact-group-title"><span class="zone-dot" data-zone="${esc(group.zone)}" aria-hidden="true"></span><span>${esc(group.title)}</span><span class="count">${group.facts.length}</span></p>`;
+function zoneMixHtml(facts, catalog) {
+  const mix = zoneMix(facts, catalog);
+  const label = mix.map((item) => `${item.count} ${zoneName(item.zone, catalog)}`).join(", ");
+  const marks = mix.map((item) => `<span class="zone-pill" data-zone="${esc(item.zone)}"><span class="zone-dot" data-zone="${esc(item.zone)}" aria-hidden="true"></span>${item.count}</span>`).join("");
+  return `<span class="zone-mix" aria-label="${esc(label)}">${marks}</span>`;
 }
 
-function factGroupHtml(facts, renderFact, catalog) {
-  return groupFacts(facts, catalog).map((group) => `<div class="fact-group" data-zone="${esc(group.zone)}">${groupTitle(group)}${group.facts.map(renderFact).join("")}</div>`).join("");
+function topicGroupHtml(group, state, renderFact) {
+  const open = Boolean(state.openGroups && state.openGroups[group.domId]);
+  const labels = group.facts.map((fact) => fact.short_label || fact.text).join(", ");
+  return `<section class="fact-group" data-group="${esc(group.domId)}">
+    <button type="button" class="fact-group-toggle" data-action="toggle-group" data-group="${esc(group.domId)}" aria-expanded="${open ? "true" : "false"}">
+      <span class="chevron" aria-hidden="true"></span>
+      <span class="fact-group-name">${esc(group.title)}</span>
+      <span class="fact-group-count">${group.facts.length}</span>
+      ${zoneMixHtml(group.facts, state.catalog)}
+      <span class="fact-group-summary">${esc(labels)}</span>
+    </button>
+    <div class="fact-group-body"${open ? "" : " hidden"}>${group.facts.map(renderFact).join("")}</div>
+  </section>`;
+}
+
+function orderedBlocks(section, state, cardId, hiddenOnly, renderFact) {
+  const limits = presentationLimits(state.catalog);
+  const chunks = [];
+  const groups = [];
+  sectionPools(section).forEach((pool) => {
+    if (pool.note && !hiddenOnly) {
+      chunks.push(`<h3>${esc(pool.title)}</h3><p class="hint">${esc(pool.note)}</p>`);
+      return;
+    }
+    const facts = (pool.facts || []).filter((fact) => (hiddenOnly ? fact.hidden : !fact.hidden));
+    if (!facts.length) {
+      if (!hiddenOnly && (pool.facts || []).length && !(pool.facts || []).some((fact) => fact.hidden)) {
+        chunks.push(`<p class="hint">В зелёной и жёлтой зоне фактов нет.</p>`);
+      }
+      return;
+    }
+    topicGroups(facts, {
+      fallbackId: "all",
+      fallbackTitle: pool.title,
+      prefixMax: limits.prefixMax,
+      minFacts: limits.minFacts,
+      catalog: state.catalog,
+    }).forEach((group) => {
+      const full = {
+        ...group,
+        id: `${pool.id}:${group.id}`,
+        domId: `${cardId}:${pool.id}:${group.id}${hiddenOnly ? ":hidden" : ""}`,
+      };
+      groups.push(full);
+      chunks.push(topicGroupHtml(full, state, renderFact));
+    });
+  });
+  return { html: chunks.join(""), groups };
+}
+
+function cardSummaryHtml(groups, state, cardId) {
+  const limits = presentationLimits(state.catalog);
+  const open = Boolean(state.openSummaries && state.openSummaries[cardId]);
+  const summary = cardSummary(groups, open ? null : limits.previewItems);
+  if (!summary.lines.length) return "";
+  const lines = summary.lines.map((line) => {
+    const items = line.labels.map((item, index) => {
+      const sep = index ? `<span class="summary-sep">, </span>` : " ";
+      return `${sep}<button type="button" class="summary-item" data-action="summary-item" data-group="${esc(item.groupId)}" data-fact="${esc(item.factId)}">${esc(item.label)}</button>`;
+    }).join("");
+    return `<p><span class="card-summary-topic">${esc(line.title)}:</span>${items}</p>`;
+  }).join("");
+  const more = summary.more > 0
+    ? `<p><button type="button" class="summary-more" data-action="summary-more" data-card="${esc(cardId)}">ещё</button></p>`
+    : "";
+  return `<div class="card-summary">${lines}${more}</div>`;
 }
 
 function orderHint() {
@@ -427,19 +548,17 @@ function checklist(state, country) {
   const facts = section.facts || [];
   const tasks = visibleFacts(facts.filter((fact) => !fact.gap), show);
   const done = tasks.filter((fact) => state.progress[fact.id] && state.progress[fact.id].completed).length;
+  const cardId = `checklist:${country.slug}`;
   const checkRow = (fact) => {
     const checked = Boolean(state.progress[fact.id] && state.progress[fact.id].completed);
     return `<div class="check${checked ? " is-done" : ""}">
       <button type="button" class="tick" data-action="check" data-id="${esc(fact.id)}" aria-pressed="${checked ? "true" : "false"}" aria-label="Отметить пункт">${checked ? icon("check") : ""}</button>
-      <div class="check-body">${factCard(fact, state.catalog)}</div>
+      <div class="check-body">${factCard(fact, state)}</div>
     </div>`;
   };
-  const visibleRows = factGroupHtml(
-    visibleFacts(facts.filter((fact) => !fact.gap), false).concat(facts.filter((fact) => fact.gap)),
-    (fact) => (fact.gap ? factCard(fact, state.catalog) : checkRow(fact)),
-    state.catalog,
-  );
-  const hiddenRows = show ? factGroupHtml(facts.filter((fact) => !fact.gap && fact.hidden), checkRow, state.catalog) : "";
+  const renderFact = (fact) => (fact.gap ? factCard(fact, state) : checkRow(fact));
+  const visible = orderedBlocks(section, state, cardId, false, renderFact);
+  const hidden = show ? orderedBlocks(section, state, cardId, true, renderFact) : { html: "", groups: [] };
   const toggle = hasHidden(facts)
     ? `<button type="button" class="ghost wide" data-action="unverified" data-scope="checklist">${show ? "Скрыть непроверенное" : "Показать непроверенное"}</button>`
     : "";
@@ -448,11 +567,12 @@ function checklist(state, country) {
       <h2>Чек-лист до вылета</h2>
       <p class="hint">${done} из ${tasks.length}</p>
     </div>
-    ${visibleRows || hiddenRows ? orderHint() : ""}
-    ${visibleRows || `<p class="hint">В зелёной и жёлтой зоне пунктов нет.</p>`}
+    ${cardSummaryHtml(visible.groups.concat(hidden.groups), state, cardId)}
+    ${visible.html || hidden.html ? orderHint() : ""}
+    ${visible.html || `<p class="hint">В зелёной и жёлтой зоне пунктов нет.</p>`}
     ${offer}
     ${toggle}
-    ${hiddenRows}
+    ${hidden.html}
   </section>`;
 }
 
@@ -484,11 +604,15 @@ function countryScreen(state, screen) {
     const guideCount = (section.instructions || []).length;
     let meta = section.applicable ? ruCount(count, "факт", "факта", "фактов") : "не применимо";
     if (guideCount) meta += ` · ${ruCount(guideCount, "инструкция", "инструкции", "инструкций")}`;
+    const blurb = section.applicable
+      ? summaryPlain(sectionTopicGroups(section, state.catalog, false), presentationLimits(state.catalog).previewItems)
+      : "";
     return `<button type="button" class="section-tile" data-action="open-section" data-slug="${esc(country.slug)}" data-key="${esc(section.key)}">
       <span class="section-index">${esc(section.key.slice(0, 1))}</span>
       <span class="section-copy">
         <strong>${esc(section.short_title)}</strong>
         <span class="hint">${esc(meta)}</span>
+        ${blurb ? `<span class="hint section-blurb">${esc(blurb)}</span>` : ""}
       </span>
     </button>`;
   }).join("");
@@ -509,53 +633,31 @@ function sectionScreen(state, screen) {
   if (!section.applicable) {
     return `<section class="screen"><h2>${esc(section.title)}</h2><p class="lead">Раздел не применим: ${esc(section.note || "")}</p>${offer}</section>`;
   }
-  const pools = [{ title: "", facts: section.facts || [], note: "" }].concat(
-    (section.subsections || []).map((sub) => ({
-      title: sub.title,
-      facts: sub.applicable ? (sub.facts || []) : [],
-      note: sub.applicable ? "" : (sub.note || "Не применимо."),
-    })),
-  );
+  const pools = sectionPools(section);
   const hidden = pools.some((pool) => hasHidden(pool.facts));
-  const visibleBlocks = pools.map((pool) => poolMarkup(pool, state.catalog)).join("");
-  const hiddenBlocks = show ? pools.map((pool) => hiddenMarkup(pool, state.catalog)).join("") : "";
+  const renderFact = (fact) => factCard(fact, state);
+  const visible = orderedBlocks(section, state, scope, false, renderFact);
+  const hiddenBlocks = show ? orderedBlocks(section, state, scope, true, renderFact) : { html: "", groups: [] };
   const guides = (section.instructions || []).map((id) => instructionTeaser(state, country.slug, id)).join("");
   const toggle = hidden
     ? `<button type="button" class="ghost wide" data-action="unverified" data-scope="${esc(scope)}">${show ? "Скрыть непроверенное" : "Показать непроверенное"}</button>`
     : "";
   const anyFacts = pools.some((pool) => (pool.facts || []).some((fact) => show || !fact.hidden));
-  const empty = visibleBlocks || hiddenBlocks
+  const empty = visible.html || hiddenBlocks.html
     ? ""
     : `<p class="hint">${show ? "Дополнительных непроверенных фактов нет." : "В зелёной и жёлтой зоне фактов нет."}</p>`;
   return `<section class="screen">
     <p class="eyebrow">${esc(splitName(country.name).title)}</p>
     <h2>${esc(section.title)}</h2>
+    ${cardSummaryHtml(visible.groups.concat(hiddenBlocks.groups), state, scope)}
     ${anyFacts ? orderHint() : ""}
-    ${visibleBlocks}
+    ${visible.html}
     ${empty}
     ${offer}
     ${toggle}
-    ${hiddenBlocks}
+    ${hiddenBlocks.html}
     <div class="instruction-block">${guides}</div>
   </section>`;
-}
-
-function poolMarkup(pool, catalog) {
-  const title = pool.title ? `<h3>${esc(pool.title)}</h3>` : "";
-  if (pool.note) return `${title}<p class="hint">${esc(pool.note)}</p>`;
-  const facts = (pool.facts || []).filter((fact) => !fact.hidden);
-  if (!facts.length) {
-    if (!pool.title || (pool.facts || []).some((fact) => fact.hidden)) return "";
-    return `${title}<p class="hint">В зелёной и жёлтой зоне фактов нет.</p>`;
-  }
-  return `${title}${factGroupHtml(facts, (fact) => factCard(fact, catalog), catalog)}`;
-}
-
-function hiddenMarkup(pool, catalog) {
-  const facts = (pool.facts || []).filter((fact) => fact.hidden);
-  if (!facts.length) return "";
-  const title = pool.title ? `<h3>${esc(pool.title)}</h3>` : "";
-  return `${title}${factGroupHtml(facts, (fact) => factCard(fact, catalog), catalog)}`;
 }
 
 function instructionTeaser(state, slug, id) {
@@ -605,7 +707,7 @@ function instructionScreen(state, screen) {
     ${step.stage ? `<p class="stage">${esc(step.stage)}</p>` : ""}
     ${intro}
     ${prereq}
-    ${factCard(step, state.catalog)}
+    ${factCard(step, state)}
     <button type="button" class="ghost wide" data-action="step-done" data-id="${esc(step.id)}" data-instruction="${esc(instruction.id)}" aria-pressed="${checked ? "true" : "false"}">${checked ? "Шаг сделан" : "Отметить шаг"}</button>
     ${hasHidden(instruction.steps) ? `<button type="button" class="text-btn" data-action="unverified" data-scope="${esc(scope)}">${show ? "Скрыть непроверенное" : "Показать непроверенное"}</button>` : ""}
     ${footerBits.length ? `<div class="note">${footerBits.join("")}</div>` : ""}
