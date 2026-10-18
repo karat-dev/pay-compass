@@ -3,14 +3,16 @@
     "official": "official",
     "media": "media",
     "traveler": "traveler",
-    "internal": "internal"
+    "internal": "internal",
+    "map_estimate": "map_estimate"
   },
   "source_points": {
     "official": 50,
     "media": 30,
     "traveler_per_report": 15,
     "traveler_max": 30,
-    "internal": 0
+    "internal": 0,
+    "map_estimate": 15
   },
   "freshness_points": [
     {
@@ -115,6 +117,9 @@
   },
   "verified_by_us_max_days": 90,
   "contradicted_by_own_zone": "red",
+  "route_rules": {
+    "allow_map_estimate_in_allowance": false
+  },
   "volatility": {
     "fallback_class": "fallback",
     "fact_field": "volatility_class",

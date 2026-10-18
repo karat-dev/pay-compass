@@ -19,7 +19,8 @@
       "hk_visa_free_days",
       "pek_pkx_bus",
       "pek_pkx_transfer_minutes",
-      {"rule": "airport_change_allowance", "id": "pek_pkx_allowance", "pair": "PEK и PKX", "inputs": ["pek_pkx_transfer_minutes", "pek_pkx_mct"]}
+      {"rule": "driving_summary", "id": "pek_pkx_driving", "direction": "PEK → PKX", "inputs": ["pek_pkx_drive"], "no_traffic_range": true},
+      {"rule": "airport_change_allowance", "id": "pek_pkx_allowance", "pair": "PEK и PKX", "inputs": ["pek_pkx_transfer_minutes", "pek_pkx_mct"], "driving_inputs": ["pek_pkx_drive"], "driving_replaces": ["pek_pkx_transfer_minutes"]}
     ],
     "sections": [
       {
@@ -30,7 +31,9 @@
           "pek_pkx_transfer_minutes",
           "pek_pkx_bus_frequency",
           "pek_pkx_mct",
-          {"rule": "airport_change_allowance", "id": "pek_pkx_allowance", "pair": "PEK и PKX", "inputs": ["pek_pkx_transfer_minutes", "pek_pkx_mct"]},
+          {"rule": "driving_summary", "id": "pek_pkx_driving", "direction": "PEK → PKX", "inputs": ["pek_pkx_drive"], "no_traffic_range": true},
+          "pek_pkx_google_transit",
+          {"rule": "airport_change_allowance", "id": "pek_pkx_allowance", "pair": "PEK и PKX", "inputs": ["pek_pkx_transfer_minutes", "pek_pkx_mct"], "driving_inputs": ["pek_pkx_drive"], "driving_replaces": ["pek_pkx_transfer_minutes"]},
           "direct_connect_hkg",
           "separate_ticket_baggage",
           "china_airside_hours"
@@ -39,7 +42,7 @@
       {
         "id": "transfer",
         "title": "Трансфер",
-        "facts": ["pek_express_cny", "pek_express_interval", "pkx_rail_minutes", "pkx_city_fare"],
+        "facts": ["pek_express_cny", "pek_express_interval", "pkx_rail_minutes", "pkx_city_fare", "pek_taxi_fare", "pkx_taxi_fare"],
         "partners": ["kiwitaxi", "gettransfer"]
       },
       {
@@ -86,8 +89,10 @@
       "pek_pkx_bus",
       "pek_pkx_transfer_minutes",
       "pvg_sha_link_minutes",
-      {"rule": "airport_change_allowance", "id": "pek_pkx_allowance", "pair": "PEK и PKX", "inputs": ["pek_pkx_transfer_minutes", "pek_pkx_mct"]},
-      {"rule": "airport_change_allowance", "id": "pvg_sha_allowance", "pair": "PVG и SHA", "inputs": ["pvg_sha_link_minutes", "pvg_sha_mct"]}
+      {"rule": "driving_summary", "id": "pek_pkx_driving", "direction": "PEK → PKX", "inputs": ["pek_pkx_drive"], "no_traffic_range": true},
+      {"rule": "driving_summary", "id": "pvg_sha_driving", "direction": "PVG → SHA", "inputs": ["pvg_sha_drive_shorter", "pvg_sha_drive_middle", "pvg_sha_drive_longer"], "no_traffic_range": true},
+      {"rule": "airport_change_allowance", "id": "pek_pkx_allowance", "pair": "PEK и PKX", "inputs": ["pek_pkx_transfer_minutes", "pek_pkx_mct"], "driving_inputs": ["pek_pkx_drive"], "driving_replaces": ["pek_pkx_transfer_minutes"]},
+      {"rule": "airport_change_allowance", "id": "pvg_sha_allowance", "pair": "PVG и SHA", "inputs": ["pvg_sha_link_minutes", "pvg_sha_mct"], "driving_inputs": ["pvg_sha_drive_shorter", "pvg_sha_drive_middle", "pvg_sha_drive_longer"], "driving_replaces": ["pvg_sha_link_minutes"]}
     ],
     "sections": [
       {
@@ -98,13 +103,17 @@
           "pek_pkx_transfer_minutes",
           "pek_pkx_bus_frequency",
           "pek_pkx_mct",
-          {"rule": "airport_change_allowance", "id": "pek_pkx_allowance", "pair": "PEK и PKX", "inputs": ["pek_pkx_transfer_minutes", "pek_pkx_mct"]},
+          {"rule": "airport_change_allowance", "id": "pek_pkx_allowance", "pair": "PEK и PKX", "inputs": ["pek_pkx_transfer_minutes", "pek_pkx_mct"], "driving_inputs": ["pek_pkx_drive"], "driving_replaces": ["pek_pkx_transfer_minutes"]},
           "pvg_sha_link_minutes",
           "pvg_sha_fare_cny",
           "pvg_sha_interval",
           "ceair_pvg_sha_minutes",
           "pvg_sha_mct",
-          {"rule": "airport_change_allowance", "id": "pvg_sha_allowance", "pair": "PVG и SHA", "inputs": ["pvg_sha_link_minutes", "pvg_sha_mct"]},
+          {"rule": "driving_summary", "id": "pek_pkx_driving", "direction": "PEK → PKX", "inputs": ["pek_pkx_drive"], "no_traffic_range": true},
+          {"rule": "driving_summary", "id": "pvg_sha_driving", "direction": "PVG → SHA", "inputs": ["pvg_sha_drive_shorter", "pvg_sha_drive_middle", "pvg_sha_drive_longer"], "no_traffic_range": true},
+          "pek_pkx_google_transit",
+          "pvg_sha_google_transit",
+          {"rule": "airport_change_allowance", "id": "pvg_sha_allowance", "pair": "PVG и SHA", "inputs": ["pvg_sha_link_minutes", "pvg_sha_mct"], "driving_inputs": ["pvg_sha_drive_shorter", "pvg_sha_drive_middle", "pvg_sha_drive_longer"], "driving_replaces": ["pvg_sha_link_minutes"]},
           "direct_connect_china",
           "separate_ticket_baggage",
           "china_airside_hours"
@@ -123,7 +132,7 @@
       {
         "id": "transfer",
         "title": "Трансфер",
-        "facts": ["pek_express_cny", "pek_express_interval", "pkx_rail_minutes", "pkx_city_fare", "city_transfer_china"],
+        "facts": ["pek_express_cny", "pek_express_interval", "pkx_rail_minutes", "pkx_city_fare", "city_transfer_china", "pek_taxi_fare", "pkx_taxi_fare", "pvg_taxi_fare", "sha_taxi_fare"],
         "partners": ["kiwitaxi", "gettransfer"]
       },
       {
@@ -151,7 +160,9 @@
     "lead_facts": [
       "thailand_visa_free_days",
       "bkk_dmk_shuttle_minutes",
-      {"rule": "airport_change_allowance", "id": "bkk_dmk_allowance", "pair": "BKK и DMK", "inputs": ["bkk_dmk_shuttle_minutes", "bkk_dmk_mct"]},
+      {"rule": "driving_summary", "id": "bkk_dmk_driving", "direction": "BKK → DMK", "inputs": ["bkk_dmk_drive_0800_ramintra", "bkk_dmk_drive_0800_ring", "bkk_dmk_drive_1300", "bkk_dmk_drive_1800", "bkk_dmk_drive_2300", "bkk_dmk_drive_sat_1300"]},
+      {"rule": "driving_summary", "id": "dmk_bkk_driving", "direction": "DMK → BKK", "inputs": ["dmk_bkk_drive_0800", "dmk_bkk_drive_1300", "dmk_bkk_drive_1800", "dmk_bkk_drive_2300", "dmk_bkk_drive_sat_1300"]},
+      {"rule": "airport_change_allowance", "id": "bkk_dmk_allowance", "pair": "BKK и DMK", "inputs": ["bkk_dmk_shuttle_minutes", "bkk_dmk_mct"], "driving_inputs": ["bkk_dmk_drive_0800_ramintra", "bkk_dmk_drive_0800_ring", "bkk_dmk_drive_1300", "bkk_dmk_drive_1800", "bkk_dmk_drive_2300", "bkk_dmk_drive_sat_1300", "dmk_bkk_drive_0800", "dmk_bkk_drive_1300", "dmk_bkk_drive_1800", "dmk_bkk_drive_2300", "dmk_bkk_drive_sat_1300"], "driving_replaces": ["bkk_dmk_shuttle_minutes"]},
       "direct_connect_thailand"
     ],
     "sections": [
@@ -162,7 +173,13 @@
           "bkk_dmk_shuttle_minutes",
           "bkk_dmk_interval",
           "bkk_dmk_mct",
-          {"rule": "airport_change_allowance", "id": "bkk_dmk_allowance", "pair": "BKK и DMK", "inputs": ["bkk_dmk_shuttle_minutes", "bkk_dmk_mct"]},
+          {"rule": "driving_summary", "id": "bkk_dmk_driving", "direction": "BKK → DMK", "inputs": ["bkk_dmk_drive_0800_ramintra", "bkk_dmk_drive_0800_ring", "bkk_dmk_drive_1300", "bkk_dmk_drive_1800", "bkk_dmk_drive_2300", "bkk_dmk_drive_sat_1300"]},
+          {"rule": "driving_summary", "id": "dmk_bkk_driving", "direction": "DMK → BKK", "inputs": ["dmk_bkk_drive_0800", "dmk_bkk_drive_1300", "dmk_bkk_drive_1800", "dmk_bkk_drive_2300", "dmk_bkk_drive_sat_1300"]},
+          {"rule": "transit_summary", "id": "bkk_dmk_transit", "direction": "BKK → DMK", "inputs": ["bkk_dmk_transit_interval", "bkk_dmk_transit_0800", "bkk_dmk_transit_check", "bkk_dmk_transit_other", "bkk_dmk_transit_2300"]},
+          {"rule": "transit_summary", "id": "dmk_bkk_transit", "direction": "DMK → BKK", "inputs": ["dmk_bkk_transit_interval", "dmk_bkk_transit_0800", "dmk_bkk_transit_other"]},
+          "dmk_bkk_transit_2300",
+          "bkk_dmk_transit_fare",
+          {"rule": "airport_change_allowance", "id": "bkk_dmk_allowance", "pair": "BKK и DMK", "inputs": ["bkk_dmk_shuttle_minutes", "bkk_dmk_mct"], "driving_inputs": ["bkk_dmk_drive_0800_ramintra", "bkk_dmk_drive_0800_ring", "bkk_dmk_drive_1300", "bkk_dmk_drive_1800", "bkk_dmk_drive_2300", "bkk_dmk_drive_sat_1300", "dmk_bkk_drive_0800", "dmk_bkk_drive_1300", "dmk_bkk_drive_1800", "dmk_bkk_drive_2300", "dmk_bkk_drive_sat_1300"], "driving_replaces": ["bkk_dmk_shuttle_minutes"]},
           "direct_connect_thailand",
           "separate_ticket_baggage"
         ]
@@ -180,7 +197,7 @@
       {
         "id": "transfer",
         "title": "Трансфер",
-        "facts": ["city_transfer_thailand"],
+        "facts": ["city_transfer_thailand", "bkk_taxi_airport_surcharge", "bkk_taxi_luggage", "bkk_taxi_sports", "bkk_taxi_tolls", "bkk_taxi_fare", "dmk_taxi_fare"],
         "partners": ["kiwitaxi", "gettransfer"]
       },
       {

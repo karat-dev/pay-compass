@@ -194,6 +194,77 @@ def test_airline_connection_advice_is_not_added_into_the_allowance():
     assert "https://thailand.go.th/public/issue-focus-detail/001_01_090" in urls
 
 
+def test_map_estimates_render_from_slots_and_stay_out_of_the_allowance_until_enabled():
+    rules = json.loads((MODEL_DIR / "rules.json").read_text(encoding="utf-8"))
+    measurements = json.loads((MODEL_DIR / "measurements.json").read_text(encoding="utf-8"))
+    drive = measurement_fact("bkk_dmk_drive_2300", measurements["bkk_dmk_drive_2300"], rules, AS_OF)
+    assert drive["volatility_class"] == TRUST_CONFIG["volatility"]["transfer_measures"]["travel_time"]
+    assert drive["source_kind"] == TRUST_CONFIG["source_kinds"]["map_estimate"]
+    assert drive["zone"] == "yellow"
+    assert drive["score_breakdown"]["source"] == TRUST_CONFIG["source_points"]["map_estimate"]
+    cards = build_routes()
+    thailand = next(card for card in cards if card["id"] == "mow_thailand")
+    outbound = next(fact for fact in thailand["lead_facts"] if fact.get("rule_id") == "bkk_dmk_driving")
+    assert outbound["text"].startswith("На машине, BKK → DMK:")
+    assert "ночью: от 30 до 55 минут" in outbound["text"]
+    assert "в 18:00: от 50 до 130 минут" in outbound["text"]
+    china = next(card for card in cards if card["id"] == "mow_china")
+    pek = next(fact for fact in china["lead_facts"] if fact.get("rule_id") == "pek_pkx_driving")
+    pvg = next(fact for fact in china["lead_facts"] if fact.get("rule_id") == "pvg_sha_driving")
+    assert "85 минут" in pek["text"]
+    assert "без диапазона по пробкам" in pek["text"]
+    assert "от 85" not in pek["text"]
+    assert "55 минут" in pvg["text"] and "65 минут" in pvg["text"]
+    assert "без диапазона по пробкам" in pvg["text"]
+    allowance = next(fact for fact in thailand["lead_facts"] if fact.get("rule_id") == "bkk_dmk_allowance")
+    assert is_gap(allowance)
+    assert "130" not in allowance["text"]
+    gaps = gap_texts(cards)
+    assert any("Google Maps" in text and "PEK" in text for text in gaps)
+    assert any("Google Maps" in text and "PVG" in text for text in gaps)
+    assert any("Тариф такси из BKK" in text for text in gaps)
+    assert any("Ночной проезд" in text for text in gaps)
+    surcharge = measurement_fact("bkk_taxi_airport_surcharge", measurements["bkk_taxi_airport_surcharge"], rules, AS_OF)
+    assert "50 батов" in surcharge["text"]
+    assert surcharge["volatility_class"] == TRUST_CONFIG["volatility"]["transfer_measures"]["price_schedule"]
+    flag = TRUST_CONFIG.setdefault("route_rules", {})
+    previous = flag.get("allow_map_estimate_in_allowance")
+    flag["allow_map_estimate_in_allowance"] = True
+    try:
+        still_gap = build_routes()
+        thai_gap = next(
+            fact
+            for card in still_gap if card["id"] == "mow_thailand"
+            for fact in card["lead_facts"]
+            if fact.get("rule_id") == "bkk_dmk_allowance"
+        )
+        assert is_gap(thai_gap)
+        edited = json.loads(json.dumps(measurements))
+        edited["bkk_dmk_mct"] = {
+            "kind": "value",
+            "value": 40,
+            "unit": "minutes",
+            "template": "Стыковка: {value} {unit_label}.",
+            "source": "https://example.com/mct",
+            "source_kind": "official",
+            "source_date": "2026-10-18",
+            "agreement": "agree",
+            "volatility": "operator",
+        }
+        advised = build_routes(measurements=edited)
+        advice = next(
+            fact
+            for card in advised if card["id"] == "mow_thailand"
+            for fact in card["lead_facts"]
+            if fact.get("rule_id") == "bkk_dmk_allowance"
+        )
+        assert advice["value"] == 170
+        assert "170 минут" in advice["text"]
+        assert advice["type"] == "advice"
+    finally:
+        flag["allow_map_estimate_in_allowance"] = previous
+
+
 def test_unknown_volatility_is_rejected_and_notes_stay_out_of_the_catalog():
     rules = json.loads((MODEL_DIR / "rules.json").read_text(encoding="utf-8"))
     measurements = json.loads((MODEL_DIR / "measurements.json").read_text(encoding="utf-8"))

@@ -172,6 +172,10 @@ def _render_fields(measurement: Dict[str, Any], rules: Dict[str, Any]) -> Dict[s
     unit = measurement.get("unit")
     if measurement.get("policy_name"):
         fields["policy_name"] = measurement["policy_name"]
+    if measurement.get("slot_label"):
+        fields["slot_label"] = measurement["slot_label"]
+    if measurement.get("service"):
+        fields["service"] = measurement["service"]
     _extra_numbers(measurement, rules, fields)
     kind = measurement.get("kind")
     if kind == "date":
@@ -205,6 +209,13 @@ def _stamp(fact: Dict[str, Any], measurement: Dict[str, Any], rules: Dict[str, A
     fact["volatility"] = name
     fact["volatility_label"] = label
     fact["sources_checked"] = _sources_checked(measurement, rules)
+    if measurement.get("slot_label"):
+        fact["slot_label"] = measurement["slot_label"]
+    if measurement.get("slot_kind"):
+        fact["slot_kind"] = measurement["slot_kind"]
+    if measurement.get("kind") == "range":
+        fact["value_min"] = measurement["value_min"]
+        fact["value_max"] = measurement["value_max"]
 
 
 def measurement_fact(measurement_id: str, measurement: Dict[str, Any], rules: Dict[str, Any], as_of: date) -> Dict[str, Any]:
@@ -241,6 +252,96 @@ def measurement_fact(measurement_id: str, measurement: Dict[str, Any], rules: Di
     return fact
 
 
+def _map_estimates_allowed() -> bool:
+    rules = TRUST_CONFIG.get("route_rules") or {}
+    return bool(rules.get("allow_map_estimate_in_allowance"))
+
+
+def _slot_phrase(fact: Dict[str, Any], rules: Dict[str, Any]) -> str:
+    forms = rules["units"]["minutes"]
+    if fact.get("slot_kind") == "interval":
+        value = int(fact["value"])
+        duration = rules["formulas"]["driving_slot_interval"].format(
+            value=format_int(value, rules),
+            unit_label=ru_plural(value, forms),
+        )
+    elif fact.get("value_min") is not None and fact.get("value_max") is not None:
+        value_max = int(fact["value_max"])
+        duration = rules["formulas"]["driving_slot_range"].format(
+            value_min=format_int(int(fact["value_min"]), rules),
+            value_max=format_int(value_max, rules),
+            unit_label=ru_plural(value_max, forms),
+        )
+    else:
+        value = int(fact["value"])
+        duration = rules["formulas"]["driving_slot_single"].format(
+            value=format_int(value, rules),
+            unit_label=ru_plural(value, forms),
+        )
+    label = fact.get("slot_label") or ""
+    if not label:
+        return duration
+    return rules["formulas"]["driving_slot_label"].format(label=label, duration=duration)
+
+
+def _summary_fact(
+    spec: Dict[str, Any],
+    facts: Dict[str, Dict[str, Any]],
+    rules: Dict[str, Any],
+    as_of: date,
+    *,
+    template_key: str,
+) -> Dict[str, Any]:
+    supports = []
+    phrases = []
+    for measurement_id in spec["inputs"]:
+        fact = facts.get(measurement_id)
+        if fact is None or is_gap(fact) or _input_minutes(fact) is None:
+            gap = _gap(rules["formulas"]["allowance_gap"].format(pair=spec["direction"]))
+            gap["rule_id"] = spec["id"]
+            return gap
+        supports.append(fact)
+        phrases.append(_slot_phrase(fact, rules))
+    text = rules["formulas"][template_key].format(
+        direction=spec["direction"],
+        slots=rules["slot_joiner"].join(phrases),
+    )
+    if spec.get("no_traffic_range"):
+        text = text.rstrip() + rules["formulas"]["driving_no_range_note"]
+    zone = _worst_zone([fact.get("zone") for fact in supports], TRUST_CONFIG)
+    dates = [fact_moment(fact) for fact in supports]
+    dates = [item for item in dates if item is not None]
+    verified = min(dates).isoformat() if dates else as_of.isoformat()
+    source = next((fact.get("source") for fact in supports if fact.get("source")), None)
+    raw = {
+        "text": text,
+        "status": _status_for(zone),
+        "fact_type": "advice",
+        "zone": zone,
+        "score": None,
+        "score_breakdown": None,
+        "date_verified": verified,
+        "source": source,
+        "source_kind": TRUST_CONFIG["source_kinds"].get("map_estimate"),
+        "source_user_facing": True,
+        "agreement": "agree",
+        "supports_resolved": [
+            {"text": fact.get("text"), "zone": fact.get("zone"), "score": fact.get("score")}
+            for fact in supports
+        ],
+        "status_derived_from": "advice_supports",
+        "reason": "сводка слотов; зона = наихудшая из опор",
+        "checked_at": as_of.isoformat(),
+        "volatility_class": supports[0].get("volatility_class"),
+    }
+    fact = normalize_fact(raw, as_of=as_of)
+    fact["rule_id"] = spec["id"]
+    if "map" in rules["volatility_classes"]:
+        fact["volatility"] = "map"
+        fact["volatility_label"] = rules["volatility_classes"]["map"]
+    return fact
+
+
 def _input_minutes(fact: Dict[str, Any]) -> Optional[int]:
     if is_gap(fact):
         return None
@@ -250,17 +351,42 @@ def _input_minutes(fact: Dict[str, Any]) -> Optional[int]:
     return None
 
 
+def _driving_minutes(spec: Dict[str, Any], facts: Dict[str, Dict[str, Any]]) -> Optional[tuple]:
+    """Max of map-estimate ranges. None when the config switch is off or an input is missing."""
+    driving_ids = spec.get("driving_inputs") or []
+    if not driving_ids or not _map_estimates_allowed():
+        return None
+    map_kind = TRUST_CONFIG["source_kinds"].get("map_estimate")
+    supports = []
+    for measurement_id in driving_ids:
+        fact = facts.get(measurement_id)
+        minutes = _input_minutes(fact) if fact is not None else None
+        if fact is None or minutes is None or fact.get("source_kind") != map_kind:
+            return None
+        supports.append(fact)
+    return max(_input_minutes(fact) or 0 for fact in supports), supports
+
+
 def allowance_fact(spec: Dict[str, Any], facts: Dict[str, Dict[str, Any]], rules: Dict[str, Any], as_of: date) -> Dict[str, Any]:
     """Sum transfer minutes and minimum connection minutes. Missing input → gap."""
     supports = []
+    replaced = set(spec.get("driving_replaces") or [])
+    driving = _driving_minutes(spec, facts)
+    travel_minutes = 0
+    if driving is not None:
+        travel_minutes, driving_supports = driving
+        supports.extend(driving_supports)
     for measurement_id in spec["inputs"]:
+        if driving is not None and measurement_id in replaced:
+            continue
         fact = facts.get(measurement_id)
         if fact is None or _input_minutes(fact) is None:
             gap = _gap(rules["formulas"]["allowance_gap"].format(pair=spec["pair"]))
             gap["rule_id"] = spec["id"]
             return gap
         supports.append(fact)
-    total = sum(_input_minutes(fact) or 0 for fact in supports)
+        travel_minutes += _input_minutes(fact) or 0
+    total = travel_minutes
     forms = rules["units"]["minutes"]
     text = rules["formulas"]["allowance_text"].format(
         pair=spec["pair"],
@@ -307,9 +433,16 @@ def _resolve(spec: Any, measurements: Dict[str, Any], built: Dict[str, Dict[str,
         if spec not in built:
             built[spec] = measurement_fact(spec, measurements[spec], rules, as_of)
         return built[spec]
+    if spec.get("rule") in ("driving_summary", "transit_summary"):
+        for measurement_id in spec["inputs"]:
+            if measurement_id not in built:
+                built[measurement_id] = measurement_fact(measurement_id, measurements[measurement_id], rules, as_of)
+        template_key = "driving_summary" if spec.get("rule") == "driving_summary" else "transit_summary"
+        return _summary_fact(spec, built, rules, as_of, template_key=template_key)
     if spec.get("rule") != "airport_change_allowance":
         raise ValueError(f"Unknown route rule: {spec!r}")
-    for measurement_id in spec["inputs"]:
+    needed = list(spec["inputs"]) + list(spec.get("driving_inputs") or [])
+    for measurement_id in needed:
         if measurement_id not in built:
             built[measurement_id] = measurement_fact(measurement_id, measurements[measurement_id], rules, as_of)
     return allowance_fact(spec, built, rules, as_of)

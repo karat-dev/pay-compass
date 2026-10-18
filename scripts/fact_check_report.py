@@ -603,6 +603,9 @@ def _walk_route(route: Dict[str, Any]) -> tuple:
             ids.append(spec)
         elif isinstance(spec, dict) and spec.get("rule") == "airport_change_allowance":
             allowances.append(spec)
+            ids.extend(spec.get("driving_inputs") or [])
+        elif isinstance(spec, dict) and spec.get("rule") in ("driving_summary", "transit_summary"):
+            ids.extend(spec.get("inputs") or [])
 
     for spec in list(route.get("lead_facts") or []):
         take(spec)

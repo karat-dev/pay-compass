@@ -162,17 +162,16 @@ def source_points_for(fact: Dict[str, Any], config: Dict[str, Any]) -> Optional[
     kinds = config["source_kinds"]
     points = config["source_points"]
     kind = fact.get("source_kind")
-    if kind == kinds["official"]:
-        return int(points["official"])
-    if kind == kinds["media"]:
-        return int(points["media"])
-    if kind == kinds["internal"]:
-        return int(points["internal"])
-    if kind == kinds["traveler"]:
+    if kind == kinds.get("traveler"):
         reports = fact.get("reports")
         count = reports if isinstance(reports, int) and reports > 0 else 0
         per_report = int(points["traveler_per_report"])
         return min(int(points["traveler_max"]), per_report * count)
+    for name, token in kinds.items():
+        if name == "traveler" or name not in points:
+            continue
+        if kind == token:
+            return int(points[name])
     return None
 
 
