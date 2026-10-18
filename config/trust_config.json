@@ -221,5 +221,13 @@
     ],
     "public_suffixes": [".gov", ".go.th", ".go.jp"],
     "dot_markers": [".gov."]
+  },
+  "tax_free_rules": {
+    "georgia_refund": {
+      "vat_of_price_ex_vat": "0.18",
+      "service_fee_of_price_ex_vat": "0.04",
+      "bank_fee_of_remainder": "0.03",
+      "result_decimal_places": 1
+    }
   }
 }

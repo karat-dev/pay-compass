@@ -99,17 +99,18 @@ def test_july_own_experience_stays_a_manual_check():
 def test_corpus_counts_match_the_guide():
     built = _bundle_report()
     summary = built["summary"]
-    assert summary["checked"] == 267
-    assert summary["gaps"] == 11
+    assert summary["checked"] == 277
+    assert summary["gaps"] == 13
     assert summary["needs_owner_decision"] == 8
-    assert summary["needs_owner_manual_check"] == 17
-    assert summary["unknown_zone"] == 43
+    assert summary["needs_owner_manual_check"] == 12
+    assert summary["unknown_zone"] == 39
+    assert summary["refresh_search"] == 12
     country = [fact for fact in built["facts"] if fact["instruction_id"] is None]
     visible = [fact for fact in country if fact["current_zone"] in ("green", "yellow")]
     hidden_url = [fact for fact in visible if "no_public_source" in fact["flags"]]
-    assert len(visible) == 160
-    assert len(hidden_url) == 78
-    assert summary["confirmed"] + summary["not_confirmed"] + summary["stale"] + summary["could_not_check"] == 267
+    assert len(visible) == 163
+    assert len(hidden_url) == 72
+    assert summary["confirmed"] + summary["not_confirmed"] + summary["stale"] + summary["could_not_check"] == 277
 
 
 def test_traveler_green_asks_the_owner_in_the_exact_phrase():
@@ -172,7 +173,7 @@ def test_early_warning_before_the_class_window_closes():
     assert "Скоро съедут" in report.render_text({"as_of": "2026-10-18", "scope_label": "тест", "summary": {
         "checked": 1, "confirmed": 0, "not_confirmed": 0, "stale": 0, "could_not_check": 0,
         "needs_owner_decision": 0, "needs_owner_manual_check": 0, "gaps": 0, "unknown_zone": 0,
-        "no_public_source": 0, "green_prompts": 0, "at_risk": 1,
+        "no_public_source": 0, "green_prompts": 0, "at_risk": 1, "refresh_search": 1,
     }, "facts": [row]})
 
 
