@@ -101,7 +101,7 @@ def test_corpus_counts_match_the_guide():
     country = [fact for fact in built["facts"] if fact["instruction_id"] is None]
     visible = [fact for fact in country if fact["current_zone"] in ("green", "yellow")]
     hidden_url = [fact for fact in visible if "no_public_source" in fact["flags"]]
-    assert len(visible) == 160
+    assert len(visible) == 161
     assert len(hidden_url) == 66
     assert summary["confirmed"] + summary["not_confirmed"] + summary["stale"] + summary["could_not_check"] == 279
 

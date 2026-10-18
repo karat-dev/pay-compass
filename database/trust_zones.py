@@ -112,10 +112,11 @@ def volatility_class_name(
     instruction_id: Optional[str] = None,
 ) -> str:
     classes = config["volatility"]["classes"]
-    explicit = fact.get("volatility_class")
+    mapping = config["volatility"]
+    field = mapping.get("fact_field") or "volatility_class"
+    explicit = fact.get(field)
     if isinstance(explicit, str) and explicit in classes:
         return explicit
-    mapping = config["volatility"]
     if instruction_id and instruction_id in (mapping.get("instructions") or {}):
         return mapping["instructions"][instruction_id]
     if section_key and subsection:
