@@ -67,6 +67,12 @@
       "gap"
     ],
     "gap_label": "не исследовано",
+    "transfer_report": {
+      "title": "Трансферы и маршруты",
+      "by_zone": "По живой зоне",
+      "at_risk": "Скоро съедут",
+      "stale": "Устарело"
+    },
     "missing_zone": "black",
     "group_order": [
       "green",
@@ -143,6 +149,16 @@
         "green_max_days": 90,
         "window_days": 90
       },
+      "transfer_travel_time": {
+        "fresh_days": 90,
+        "green_max_days": 90,
+        "window_days": 90
+      },
+      "transfer_price_schedule": {
+        "fresh_days": 30,
+        "green_max_days": 30,
+        "window_days": 30
+      },
       "fallback": {
         "green_max_days": null,
         "window_days": null
@@ -161,6 +177,16 @@
     "subsections": {
       "3_local_wallets_cards/wallets": "fast",
       "3_local_wallets_cards/local_card": "medium"
+    },
+    "transfer_topics": {
+      "airport_pair": "аэропорт — аэропорт",
+      "airport_city": "аэропорт — город",
+      "public_transport": "общественный транспорт",
+      "taxi_price": "такси и трансфер"
+    },
+    "transfer_measures": {
+      "travel_time": "transfer_travel_time",
+      "price_schedule": "transfer_price_schedule"
     },
     "instructions": {
       "mts_tr_qr": "fast",

@@ -419,6 +419,65 @@ def test_blank_scope_means_the_whole_guide(monkeypatch):
     assert args.country == ""
 
 
+def test_transfer_section_counts_live_zones_risk_stale_and_gaps():
+    from datetime import timedelta
+
+    built = _bundle_report()
+    block = built["transfers"]
+    labels = CONFIG["display"]["transfer_report"]
+    assert block["title"] == labels["title"] == "Трансферы и маршруты"
+    assert block["at_risk_label"] == "Скоро съедут"
+    assert block["stale_label"] == "Устарело"
+    assert block["gap_label"] == CONFIG["display"]["gap_label"]
+    counted = sum(item["count"] for item in block["zones"]) + block["gaps"]
+    rows = report.transfer_rows(
+        report.load_json(report.MODEL_DIR / "rules.json"),
+        report.load_json(report.MODEL_DIR / "measurements.json"),
+        report.load_json(report.MODEL_DIR / "routes.json"),
+        CONFIG,
+        AS_OF,
+    )
+    assert counted == len(rows)
+    assert block["gaps"] == len(block["gap_rows"])
+    assert block["at_risk"] == len(block["at_risk_rows"])
+    assert block["stale"] == len(block["stale_rows"])
+    assert block["gaps"] > 0 and block["stale"] > 0
+    gap_text = "\n".join(row["text"] for row in block["gap_rows"])
+    assert "PEK и PKX" in gap_text
+    assert "PVG и SHA" in gap_text
+    assert "BKK и DMK" in gap_text
+    assert "в город" in gap_text
+    assert all("Виза не нужна" not in row["text"] for row in rows)
+    green = next(item for item in block["zones"] if item["zone"] == "green")
+    yellow = next(item for item in block["zones"] if item["zone"] == "yellow")
+    assert green["count"] > 0 and yellow["count"] > 0
+    text = report.render_text(built)
+    assert text.index(block["title"]) < text.index("Не сошлось с формулой")
+    messages = report.format_telegram_messages(built, "https://github.com/karat-dev/pay-compass/actions/runs/1")
+    telegram = "\n".join(messages)
+    assert block["title"] in telegram
+    assert f"{block['at_risk_label']}: {block['at_risk']}" in telegram
+    assert f"{block['stale_label']}: {block['stale']}" in telegram
+    assert f"{block['gap_label']}: {block['gaps']}" in telegram
+    assert all(len(part) <= 4096 for part in messages)
+    georgia = _bundle_report(scope="country", country="georgia")
+    assert georgia["transfers"]["gaps"] == 0
+    assert sum(item["count"] for item in georgia["transfers"]["zones"]) == 0
+
+    rules = report.load_json(report.MODEL_DIR / "rules.json")
+    measurements = report.load_json(report.MODEL_DIR / "measurements.json")
+    sample = json.loads(json.dumps(measurements["pvg_sha_link_minutes"]))
+    travel = CONFIG["volatility"]["classes"][CONFIG["volatility"]["transfer_measures"]["travel_time"]]
+    sample["source_date"] = (AS_OF - timedelta(days=int(travel["fresh_days"]))).isoformat()
+    sample["date_estimated"] = False
+    aged = report.measurement_fact("pvg_sha_link_minutes", sample, rules, AS_OF)
+    assert aged["volatility_class"] == CONFIG["volatility"]["transfer_measures"]["travel_time"]
+    assert aged["at_risk"] is True
+    sample["source_date"] = (AS_OF - timedelta(days=int(travel["fresh_days"]) + 1)).isoformat()
+    older = report.measurement_fact("pvg_sha_link_minutes", sample, rules, AS_OF)
+    assert report._freshness_is_stale(older, CONFIG)
+
+
 def test_workflow_schedule_and_push_stay_read_only():
     text = WORKFLOW.read_text(encoding="utf-8")
     script = (ROOT / "scripts" / "fact_check_report.py").read_text(encoding="utf-8")
@@ -426,7 +485,9 @@ def test_workflow_schedule_and_push_stay_read_only():
     assert "cron: '0 6 * * 1'" in text
     assert "branches:\n      - main" in text
     assert "database/data/countries.json" in text
+    assert "database/data/route_model/measurements.json" in text
     assert "config/trust_config.json" in text
+    assert "Трансферы и маршруты" in text
     assert "inputs.scope || 'all'" in text
     assert "contents: read" in text
     assert "contents: write" not in text

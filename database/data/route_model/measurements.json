@@ -76,7 +76,9 @@
     "source_kind": "official",
     "source_date": "2026-06-04",
     "agreement": "agree",
-    "volatility": "operator"
+    "volatility": "operator",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
   },
   "bkk_dmk_shuttle_minutes": {
     "kind": "range",
@@ -89,7 +91,9 @@
     "source_date": "2023-07-11",
     "date_basis": "страница thailand.go.th: Created 2023-03-16, Updated 2023-07-11",
     "agreement": "agree",
-    "volatility": "operator"
+    "volatility": "operator",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
   },
   "pek_pkx_bus": {
     "kind": "statement",
@@ -98,7 +102,9 @@
     "source_kind": "official",
     "source_date": "2026-08-19",
     "agreement": "agree",
-    "volatility": "operator"
+    "volatility": "operator",
+    "transfer_topic": "public_transport",
+    "transfer_measure": "price_schedule"
   },
   "pek_pkx_transfer_minutes": {
     "gap": true,
@@ -111,7 +117,9 @@
         "volatility": "operator",
         "note": "есть продукт самолёт плюс автобус, минут нет"
       }
-    ]
+    ],
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
   },
   "pek_pkx_bus_frequency": {
     "gap": true,
@@ -124,7 +132,9 @@
         "volatility": "operator",
         "note": "частота межаэропортового автобуса не указана"
       }
-    ]
+    ],
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "price_schedule"
   },
   "pek_pkx_mct": {
     "gap": true,
@@ -137,7 +147,9 @@
         "volatility": "operator",
         "note": "у PEK несколько строк по направлению и багажу, и время авиакомпании важнее; одной цифры нет. PKX на странице нет"
       }
-    ]
+    ],
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
   },
   "pvg_sha_mct": {
     "gap": true,
@@ -150,7 +162,9 @@
         "volatility": "operator",
         "note": "3.5 часа — условие China Eastern для своего билета, уже включает дорогу, это не MCT аэропорта и не вход формулы"
       }
-    ]
+    ],
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
   },
   "bkk_dmk_mct": {
     "gap": true,
@@ -163,7 +177,9 @@
         "volatility": "operator",
         "note": "одна страница даёт около 90 минут и отдельно 60–90, 120 и 150–180; одно число не выбрано"
       }
-    ]
+    ],
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
   },
   "bkk_dmk_interval": {
     "gap": true,
@@ -188,7 +204,9 @@
         "volatility": "schedule",
         "note": "Updated 2023-07-11: 1 автобус в час"
       }
-    ]
+    ],
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "price_schedule"
   },
   "airlines_mow_hkg": {
     "gap": true,
@@ -311,7 +329,9 @@
     "source_date": "2026-10-18",
     "date_estimated": true,
     "date_basis": "на странице BCIA нет даты, снимок 18.10.2026",
-    "agreement": "agree"
+    "agreement": "agree",
+    "transfer_topic": "airport_city",
+    "transfer_measure": "price_schedule"
   },
   "pek_express_interval": {
     "kind": "value",
@@ -324,7 +344,9 @@
     "source_date": "2026-10-18",
     "date_estimated": true,
     "date_basis": "на странице BCIA нет даты, снимок 18.10.2026",
-    "agreement": "agree"
+    "agreement": "agree",
+    "transfer_topic": "airport_city",
+    "transfer_measure": "price_schedule"
   },
   "pkx_rail_minutes": {
     "kind": "value",
@@ -335,7 +357,9 @@
     "source": "https://english.beijing.gov.cn/travellinginbeijing/transportation/airport/202005/t20200516_1899220.html",
     "source_kind": "official",
     "source_date": "2020-05-16",
-    "agreement": "agree"
+    "agreement": "agree",
+    "transfer_topic": "airport_city",
+    "transfer_measure": "travel_time"
   },
   "pkx_city_fare": {
     "gap": true,
@@ -348,7 +372,9 @@
         "volatility": "statute",
         "note": "указана базовая цена регулирования, не цена билета пассажира"
       }
-    ]
+    ],
+    "transfer_topic": "airport_city",
+    "transfer_measure": "price_schedule"
   },
   "pvg_sha_fare_cny": {
     "kind": "value",
@@ -360,7 +386,9 @@
     "source_kind": "official",
     "source_date": "2026-03-31",
     "date_basis": "Updated on March 31, 2026",
-    "agreement": "agree"
+    "agreement": "agree",
+    "transfer_topic": "airport_city",
+    "transfer_measure": "price_schedule"
   },
   "pvg_sha_interval": {
     "kind": "value",
@@ -372,7 +400,9 @@
     "source_kind": "official",
     "source_date": "2026-03-31",
     "date_basis": "Updated on March 31, 2026",
-    "agreement": "agree"
+    "agreement": "agree",
+    "transfer_topic": "airport_city",
+    "transfer_measure": "price_schedule"
   },
   "ceair_pvg_sha_minutes": {
     "kind": "value",
@@ -384,7 +414,9 @@
     "source_kind": "official",
     "source_date": "2025-03-28",
     "date_basis": "страница: at least 3.5 hours; в данных это 210 минут",
-    "agreement": "agree"
+    "agreement": "agree",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
   },
   "china_rmb_cash_cny": {
     "kind": "value",
@@ -519,13 +551,17 @@
     "gap": true,
     "volatility": "open",
     "text": "Цена и время проезда из аэропортов Шанхая в город — не исследовано.",
-    "sources_checked": []
+    "sources_checked": [],
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule"
   },
   "city_transfer_thailand": {
     "gap": true,
     "volatility": "open",
     "text": "Цена и время проезда из BKK, DMK и HKT в город — не исследовано.",
-    "sources_checked": []
+    "sources_checked": [],
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule"
   },
   "hkg_other_prohibited": {
     "gap": true,

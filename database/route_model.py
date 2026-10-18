@@ -109,8 +109,29 @@ def _volatility(measurement: Dict[str, Any], rules: Dict[str, Any]) -> tuple:
     return name, classes[name]
 
 
+def _transfer_engine_class(measurement: Dict[str, Any]) -> Optional[str]:
+    """Travel time and price/schedule use the transport classes named in trust_config."""
+    topic = measurement.get("transfer_topic")
+    measure = measurement.get("transfer_measure")
+    if topic is None and measure is None:
+        return None
+    volatility = TRUST_CONFIG["volatility"]
+    topics = volatility.get("transfer_topics") or {}
+    measures = volatility.get("transfer_measures") or {}
+    classes = volatility["classes"]
+    mapped = measures.get(measure)
+    if topic not in topics or not isinstance(mapped, str) or mapped not in classes:
+        raise ValueError(
+            f"Transfer measurement needs a known topic and measure, got topic={topic!r} measure={measure!r}"
+        )
+    return mapped
+
+
 def _engine_class(measurement: Dict[str, Any], rules: Dict[str, Any]) -> str:
-    """Map a route label onto a live-zone class. The class name lives in rules.json."""
+    """Map a route label onto a live-zone class. The class name lives in config."""
+    transfer = _transfer_engine_class(measurement)
+    if transfer:
+        return transfer
     label, _ = _volatility(measurement, rules)
     mapped = (rules.get("engine_volatility") or {}).get(label)
     classes = TRUST_CONFIG["volatility"]["classes"]
@@ -187,6 +208,7 @@ def _stamp(fact: Dict[str, Any], measurement: Dict[str, Any], rules: Dict[str, A
 
 
 def measurement_fact(measurement_id: str, measurement: Dict[str, Any], rules: Dict[str, Any], as_of: date) -> Dict[str, Any]:
+    _transfer_engine_class(measurement)
     if measurement.get("gap"):
         fact = _gap(measurement["text"])
         _stamp(fact, measurement, rules, measurement_id)

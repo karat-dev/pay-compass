@@ -30,6 +30,19 @@ def test_route_score_uses_the_guide_formula():
     measurements = json.loads((MODEL_DIR / "measurements.json").read_text(encoding="utf-8"))
     fact = measurement_fact("china_visa_free_days", measurements["china_visa_free_days"], rules, AS_OF)
     assert fact["volatility_class"] == rules["engine_volatility"]["statute"]
+    link = measurement_fact("pvg_sha_link_minutes", measurements["pvg_sha_link_minutes"], rules, AS_OF)
+    fare = measurement_fact("pek_express_cny", measurements["pek_express_cny"], rules, AS_OF)
+    interval = measurement_fact("pek_express_interval", measurements["pek_express_interval"], rules, AS_OF)
+    classes = TRUST_CONFIG["volatility"]["classes"]
+    measures = TRUST_CONFIG["volatility"]["transfer_measures"]
+    assert link["volatility_class"] == measures["travel_time"]
+    assert fare["volatility_class"] == interval["volatility_class"] == measures["price_schedule"]
+    assert classes[measures["travel_time"]]["fresh_days"] == classes["slow"]["fresh_days"]
+    assert classes[measures["travel_time"]]["green_max_days"] == classes["slow"]["green_max_days"]
+    assert classes[measures["travel_time"]]["window_days"] == classes["slow"]["window_days"]
+    assert classes[measures["price_schedule"]]["fresh_days"] == classes["medium"]["fresh_days"]
+    assert classes[measures["price_schedule"]]["green_max_days"] == classes["medium"]["green_max_days"]
+    assert classes[measures["price_schedule"]]["window_days"] == classes["medium"]["window_days"]
     probed = {
         "text": fact["text"],
         "status": "unconfirmed",
@@ -184,6 +197,14 @@ def test_airline_connection_advice_is_not_added_into_the_allowance():
 def test_unknown_volatility_is_rejected_and_notes_stay_out_of_the_catalog():
     rules = json.loads((MODEL_DIR / "rules.json").read_text(encoding="utf-8"))
     measurements = json.loads((MODEL_DIR / "measurements.json").read_text(encoding="utf-8"))
+    broken = json.loads(json.dumps(measurements["pek_express_cny"]))
+    broken["transfer_measure"] = "guess"
+    try:
+        measurement_fact("pek_express_cny", broken, rules, AS_OF)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("unknown transfer measure was accepted")
     broken = json.loads(json.dumps(measurements["pek_express_cny"]))
     broken["volatility"] = "guess"
     try:

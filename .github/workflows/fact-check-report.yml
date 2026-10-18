@@ -24,6 +24,9 @@ on:
       - main
     paths:
       - database/data/countries.json
+      - database/data/route_model/measurements.json
+      - database/data/route_model/rules.json
+      - database/data/route_model/routes.json
       - config/trust_config.json
 
 permissions:
@@ -36,6 +39,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Telegram text is format_telegram_messages: guide counts, then «Трансферы и маршруты».
       - name: Build fact-check report
         env:
           # schedule and push have no inputs; a blank scope means the whole guide

@@ -21,12 +21,14 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from database.knowledge_base import INSTRUCTION_SECTION, SECTION_ORDER, public_source_url  # noqa: E402
+from database.knowledge_base import INSTRUCTION_SECTION, SECTION_ORDER, is_gap, public_source_url  # noqa: E402
 from database.miniapp_catalog import _fact_id  # noqa: E402
+from database.route_model import MODEL_DIR, allowance_fact, measurement_fact  # noqa: E402
 from database.trust_zones import (  # noqa: E402
     confirmation_stats,
     http_urls as trust_http_urls,
     is_official_publisher as trust_is_official_publisher,
+    open_freshness_band,
     resolve_zone,
     zone_rank,
 )
@@ -584,6 +586,161 @@ def _fetch(url: str, timeout: float) -> Dict[str, Any]:
         return {"url": url, "status_code": None, "error": exc.__class__.__name__, "content_confirmed": False}
 
 
+def _route_matches(route: Dict[str, Any], scope: str, country: Optional[str]) -> bool:
+    if scope != "country" or not country:
+        return True
+    if route.get("destination_slug") == country:
+        return True
+    return any(target.get("slug") == country for target in route.get("payment_targets") or [])
+
+
+def _walk_route(route: Dict[str, Any]) -> tuple:
+    ids: List[str] = []
+    allowances: List[Dict[str, Any]] = []
+
+    def take(spec: Any) -> None:
+        if isinstance(spec, str):
+            ids.append(spec)
+        elif isinstance(spec, dict) and spec.get("rule") == "airport_change_allowance":
+            allowances.append(spec)
+
+    for spec in list(route.get("lead_facts") or []):
+        take(spec)
+    if route.get("airline_fact"):
+        take(route["airline_fact"])
+    for section in route.get("sections") or []:
+        for spec in section.get("facts") or []:
+            take(spec)
+    return ids, allowances
+
+
+def _transfer_topics(config: Dict[str, Any]) -> Dict[str, str]:
+    return (config.get("volatility") or {}).get("transfer_topics") or {}
+
+
+def transfer_rows(
+    rules: Dict[str, Any],
+    measurements: Dict[str, Any],
+    routes: Sequence[Dict[str, Any]],
+    config: Dict[str, Any],
+    as_of: date,
+    *,
+    scope: str = "all",
+    country: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Score airport, city, public-transport and taxi measurements with the live zone."""
+    topics = _transfer_topics(config)
+    selected: List[str] = []
+    allowances: List[Dict[str, Any]] = []
+    seen_rules = set()
+    for route in routes:
+        if not _route_matches(route, scope, country):
+            continue
+        ids, specs = _walk_route(route)
+        for measurement_id in ids:
+            measurement = measurements.get(measurement_id) or {}
+            if measurement.get("transfer_topic") in topics and measurement_id not in selected:
+                selected.append(measurement_id)
+        for spec in specs:
+            rule_id = spec.get("id")
+            inputs = spec.get("inputs") or []
+            if not rule_id or rule_id in seen_rules or not inputs:
+                continue
+            if all((measurements.get(item) or {}).get("transfer_topic") in topics for item in inputs):
+                seen_rules.add(rule_id)
+                allowances.append(spec)
+    if scope != "country":
+        for measurement_id, measurement in measurements.items():
+            if measurement.get("transfer_topic") in topics and measurement_id not in selected:
+                selected.append(measurement_id)
+    built: Dict[str, Dict[str, Any]] = {}
+    rows: List[Dict[str, Any]] = []
+    for measurement_id in selected:
+        measurement = measurements[measurement_id]
+        fact = measurement_fact(measurement_id, measurement, rules, as_of)
+        built[measurement_id] = fact
+        rows.append(_transfer_row(measurement_id, fact, measurement, config))
+    for spec in allowances:
+        for measurement_id in spec["inputs"]:
+            if measurement_id not in built:
+                built[measurement_id] = measurement_fact(
+                    measurement_id, measurements[measurement_id], rules, as_of
+                )
+        fact = allowance_fact(spec, built, rules, as_of)
+        rows.append(_transfer_row(spec["id"], fact, {}, config))
+    return rows
+
+
+def _freshness_is_stale(fact: Dict[str, Any], config: Dict[str, Any]) -> bool:
+    if is_gap(fact):
+        return False
+    breakdown = fact.get("score_breakdown")
+    if not isinstance(breakdown, dict) or "freshness" not in breakdown:
+        return False
+    return int(breakdown["freshness"]) == int(open_freshness_band(config)["points"])
+
+
+def _transfer_row(
+    row_id: str,
+    fact: Dict[str, Any],
+    measurement: Dict[str, Any],
+    config: Dict[str, Any],
+) -> Dict[str, Any]:
+    gap = is_gap(fact)
+    return {
+        "id": row_id,
+        "text": fact.get("text") or "",
+        "zone": None if gap else fact.get("zone"),
+        "gap": gap,
+        "at_risk": bool(fact.get("at_risk")) and not gap,
+        "stale": _freshness_is_stale(fact, config),
+        "topic": measurement.get("transfer_topic"),
+        "volatility_class": fact.get("volatility_class"),
+    }
+
+
+def summarize_transfers(rows: Sequence[Dict[str, Any]], config: Dict[str, Any]) -> Dict[str, Any]:
+    display = config["display"]
+    labels = display["transfer_report"]
+    titles = display["zone_titles"]
+    names = [name for name in display["group_order"] if zone_rank(name, config) is not None]
+    counts = {name: 0 for name in names}
+    gaps = 0
+    at_risk = 0
+    stale = 0
+    for row in rows:
+        if row["gap"]:
+            gaps += 1
+        elif row.get("zone") in counts:
+            counts[row["zone"]] += 1
+        if row["at_risk"]:
+            at_risk += 1
+        if row["stale"]:
+            stale += 1
+    return {
+        "title": labels["title"],
+        "by_zone_label": labels["by_zone"],
+        "zones": [{"zone": name, "title": titles.get(name) or name, "count": counts[name]} for name in names],
+        "at_risk_label": labels["at_risk"],
+        "at_risk": at_risk,
+        "stale_label": labels["stale"],
+        "stale": stale,
+        "gap_label": display["gap_label"],
+        "gaps": gaps,
+        "at_risk_rows": [row for row in rows if row["at_risk"]],
+        "stale_rows": [row for row in rows if row["stale"]],
+        "gap_rows": [row for row in rows if row["gap"]],
+    }
+
+
+def _route_bundle() -> tuple:
+    return (
+        load_json(MODEL_DIR / "rules.json"),
+        load_json(MODEL_DIR / "measurements.json"),
+        load_json(MODEL_DIR / "routes.json"),
+    )
+
+
 def build_report(
     *,
     as_of: Optional[date] = None,
@@ -593,6 +750,9 @@ def build_report(
     bundle: Optional[Dict[str, Any]] = None,
     config: Optional[Dict[str, Any]] = None,
     http_by_url: Optional[Dict[str, Dict[str, Any]]] = None,
+    route_rules: Optional[Dict[str, Any]] = None,
+    route_measurements: Optional[Dict[str, Any]] = None,
+    route_definitions: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     as_of = as_of or date.today()
     bundle = bundle if bundle is not None else load_json(DATA_PATH)
@@ -623,6 +783,23 @@ def build_report(
     ]
     names = {slug: (bundle.get("countries") or {}).get(slug, {}).get("name") or slug for slug in COUNTRY_ORDER}
     summary = _summary(facts)
+    if route_rules is None or route_measurements is None or route_definitions is None:
+        loaded_rules, loaded_measurements, loaded_routes = _route_bundle()
+        route_rules = loaded_rules if route_rules is None else route_rules
+        route_measurements = loaded_measurements if route_measurements is None else route_measurements
+        route_definitions = loaded_routes if route_definitions is None else route_definitions
+    transfers = summarize_transfers(
+        transfer_rows(
+            route_rules,
+            route_measurements,
+            route_definitions,
+            config,
+            as_of,
+            scope=scope,
+            country=country,
+        ),
+        config,
+    )
     scope_label = "все страны" if scope == "all" else names.get(country or "", country or "")
     return {
         "schema_version": SCHEMA_VERSION,
@@ -644,6 +821,7 @@ def build_report(
         },
         "summary": summary,
         "facts": facts,
+        "transfers": transfers,
     }
 
 
@@ -704,6 +882,7 @@ def render_text(report: Dict[str, Any]) -> str:
         f"Обновить поиск источника: {summary['refresh_search']}",
         "",
     ]
+    lines.extend(_transfer_lines(report))
     lines.extend(_section(report, "Не сошлось с формулой", lambda fact: fact["status"] == "fail"))
     lines.extend(_section(report, "Устарело: баллы не держат записанную зону", lambda fact: fact["status"] == "stale"))
     lines.extend(_section(report, "Не исследовано", lambda fact: "gap" in fact["flags"]))
@@ -739,6 +918,24 @@ def render_text(report: Dict[str, Any]) -> str:
             lines.append(f"   {fact['text']}")
     lines.append("")
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _transfer_lines(report: Dict[str, Any]) -> List[str]:
+    block = report.get("transfers")
+    if not block:
+        return []
+    lines = [block["title"], block["by_zone_label"]]
+    for item in block["zones"]:
+        lines.append(f"{item['title']}: {item['count']}")
+    lines.append(f"{block['at_risk_label']}: {block['at_risk']}")
+    for row in block.get("at_risk_rows") or []:
+        lines.append(f"- {row['text']}")
+    lines.append(f"{block['stale_label']}: {block['stale']}")
+    lines.append(f"{block['gap_label']}: {block['gaps']}")
+    for row in block.get("gap_rows") or []:
+        lines.append(f"- {row['text']}")
+    lines.append("")
+    return lines
 
 
 def _risk_lines(report: Dict[str, Any]) -> List[str]:
@@ -786,6 +983,14 @@ def format_telegram_messages(report: Dict[str, Any], run_url: str = "", *, limit
         f"Не смогли проверить: {summary['could_not_check']}",
         f"Нужно решение владельца: {summary['needs_owner_decision']}",
     ]
+    block = report.get("transfers")
+    if block:
+        lines.append(block["title"])
+        for item in block["zones"]:
+            lines.append(f"{item['title']}: {item['count']}")
+        lines.append(f"{block['at_risk_label']}: {block['at_risk']}")
+        lines.append(f"{block['stale_label']}: {block['stale']}")
+        lines.append(f"{block['gap_label']}: {block['gaps']}")
     if run_url:
         lines.append(f"Прогон: {run_url}")
     return split_telegram("\n".join(lines), run_url=run_url, limit=limit)
