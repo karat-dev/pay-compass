@@ -239,7 +239,29 @@ def _outlet_key(item: Dict[str, Any]) -> Optional[tuple]:
     return None
 
 
-def confirmation_stats(fact: Dict[str, Any], as_of: date, fresh_days: Optional[int]) -> Dict[str, Any]:
+def _counts_toward_upgrade(item: Dict[str, Any], config: Optional[Dict[str, Any]]) -> bool:
+    """A listed source with a verdict counts only when that verdict is a confirmation.
+
+    Older facts have no verdict. Those still count, so a new field does not
+    drop confirmations that were already in the guide.
+    """
+    if not config:
+        return True
+    counted = (config.get("upgrade") or {}).get("counted_confirmation_verdicts")
+    if not counted:
+        return True
+    verdict = item.get("verdict")
+    if verdict is None:
+        return True
+    return verdict in counted
+
+
+def confirmation_stats(
+    fact: Dict[str, Any],
+    as_of: date,
+    fresh_days: Optional[int],
+    config: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """Distinct fresh confirmations. A bare reports count is not independence."""
     items = fact.get("confirmations")
     reports = fact.get("reports") if isinstance(fact.get("reports"), int) else 0
@@ -252,6 +274,8 @@ def confirmation_stats(fact: Dict[str, Any], as_of: date, fresh_days: Optional[i
     fresh_keys = []
     for item in items:
         if not isinstance(item, dict):
+            continue
+        if not _counts_toward_upgrade(item, config):
             continue
         key = _outlet_key(item)
         if key is None:
@@ -516,7 +540,7 @@ def resolve_zone(
     fresh_days = spec.get("fresh_days")
     if fresh_days is None:
         fresh_days = class_window_days(spec, config)
-    stats = confirmation_stats(fact, as_of, fresh_days if fresh_days is not None else None)
+    stats = confirmation_stats(fact, as_of, fresh_days if fresh_days is not None else None, config)
     formula = scored["formula_zone"]
     if zone_rank(stored, config) is None:
         shown = formula
