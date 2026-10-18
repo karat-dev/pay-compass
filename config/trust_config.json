@@ -3,14 +3,16 @@
     "official": "official",
     "media": "media",
     "traveler": "traveler",
-    "internal": "internal"
+    "internal": "internal",
+    "map_estimate": "map_estimate"
   },
   "source_points": {
     "official": 50,
     "media": 30,
     "traveler_per_report": 15,
     "traveler_max": 30,
-    "internal": 0
+    "internal": 0,
+    "map_estimate": 15
   },
   "freshness_points": [
     {
@@ -67,6 +69,12 @@
       "gap"
     ],
     "gap_label": "не исследовано",
+    "transfer_report": {
+      "title": "Трансферы и маршруты",
+      "by_zone": "По живой зоне",
+      "at_risk": "Скоро съедут",
+      "stale": "Устарело"
+    },
     "missing_zone": "black",
     "group_order": [
       "green",
@@ -109,6 +117,94 @@
   },
   "verified_by_us_max_days": 90,
   "contradicted_by_own_zone": "red",
+  "route_rules": {
+    "allow_map_estimate_in_allowance": false
+  },
+  "auto_checks": {
+    "summary_label": "Следующая автопроверка",
+    "date_text": "{date}",
+    "uncovered_text": "Нет автопроверки — нужен твой ответ ({kind})",
+    "owner_summary": "Нужен твой ответ: {product_label} {product}, {logic_label} {logic}",
+    "kind_labels": {
+      "product": "продуктовый",
+      "logic": "логический"
+    },
+    "kinds": {
+      "product": "product",
+      "logic": "logic"
+    },
+    "reason_label": "По причинам",
+    "reason_labels": {
+      "own_experience": "свой опыт",
+      "review_green": "зелёный только из отзывов",
+      "conflict": "конфликт источников",
+      "owner_check": "ручная проверка",
+      "decision": "решение владельца",
+      "refresh": "заявление без страницы оператора",
+      "gap": "пробел",
+      "unscored": "нет данных для формулы",
+      "advice": "формула без источника",
+      "uncovered_class": "класс вне расписаний"
+    },
+    "reason_order": [
+      "own_experience",
+      "review_green",
+      "conflict",
+      "owner_check",
+      "decision",
+      "refresh",
+      "gap",
+      "unscored",
+      "advice",
+      "uncovered_class"
+    ],
+    "product": {
+      "source_kinds": ["internal"],
+      "verified_field": "verified_by_us",
+      "conflict_field": "agreement",
+      "conflict_volatility": "conflict",
+      "review_source_kind": "traveler",
+      "owner_check_field": "needs_owner_check",
+      "decision_field": "decision_needed",
+      "refresh_field": "refresh_search"
+    },
+    "source_kinds": ["official", "media", "map_estimate"],
+    "schedules": [
+      {
+        "id": "fact_check",
+        "minute": 0,
+        "hour": 6,
+        "day_of_month": null,
+        "day_of_week": 1,
+        "classes": ["fast", "medium", "slow", "fallback", "bank_procedure"]
+      },
+      {
+        "id": "transfers",
+        "minute": 0,
+        "hour": 6,
+        "day_of_month": 10,
+        "day_of_week": null,
+        "classes": ["transfer_travel_time", "transfer_price_schedule"]
+      },
+      {
+        "id": "entry_rules",
+        "minute": 0,
+        "hour": 6,
+        "day_of_month": 3,
+        "day_of_week": null,
+        "classes": ["slow"],
+        "categories": ["visa", "stamps"]
+      },
+      {
+        "id": "cache",
+        "minute": 0,
+        "hour": 6,
+        "day_of_month": 7,
+        "day_of_week": null,
+        "categories": ["tickets"]
+      }
+    ]
+  },
   "volatility": {
     "fallback_class": "fallback",
     "fact_field": "volatility_class",
@@ -143,6 +239,16 @@
         "green_max_days": 90,
         "window_days": 90
       },
+      "transfer_travel_time": {
+        "fresh_days": 90,
+        "green_max_days": 90,
+        "window_days": 90
+      },
+      "transfer_price_schedule": {
+        "fresh_days": 30,
+        "green_max_days": 30,
+        "window_days": 30
+      },
       "fallback": {
         "green_max_days": null,
         "window_days": null
@@ -161,6 +267,16 @@
     "subsections": {
       "3_local_wallets_cards/wallets": "fast",
       "3_local_wallets_cards/local_card": "medium"
+    },
+    "transfer_topics": {
+      "airport_pair": "аэропорт — аэропорт",
+      "airport_city": "аэропорт — город",
+      "public_transport": "общественный транспорт",
+      "taxi_price": "такси и трансфер"
+    },
+    "transfer_measures": {
+      "travel_time": "transfer_travel_time",
+      "price_schedule": "transfer_price_schedule"
     },
     "instructions": {
       "mts_tr_qr": "fast",

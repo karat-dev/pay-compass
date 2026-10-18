@@ -354,6 +354,10 @@ def test_script_does_not_write_product_data():
         "drops_on",
         "at_risk",
         "at_risk_reason",
+        "next_auto_check",
+        "owner_question_type",
+        "owner_question_reason",
+        "auto_check_text",
     }
     assert "at_risk" in payload["summary"]
     text = Path("/tmp/fact_check_report.txt").read_text(encoding="utf-8")
@@ -419,6 +423,245 @@ def test_blank_scope_means_the_whole_guide(monkeypatch):
     assert args.country == ""
 
 
+def test_transfer_section_counts_live_zones_risk_stale_and_gaps():
+    from datetime import timedelta
+
+    built = _bundle_report()
+    block = built["transfers"]
+    labels = CONFIG["display"]["transfer_report"]
+    assert block["title"] == labels["title"] == "Трансферы и маршруты"
+    assert block["at_risk_label"] == "Скоро съедут"
+    assert block["stale_label"] == "Устарело"
+    assert block["gap_label"] == CONFIG["display"]["gap_label"]
+    counted = sum(item["count"] for item in block["zones"]) + block["gaps"]
+    rows = report.transfer_rows(
+        report.load_json(report.MODEL_DIR / "rules.json"),
+        report.load_json(report.MODEL_DIR / "measurements.json"),
+        report.load_json(report.MODEL_DIR / "routes.json"),
+        CONFIG,
+        AS_OF,
+    )
+    assert counted == len(rows)
+    assert block["gaps"] == len(block["gap_rows"])
+    assert block["at_risk"] == len(block["at_risk_rows"])
+    assert block["stale"] == len(block["stale_rows"])
+    assert block["gaps"] > 0 and block["stale"] > 0
+    gap_text = "\n".join(row["text"] for row in block["gap_rows"])
+    assert "PEK и PKX" in gap_text
+    assert "PVG и SHA" in gap_text
+    assert "BKK и DMK" in gap_text
+    assert "в город" in gap_text
+    assert all("Виза не нужна" not in row["text"] for row in rows)
+    green = next(item for item in block["zones"] if item["zone"] == "green")
+    yellow = next(item for item in block["zones"] if item["zone"] == "yellow")
+    assert green["count"] > 0 and yellow["count"] > 0
+    text = report.render_text(built)
+    assert text.index(block["title"]) < text.index("Не сошлось с формулой")
+    messages = report.format_telegram_messages(built, "https://github.com/karat-dev/pay-compass/actions/runs/1")
+    telegram = "\n".join(messages)
+    assert block["title"] in telegram
+    assert f"{block['at_risk_label']}: {block['at_risk']}" in telegram
+    assert f"{block['stale_label']}: {block['stale']}" in telegram
+    assert f"{block['gap_label']}: {block['gaps']}" in telegram
+    assert all(len(part) <= 4096 for part in messages)
+    georgia = _bundle_report(scope="country", country="georgia")
+    assert georgia["transfers"]["gaps"] == 0
+    assert sum(item["count"] for item in georgia["transfers"]["zones"]) == 0
+
+    rules = report.load_json(report.MODEL_DIR / "rules.json")
+    measurements = report.load_json(report.MODEL_DIR / "measurements.json")
+    sample = json.loads(json.dumps(measurements["pvg_sha_link_minutes"]))
+    travel = CONFIG["volatility"]["classes"][CONFIG["volatility"]["transfer_measures"]["travel_time"]]
+    sample["source_date"] = (AS_OF - timedelta(days=int(travel["fresh_days"]))).isoformat()
+    sample["date_estimated"] = False
+    aged = report.measurement_fact("pvg_sha_link_minutes", sample, rules, AS_OF)
+    assert aged["volatility_class"] == CONFIG["volatility"]["transfer_measures"]["travel_time"]
+    assert aged["at_risk"] is True
+    sample["source_date"] = (AS_OF - timedelta(days=int(travel["fresh_days"]) + 1)).isoformat()
+    older = report.measurement_fact("pvg_sha_link_minutes", sample, rules, AS_OF)
+    assert report._freshness_is_stale(older, CONFIG)
+
+
+def test_next_auto_check_uses_config_schedules_and_names_owner_questions():
+    schedules = {item["id"]: item for item in CONFIG["auto_checks"]["schedules"]}
+    sunday = date(2026, 10, 18)
+    assert report.next_schedule_date(schedules["fact_check"], sunday).isoformat() == "2026-10-19"
+    assert report.next_schedule_date(schedules["fact_check"], date(2026, 10, 19)).isoformat() == "2026-10-26"
+    assert report.next_schedule_date(schedules["entry_rules"], sunday).isoformat() == "2026-11-03"
+    assert report.next_schedule_date(schedules["cache"], sunday).isoformat() == "2026-11-07"
+    assert report.next_schedule_date(schedules["transfers"], sunday).isoformat() == "2026-11-10"
+    assert report.next_schedule_date(schedules["transfers"], date(2026, 11, 10)).isoformat() == "2026-12-10"
+    weekly = f"{schedules['fact_check']['minute']} {schedules['fact_check']['hour']} * * {schedules['fact_check']['day_of_week']}"
+    assert weekly in WORKFLOW.read_text(encoding="utf-8")
+    covered_by_other = set()
+    for schedule in CONFIG["auto_checks"]["schedules"]:
+        if schedule["id"] != "fact_check" and schedule.get("classes") and not schedule.get("categories"):
+            covered_by_other.update(schedule["classes"])
+    for name in CONFIG["volatility"]["classes"]:
+        if name not in covered_by_other:
+            assert name in schedules["fact_check"]["classes"], name
+
+    built = _bundle_report()
+    labels = CONFIG["auto_checks"]
+    product = labels["kinds"]["product"]
+    logic = labels["kinds"]["logic"]
+    product_phrase = labels["uncovered_text"].format(kind=labels["kind_labels"]["product"])
+    logic_phrase = labels["uncovered_text"].format(kind=labels["kind_labels"]["logic"])
+    assert product_phrase == "Нет автопроверки — нужен твой ответ (продуктовый)"
+    assert logic_phrase == "Нет автопроверки — нужен твой ответ (логический)"
+
+    dated = 0
+    for fact in built["facts"]:
+        assert "next_auto_check" in fact and "owner_question_type" in fact
+        if fact["next_auto_check"]:
+            dated += 1
+            assert fact["owner_question_type"] is None
+            assert fact["auto_check_text"] == fact["next_auto_check"]
+        else:
+            assert fact["owner_question_type"] in (product, logic)
+            assert fact["auto_check_text"] in (product_phrase, logic_phrase)
+    guide = built["auto_check"]
+    assert sum(item["count"] for item in guide["dates"]) + guide["product"] + guide["logic"] == len(built["facts"])
+    assert dated == sum(item["count"] for item in guide["dates"])
+    trial = next(fact for fact in built["facts"] if fact["text"].startswith("Сделать пробное"))
+    assert trial["owner_question_type"] == product
+    assert trial["next_auto_check"] is None
+
+    own = _assess(_fact(zone="green", source_kind="internal", verified_by_us=True, agreement="agree", reports=0, date_verified="2026-07-16"))
+    assert own["next_auto_check"] is None
+    assert own["owner_question_type"] == product
+    assert own["owner_question_reason"] == "own_experience"
+    assert own["auto_check_text"] == product_phrase
+
+    reviews = _assess(_fact(zone="yellow", reports=5, source_kind="traveler", agreement="agree"))
+    assert reviews["next_auto_check"] is None
+    assert reviews["owner_question_type"] == product
+    assert reviews["owner_question_reason"] == "review_green"
+
+    conflict = _assess(_fact(zone="yellow", agreement=CONFIG["early_warning"]["conflict_agreement"], source_kind="media", reports=0, source="https://example.test/a"))
+    assert conflict["next_auto_check"] is None
+    assert conflict["owner_question_type"] == product
+    assert conflict["owner_question_reason"] == "conflict"
+
+    official = _assess(_fact(
+        zone="green",
+        source_kind="official",
+        reports=0,
+        agreement="agree",
+        source="https://www.rshb.ru/tariffs",
+        date_verified="2026-10-10",
+        volatility_class="fast",
+    ))
+    assert official["next_auto_check"] == "2026-10-19"
+    assert official["owner_question_type"] is None
+    bank_class = next(name for name in CONFIG["volatility"]["classes"] if name in schedules["fact_check"]["classes"] and name not in ("fast", "medium", "slow", "fallback"))
+    bank = _assess(_fact(
+        zone="yellow",
+        source_kind="official",
+        reports=0,
+        agreement="agree",
+        source="https://www.tbcbank.ge/tariffs",
+        date_verified="2026-10-10",
+        volatility_class=bank_class,
+    ))
+    assert bank["next_auto_check"] == report.next_schedule_date(schedules["fact_check"], AS_OF).isoformat()
+    assert bank["owner_question_reason"] is None
+
+    visa = _assess(
+        _fact(
+            zone="green",
+            source_kind="official",
+            reports=0,
+            agreement="agree",
+            source="https://www.mfa.gov.cn/visa",
+            date_verified="2026-10-01",
+            volatility_class="slow",
+        ),
+        category="visa",
+    )
+    assert visa["next_auto_check"] == "2026-11-03"
+
+    tickets = _assess(
+        _fact(
+            zone="yellow",
+            source_kind="media",
+            reports=0,
+            agreement="agree",
+            source="https://www.aviasales.ru/search",
+            date_verified="2026-10-10",
+            volatility_class="fast",
+        ),
+        category="tickets",
+    )
+    assert tickets["next_auto_check"] == "2026-11-07"
+
+    gap = _assess(_fact(zone="gap", fact_type="gap", source_kind=None, source=None, agreement="agree"))
+    assert gap["next_auto_check"] is None
+    assert gap["owner_question_type"] == logic
+    assert gap["owner_question_reason"] == "gap"
+    assert gap["auto_check_text"] == logic_phrase
+
+    dropping = _assess(
+        _fact(
+            zone="green",
+            source_kind="official",
+            reports=0,
+            agreement="agree",
+            source="https://www.rshb.ru/tariffs",
+            date_verified="2026-09-30",
+            volatility_class="fast",
+        ),
+        as_of=date(2026, 10, 14),
+    )
+    assert dropping["at_risk"] is True
+    assert dropping["drops_on"] < report.next_schedule_date(schedules["fact_check"], date(2026, 10, 14)).isoformat()
+    assert dropping["next_auto_check"] == dropping["drops_on"]
+
+    rows = report.transfer_rows(
+        report.load_json(report.MODEL_DIR / "rules.json"),
+        report.load_json(report.MODEL_DIR / "measurements.json"),
+        report.load_json(report.MODEL_DIR / "routes.json"),
+        CONFIG,
+        AS_OF,
+    )
+    drive = next(row for row in rows if row["id"] == "bkk_dmk_drive_2300")
+    assert drive["volatility_class"] == CONFIG["volatility"]["transfer_measures"]["travel_time"]
+    assert drive["next_auto_check"] == "2026-11-10"
+    night = next(row for row in rows if row["id"] == "dmk_bkk_transit_2300")
+    assert night["gap"] is True
+    assert night["next_auto_check"] is None
+    assert night["owner_question_type"] == logic
+    interval = next(row for row in rows if row["id"] == "bkk_dmk_interval")
+    assert interval["owner_question_type"] == product
+    assert interval["owner_question_reason"] == "conflict"
+    assert interval["auto_check_text"] == product_phrase
+    block = built["transfers"]["auto_check"]
+    rendered = report.render_text(built)
+    for block_name in (guide, block):
+        assert sum(item["count"] for item in block_name["reasons"]) == block_name["product"] + block_name["logic"]
+        assert block_name["reason_label"] in rendered
+    assert sum(item["count"] for item in block["dates"]) + block["product"] + block["logic"] == len(rows)
+    assert any(item["date"] == "2026-11-10" and item["count"] > 0 for item in block["dates"])
+
+    text = report.render_text(built)
+    assert product_phrase in text and logic_phrase in text
+    assert built["auto_check"]["owner_label"] in text
+    assert block["owner_label"] in text
+    messages = report.format_telegram_messages(built, "https://github.com/karat-dev/pay-compass/actions/runs/1")
+    telegram = "\n".join(messages)
+    assert telegram.count(labels["summary_label"]) == 2
+    assert built["auto_check"]["owner_label"] in telegram
+    assert block["owner_label"] in telegram
+    assert "2026-11-10:" in telegram
+    assert all(len(part) <= 4096 for part in messages)
+    script = (ROOT / "scripts" / "fact_check_report.py").read_text(encoding="utf-8")
+    for needle in ("day_of_month",):
+        assert needle in script
+    assert "2026-11-10" not in script
+    assert "2026-11-03" not in script
+    assert "2026-11-07" not in script
+
+
 def test_workflow_schedule_and_push_stay_read_only():
     text = WORKFLOW.read_text(encoding="utf-8")
     script = (ROOT / "scripts" / "fact_check_report.py").read_text(encoding="utf-8")
@@ -426,7 +669,9 @@ def test_workflow_schedule_and_push_stay_read_only():
     assert "cron: '0 6 * * 1'" in text
     assert "branches:\n      - main" in text
     assert "database/data/countries.json" in text
+    assert "database/data/route_model/measurements.json" in text
     assert "config/trust_config.json" in text
+    assert "Трансферы и маршруты" in text
     assert "inputs.scope || 'all'" in text
     assert "contents: read" in text
     assert "contents: write" not in text

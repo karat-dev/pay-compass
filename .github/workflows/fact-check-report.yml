@@ -18,12 +18,16 @@ on:
         default: ""
   schedule:
     # Monday 09:00 Moscow (UTC+3). GitHub Actions cron is UTC.
+    # The same weekly fact-check, plus the monthly transfer, entry-rule, and cache dates, live in config auto_checks.
     - cron: '0 6 * * 1'
   push:
     branches:
       - main
     paths:
       - database/data/countries.json
+      - database/data/route_model/measurements.json
+      - database/data/route_model/rules.json
+      - database/data/route_model/routes.json
       - config/trust_config.json
 
 permissions:
@@ -36,6 +40,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Telegram text is format_telegram_messages: guide counts, then «Трансферы и маршруты».
       - name: Build fact-check report
         env:
           # schedule and push have no inputs; a blank scope means the whole guide

@@ -76,7 +76,9 @@
     "source_kind": "official",
     "source_date": "2026-06-04",
     "agreement": "agree",
-    "volatility": "operator"
+    "volatility": "operator",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
   },
   "bkk_dmk_shuttle_minutes": {
     "kind": "range",
@@ -89,7 +91,9 @@
     "source_date": "2023-07-11",
     "date_basis": "страница thailand.go.th: Created 2023-03-16, Updated 2023-07-11",
     "agreement": "agree",
-    "volatility": "operator"
+    "volatility": "operator",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
   },
   "pek_pkx_bus": {
     "kind": "statement",
@@ -98,7 +102,9 @@
     "source_kind": "official",
     "source_date": "2026-08-19",
     "agreement": "agree",
-    "volatility": "operator"
+    "volatility": "operator",
+    "transfer_topic": "public_transport",
+    "transfer_measure": "price_schedule"
   },
   "pek_pkx_transfer_minutes": {
     "gap": true,
@@ -111,7 +117,9 @@
         "volatility": "operator",
         "note": "есть продукт самолёт плюс автобус, минут нет"
       }
-    ]
+    ],
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
   },
   "pek_pkx_bus_frequency": {
     "gap": true,
@@ -124,7 +132,9 @@
         "volatility": "operator",
         "note": "частота межаэропортового автобуса не указана"
       }
-    ]
+    ],
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "price_schedule"
   },
   "pek_pkx_mct": {
     "gap": true,
@@ -137,7 +147,9 @@
         "volatility": "operator",
         "note": "у PEK несколько строк по направлению и багажу, и время авиакомпании важнее; одной цифры нет. PKX на странице нет"
       }
-    ]
+    ],
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
   },
   "pvg_sha_mct": {
     "gap": true,
@@ -150,7 +162,9 @@
         "volatility": "operator",
         "note": "3.5 часа — условие China Eastern для своего билета, уже включает дорогу, это не MCT аэропорта и не вход формулы"
       }
-    ]
+    ],
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
   },
   "bkk_dmk_mct": {
     "gap": true,
@@ -163,7 +177,9 @@
         "volatility": "operator",
         "note": "одна страница даёт около 90 минут и отдельно 60–90, 120 и 150–180; одно число не выбрано"
       }
-    ]
+    ],
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
   },
   "bkk_dmk_interval": {
     "gap": true,
@@ -188,7 +204,9 @@
         "volatility": "schedule",
         "note": "Updated 2023-07-11: 1 автобус в час"
       }
-    ]
+    ],
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "price_schedule"
   },
   "airlines_mow_hkg": {
     "gap": true,
@@ -311,7 +329,9 @@
     "source_date": "2026-10-18",
     "date_estimated": true,
     "date_basis": "на странице BCIA нет даты, снимок 18.10.2026",
-    "agreement": "agree"
+    "agreement": "agree",
+    "transfer_topic": "airport_city",
+    "transfer_measure": "price_schedule"
   },
   "pek_express_interval": {
     "kind": "value",
@@ -324,7 +344,9 @@
     "source_date": "2026-10-18",
     "date_estimated": true,
     "date_basis": "на странице BCIA нет даты, снимок 18.10.2026",
-    "agreement": "agree"
+    "agreement": "agree",
+    "transfer_topic": "airport_city",
+    "transfer_measure": "price_schedule"
   },
   "pkx_rail_minutes": {
     "kind": "value",
@@ -335,7 +357,9 @@
     "source": "https://english.beijing.gov.cn/travellinginbeijing/transportation/airport/202005/t20200516_1899220.html",
     "source_kind": "official",
     "source_date": "2020-05-16",
-    "agreement": "agree"
+    "agreement": "agree",
+    "transfer_topic": "airport_city",
+    "transfer_measure": "travel_time"
   },
   "pkx_city_fare": {
     "gap": true,
@@ -348,7 +372,9 @@
         "volatility": "statute",
         "note": "указана базовая цена регулирования, не цена билета пассажира"
       }
-    ]
+    ],
+    "transfer_topic": "airport_city",
+    "transfer_measure": "price_schedule"
   },
   "pvg_sha_fare_cny": {
     "kind": "value",
@@ -360,7 +386,9 @@
     "source_kind": "official",
     "source_date": "2026-03-31",
     "date_basis": "Updated on March 31, 2026",
-    "agreement": "agree"
+    "agreement": "agree",
+    "transfer_topic": "airport_city",
+    "transfer_measure": "price_schedule"
   },
   "pvg_sha_interval": {
     "kind": "value",
@@ -372,7 +400,9 @@
     "source_kind": "official",
     "source_date": "2026-03-31",
     "date_basis": "Updated on March 31, 2026",
-    "agreement": "agree"
+    "agreement": "agree",
+    "transfer_topic": "airport_city",
+    "transfer_measure": "price_schedule"
   },
   "ceair_pvg_sha_minutes": {
     "kind": "value",
@@ -384,7 +414,9 @@
     "source_kind": "official",
     "source_date": "2025-03-28",
     "date_basis": "страница: at least 3.5 hours; в данных это 210 минут",
-    "agreement": "agree"
+    "agreement": "agree",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
   },
   "china_rmb_cash_cny": {
     "kind": "value",
@@ -519,18 +551,901 @@
     "gap": true,
     "volatility": "open",
     "text": "Цена и время проезда из аэропортов Шанхая в город — не исследовано.",
-    "sources_checked": []
+    "sources_checked": [],
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule"
   },
   "city_transfer_thailand": {
     "gap": true,
     "volatility": "open",
     "text": "Цена и время проезда из BKK, DMK и HKT в город — не исследовано.",
-    "sources_checked": []
+    "sources_checked": [],
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule"
   },
   "hkg_other_prohibited": {
     "gap": true,
     "volatility": "open",
     "text": "Прочие запрещённые предметы и лекарства в Китае и Гонконге, кроме электронных сигарет Гонконга — не исследовано.",
     "sources_checked": []
+  },
+  "bkk_dmk_drive_0800_ramintra": {
+    "kind": "range",
+    "value_min": 45,
+    "value_max": 100,
+    "unit": "minutes",
+    "slot_label": "в 08:00 по Раминтре",
+    "slot_kind": "range",
+    "template": "{slot_label}: от {value_min} до {value_max} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Suvarnabhumi+Airport&destination=Don+Mueang+International+Airport&travelmode=driving",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18; типичные диапазоны на выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
+  },
+  "bkk_dmk_drive_0800_ring": {
+    "kind": "range",
+    "value_min": 45,
+    "value_max": 85,
+    "unit": "minutes",
+    "slot_label": "в 08:00 по внешнему кольцу",
+    "slot_kind": "range",
+    "template": "{slot_label}: от {value_min} до {value_max} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Suvarnabhumi+Airport&destination=Don+Mueang+International+Airport&travelmode=driving",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18; типичные диапазоны на выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
+  },
+  "bkk_dmk_drive_1300": {
+    "kind": "range",
+    "value_min": 35,
+    "value_max": 65,
+    "unit": "minutes",
+    "slot_label": "в 13:00",
+    "slot_kind": "range",
+    "template": "{slot_label}: от {value_min} до {value_max} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Suvarnabhumi+Airport&destination=Don+Mueang+International+Airport&travelmode=driving",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18; типичные диапазоны на выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
+  },
+  "bkk_dmk_drive_1800": {
+    "kind": "range",
+    "value_min": 50,
+    "value_max": 130,
+    "unit": "minutes",
+    "slot_label": "в 18:00",
+    "slot_kind": "range",
+    "template": "{slot_label}: от {value_min} до {value_max} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Suvarnabhumi+Airport&destination=Don+Mueang+International+Airport&travelmode=driving",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18; типичные диапазоны на выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
+  },
+  "bkk_dmk_drive_2300": {
+    "kind": "range",
+    "value_min": 30,
+    "value_max": 55,
+    "unit": "minutes",
+    "slot_label": "ночью",
+    "slot_kind": "range",
+    "template": "{slot_label}: от {value_min} до {value_max} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Suvarnabhumi+Airport&destination=Don+Mueang+International+Airport&travelmode=driving",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18; типичные диапазоны на выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
+  },
+  "bkk_dmk_drive_sat_1300": {
+    "kind": "range",
+    "value_min": 40,
+    "value_max": 80,
+    "unit": "minutes",
+    "slot_label": "в субботу в 13:00",
+    "slot_kind": "range",
+    "template": "{slot_label}: от {value_min} до {value_max} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Suvarnabhumi+Airport&destination=Don+Mueang+International+Airport&travelmode=driving",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18; типичные диапазоны на выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
+  },
+  "dmk_bkk_drive_0800": {
+    "kind": "range",
+    "value_min": 35,
+    "value_max": 75,
+    "unit": "minutes",
+    "slot_label": "в 08:00",
+    "slot_kind": "range",
+    "template": "{slot_label}: от {value_min} до {value_max} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Don+Mueang+International+Airport&destination=Suvarnabhumi+Airport&travelmode=driving",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18; типичные диапазоны на выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
+  },
+  "dmk_bkk_drive_1300": {
+    "kind": "range",
+    "value_min": 35,
+    "value_max": 60,
+    "unit": "minutes",
+    "slot_label": "в 13:00",
+    "slot_kind": "range",
+    "template": "{slot_label}: от {value_min} до {value_max} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Don+Mueang+International+Airport&destination=Suvarnabhumi+Airport&travelmode=driving",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18; типичные диапазоны на выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
+  },
+  "dmk_bkk_drive_1800": {
+    "kind": "range",
+    "value_min": 40,
+    "value_max": 100,
+    "unit": "minutes",
+    "slot_label": "в 18:00",
+    "slot_kind": "range",
+    "template": "{slot_label}: от {value_min} до {value_max} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Don+Mueang+International+Airport&destination=Suvarnabhumi+Airport&travelmode=driving",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18; типичные диапазоны на выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
+  },
+  "dmk_bkk_drive_2300": {
+    "kind": "range",
+    "value_min": 30,
+    "value_max": 55,
+    "unit": "minutes",
+    "slot_label": "ночью",
+    "slot_kind": "range",
+    "template": "{slot_label}: от {value_min} до {value_max} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Don+Mueang+International+Airport&destination=Suvarnabhumi+Airport&travelmode=driving",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18; типичные диапазоны на выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
+  },
+  "dmk_bkk_drive_sat_1300": {
+    "kind": "range",
+    "value_min": 35,
+    "value_max": 75,
+    "unit": "minutes",
+    "slot_label": "в субботу в 13:00",
+    "slot_kind": "range",
+    "template": "{slot_label}: от {value_min} до {value_max} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Don+Mueang+International+Airport&destination=Suvarnabhumi+Airport&travelmode=driving",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18; типичные диапазоны на выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
+  },
+  "pek_pkx_drive": {
+    "kind": "value",
+    "value": 85,
+    "unit": "minutes",
+    "slot_label": "в любое проверенное время",
+    "slot_kind": "single",
+    "template": "{slot_label}: {value} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Beijing+Capital+International+Airport&destination=Beijing+Daxing+International+Airport&travelmode=driving",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18: типично одна цифра во все проверенные слоты, диапазона по пробкам нет",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
+  },
+  "pvg_sha_drive_shorter": {
+    "kind": "value",
+    "value": 55,
+    "unit": "minutes",
+    "slot_label": "короче",
+    "slot_kind": "single",
+    "template": "{slot_label}: {value} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Shanghai+Pudong+International+Airport&destination=Shanghai+Hongqiao+International+Airport&travelmode=driving",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18: три отдельные цифры, одинаковые во все проверенные слоты, диапазона по пробкам нет",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
+  },
+  "pvg_sha_drive_middle": {
+    "kind": "value",
+    "value": 60,
+    "unit": "minutes",
+    "slot_label": "средний",
+    "slot_kind": "single",
+    "template": "{slot_label}: {value} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Shanghai+Pudong+International+Airport&destination=Shanghai+Hongqiao+International+Airport&travelmode=driving",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18: три отдельные цифры, одинаковые во все проверенные слоты, диапазона по пробкам нет",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
+  },
+  "pvg_sha_drive_longer": {
+    "kind": "value",
+    "value": 65,
+    "unit": "minutes",
+    "slot_label": "дольше",
+    "slot_kind": "single",
+    "template": "{slot_label}: {value} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Shanghai+Pudong+International+Airport&destination=Shanghai+Hongqiao+International+Airport&travelmode=driving",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18: три отдельные цифры, одинаковые во все проверенные слоты, диапазона по пробкам нет",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time"
+  },
+  "bkk_dmk_transit_interval": {
+    "kind": "value",
+    "value": 15,
+    "unit": "minutes",
+    "service": "ARL и автобус 504",
+    "slot_label": "ARL и автобус 504",
+    "slot_kind": "interval",
+    "template": "{service}: каждые {value} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Suvarnabhumi+Airport&destination=Don+Mueang+International+Airport&travelmode=transit",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18, общественный транспорт; выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "public_transport",
+    "transfer_measure": "price_schedule"
+  },
+  "bkk_dmk_transit_0800": {
+    "kind": "value",
+    "value": 89,
+    "unit": "minutes",
+    "slot_label": "в 08:00",
+    "slot_kind": "single",
+    "template": "{slot_label}: {value} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Suvarnabhumi+Airport&destination=Don+Mueang+International+Airport&travelmode=transit",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18, общественный транспорт; выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "public_transport",
+    "transfer_measure": "travel_time"
+  },
+  "bkk_dmk_transit_check": {
+    "kind": "value",
+    "value": 93,
+    "unit": "minutes",
+    "slot_label": "в момент проверки",
+    "slot_kind": "single",
+    "template": "{slot_label}: {value} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Suvarnabhumi+Airport&destination=Don+Mueang+International+Airport&travelmode=transit",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, снимок в воскресенье 2026-10-18 вечером по местному времени",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "public_transport",
+    "transfer_measure": "travel_time"
+  },
+  "bkk_dmk_transit_other": {
+    "kind": "range",
+    "value_min": 97,
+    "value_max": 168,
+    "unit": "minutes",
+    "slot_label": "другие варианты",
+    "slot_kind": "range",
+    "template": "{slot_label}: от {value_min} до {value_max} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Suvarnabhumi+Airport&destination=Don+Mueang+International+Airport&travelmode=transit",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18, общественный транспорт; выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "public_transport",
+    "transfer_measure": "travel_time"
+  },
+  "bkk_dmk_transit_2300": {
+    "kind": "range",
+    "value_min": 105,
+    "value_max": 126,
+    "unit": "minutes",
+    "slot_label": "ночью",
+    "slot_kind": "range",
+    "template": "{slot_label}: от {value_min} до {value_max} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Suvarnabhumi+Airport&destination=Don+Mueang+International+Airport&travelmode=transit",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18, общественный транспорт; выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "public_transport",
+    "transfer_measure": "travel_time"
+  },
+  "dmk_bkk_transit_interval": {
+    "kind": "value",
+    "value": 15,
+    "unit": "minutes",
+    "service": "автобус 504 и ARL",
+    "slot_label": "автобус 504 и ARL",
+    "slot_kind": "interval",
+    "template": "{service}: каждые {value} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Don+Mueang+International+Airport&destination=Suvarnabhumi+Airport&travelmode=transit",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18, общественный транспорт; выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "public_transport",
+    "transfer_measure": "price_schedule"
+  },
+  "dmk_bkk_transit_0800": {
+    "kind": "value",
+    "value": 90,
+    "unit": "minutes",
+    "slot_label": "в 08:00",
+    "slot_kind": "single",
+    "template": "{slot_label}: {value} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Don+Mueang+International+Airport&destination=Suvarnabhumi+Airport&travelmode=transit",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18, общественный транспорт; выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "public_transport",
+    "transfer_measure": "travel_time"
+  },
+  "dmk_bkk_transit_other": {
+    "kind": "range",
+    "value_min": 111,
+    "value_max": 136,
+    "unit": "minutes",
+    "slot_label": "другие варианты",
+    "slot_kind": "range",
+    "template": "{slot_label}: от {value_min} до {value_max} {unit_label}.",
+    "source": "https://www.google.com/maps/dir/?api=1&origin=Don+Mueang+International+Airport&destination=Suvarnabhumi+Airport&travelmode=transit",
+    "source_kind": "map_estimate",
+    "source_date": "2026-10-18",
+    "date_basis": "Google Maps без входа, проверка 2026-10-18, общественный транспорт; выезды во вторник 2026-10-20 и в субботу 2026-10-24, местное время",
+    "agreement": "agree",
+    "volatility": "map",
+    "transfer_topic": "public_transport",
+    "transfer_measure": "travel_time"
+  },
+  "dmk_bkk_transit_2300": {
+    "gap": true,
+    "volatility": "open",
+    "text": "Ночной проезд общественным транспортом из DMK в BKK — не исследовано.",
+    "transfer_topic": "public_transport",
+    "transfer_measure": "travel_time",
+    "sources_checked": [
+      {
+        "url": "https://www.google.com/maps/dir/?api=1&origin=Don+Mueang+International+Airport&destination=Suvarnabhumi+Airport&travelmode=transit",
+        "source_date": "2026-10-18",
+        "volatility": "map",
+        "note": "в 23:00 нет удобного рейса: варианты очень долгие либо первые отправления глубокой ночью"
+      }
+    ]
+  },
+  "bkk_dmk_transit_fare": {
+    "gap": true,
+    "volatility": "open",
+    "text": "Стоимость проезда между BKK и DMK на ARL и автобусе — не исследовано.",
+    "transfer_topic": "public_transport",
+    "transfer_measure": "price_schedule",
+    "sources_checked": [
+      {
+        "url": "https://www.google.com/maps/dir/?api=1&origin=Suvarnabhumi+Airport&destination=Don+Mueang+International+Airport&travelmode=transit",
+        "source_date": "2026-10-18",
+        "volatility": "map",
+        "note": "карту проезда Google не показывает"
+      }
+    ]
+  },
+  "pek_pkx_google_transit": {
+    "gap": true,
+    "volatility": "open",
+    "text": "Общественный транспорт из PEK в PKX в Google Maps — не исследовано.",
+    "transfer_topic": "public_transport",
+    "transfer_measure": "travel_time",
+    "sources_checked": [
+      {
+        "url": "https://www.google.com/maps/dir/?api=1&origin=Beijing+Capital+International+Airport&destination=Beijing+Daxing+International+Airport&travelmode=transit",
+        "source_date": "2026-10-18",
+        "volatility": "map",
+        "note": "у Google нет покрытия общественного транспорта"
+      }
+    ]
+  },
+  "pvg_sha_google_transit": {
+    "gap": true,
+    "volatility": "open",
+    "text": "Общественный транспорт из PVG в SHA в Google Maps — не исследовано.",
+    "transfer_topic": "public_transport",
+    "transfer_measure": "travel_time",
+    "sources_checked": [
+      {
+        "url": "https://www.google.com/maps/dir/?api=1&origin=Shanghai+Pudong+International+Airport&destination=Shanghai+Hongqiao+International+Airport&travelmode=transit",
+        "source_date": "2026-10-18",
+        "volatility": "map",
+        "note": "у Google нет покрытия общественного транспорта"
+      }
+    ]
+  },
+  "bkk_taxi_airport_surcharge": {
+    "kind": "value",
+    "value": 50,
+    "unit": "thb",
+    "template": "Доплата аэропорта к такси из BKK: {value} {unit_label}.",
+    "source": "https://suvarnabhumi.airportthai.co.th/service/transportation/detail/304",
+    "source_kind": "official",
+    "source_date": "2026-10-18",
+    "date_estimated": true,
+    "date_basis": "страница AOT Suvarnabhumi, даты обновления в снимке нет",
+    "agreement": "agree",
+    "volatility": "operator",
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule"
+  },
+  "bkk_taxi_luggage": {
+    "kind": "value",
+    "value": 20,
+    "unit": "thb",
+    "numbers": {
+      "inches": {
+        "value": 26,
+        "unit": "inches"
+      }
+    },
+    "template": "Багаж длиннее {inches} {inches_label} к такси из BKK: до {value} {unit_label} за место.",
+    "source": "https://suvarnabhumi.airportthai.co.th/service/transportation/detail/304",
+    "source_kind": "official",
+    "source_date": "2026-10-18",
+    "date_estimated": true,
+    "date_basis": "страница AOT Suvarnabhumi, даты обновления в снимке нет",
+    "agreement": "agree",
+    "volatility": "operator",
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule"
+  },
+  "bkk_taxi_sports": {
+    "kind": "value",
+    "value": 100,
+    "unit": "thb",
+    "template": "Спортивный и коробочный багаж к такси из BKK: до {value} {unit_label}.",
+    "source": "https://suvarnabhumi.airportthai.co.th/service/transportation/detail/304",
+    "source_kind": "official",
+    "source_date": "2026-10-18",
+    "date_estimated": true,
+    "date_basis": "страница AOT Suvarnabhumi, даты обновления в снимке нет",
+    "agreement": "agree",
+    "volatility": "operator",
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule"
+  },
+  "bkk_taxi_tolls": {
+    "kind": "statement",
+    "template": "Платные дороги к такси из BKK платит пассажир.",
+    "source": "https://suvarnabhumi.airportthai.co.th/service/transportation/detail/304",
+    "source_kind": "official",
+    "source_date": "2026-10-18",
+    "date_estimated": true,
+    "date_basis": "страница AOT Suvarnabhumi, даты обновления в снимке нет",
+    "agreement": "agree",
+    "volatility": "operator",
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule"
+  },
+  "bkk_taxi_fare": {
+    "gap": true,
+    "volatility": "open",
+    "text": "Тариф такси из BKK — не исследовано.",
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule",
+    "sources_checked": [
+      {
+        "url": "https://suvarnabhumi.airportthai.co.th/service/transportation/detail/304",
+        "source_date": "2026-10-18",
+        "volatility": "operator",
+        "note": "таблица тарифа не читается; для остальных аэропортов отдельной цены нет"
+      }
+    ]
+  },
+  "dmk_taxi_fare": {
+    "gap": true,
+    "volatility": "open",
+    "text": "Тариф такси из DMK — не исследовано.",
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule",
+    "sources_checked": [
+      {
+        "url": "https://suvarnabhumi.airportthai.co.th/service/transportation/detail/304",
+        "source_date": "2026-10-18",
+        "volatility": "operator",
+        "note": "таблица тарифа не читается; для остальных аэропортов отдельной цены нет"
+      }
+    ]
+  },
+  "pek_taxi_fare": {
+    "gap": true,
+    "volatility": "open",
+    "text": "Тариф такси из PEK — не исследовано.",
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule",
+    "sources_checked": [
+      {
+        "url": "https://suvarnabhumi.airportthai.co.th/service/transportation/detail/304",
+        "source_date": "2026-10-18",
+        "volatility": "operator",
+        "note": "таблица тарифа не читается; для остальных аэропортов отдельной цены нет"
+      }
+    ]
+  },
+  "pkx_taxi_fare": {
+    "gap": true,
+    "volatility": "open",
+    "text": "Тариф такси из PKX — не исследовано.",
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule",
+    "sources_checked": [
+      {
+        "url": "https://suvarnabhumi.airportthai.co.th/service/transportation/detail/304",
+        "source_date": "2026-10-18",
+        "volatility": "operator",
+        "note": "таблица тарифа не читается; для остальных аэропортов отдельной цены нет"
+      }
+    ]
+  },
+  "pvg_taxi_fare": {
+    "gap": true,
+    "volatility": "open",
+    "text": "Тариф такси из PVG — не исследовано.",
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule",
+    "sources_checked": [
+      {
+        "url": "https://suvarnabhumi.airportthai.co.th/service/transportation/detail/304",
+        "source_date": "2026-10-18",
+        "volatility": "operator",
+        "note": "таблица тарифа не читается; для остальных аэропортов отдельной цены нет"
+      }
+    ]
+  },
+  "sha_taxi_fare": {
+    "gap": true,
+    "volatility": "open",
+    "text": "Тариф такси из SHA — не исследовано.",
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule",
+    "sources_checked": [
+      {
+        "url": "https://suvarnabhumi.airportthai.co.th/service/transportation/detail/304",
+        "source_date": "2026-10-18",
+        "volatility": "operator",
+        "note": "таблица тарифа не читается; для остальных аэропортов отдельной цены нет"
+      }
+    ]
+  },
+  "bkk_dmk_grab_pickup": {
+    "source": "owner Grab screenshots 2026-10-18",
+    "source_kind": "internal",
+    "source_date": "2026-10-18",
+    "date_basis": "owner Grab screenshots 2026-10-18. Наблюдение около 16:45 МСК, 20:45 Бангкок, воскресенье. Цены — котировка в приложении, не забронированная поездка, оплата наличными.",
+    "agreement": "agree",
+    "volatility": "owner",
+    "verified_by_us": true,
+    "source_user_facing": false,
+    "kind": "statement",
+    "direction": "BKK → DMK",
+    "pickup": "Grab Pickup Point Floor 1 Suvarnabhumi, до DMK Domestic Arrival Exit 14",
+    "template": "Посадка Grab, {direction}: {pickup}.",
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule"
+  },
+  "dmk_bkk_grab_pickup": {
+    "source": "owner Grab screenshots 2026-10-18",
+    "source_kind": "internal",
+    "source_date": "2026-10-18",
+    "date_basis": "owner Grab screenshots 2026-10-18. Наблюдение около 16:45 МСК, 20:45 Бангкок, воскресенье. Цены — котировка в приложении, не забронированная поездка, оплата наличными.",
+    "agreement": "agree",
+    "volatility": "owner",
+    "verified_by_us": true,
+    "source_user_facing": false,
+    "kind": "statement",
+    "direction": "DMK → BKK",
+    "pickup": "DMK Domestic Arrival Exit 14",
+    "template": "Посадка Grab, {direction}: {pickup}.",
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule"
+  },
+  "grab_product_names_differ": {
+    "source": "owner Grab screenshots 2026-10-18",
+    "source_kind": "internal",
+    "source_date": "2026-10-18",
+    "date_basis": "owner Grab screenshots 2026-10-18. Наблюдение около 16:45 МСК, 20:45 Бангкок, воскресенье. Цены — котировка в приложении, не забронированная поездка, оплата наличными.",
+    "agreement": "agree",
+    "volatility": "owner",
+    "verified_by_us": true,
+    "source_user_facing": false,
+    "kind": "statement",
+    "template": "В Grab названия тарифов из BKK в DMK и обратно не совпадают.",
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule"
+  },
+  "bkk_dmk_grab_justgrab": {
+    "source": "owner Grab screenshots 2026-10-18",
+    "source_kind": "internal",
+    "source_date": "2026-10-18",
+    "date_basis": "owner Grab screenshots 2026-10-18. Наблюдение около 16:45 МСК, 20:45 Бангкок, воскресенье. Цены — котировка в приложении, не забронированная поездка, оплата наличными.",
+    "agreement": "agree",
+    "volatility": "owner",
+    "verified_by_us": true,
+    "source_user_facing": false,
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule",
+    "unit": "thb",
+    "kind": "value",
+    "value": 652,
+    "service": "JustGrab",
+    "direction": "BKK → DMK",
+    "template": "{service}, {direction}: {value} {unit_label}. Котировка в Grab наличными, не поездка."
+  },
+  "bkk_dmk_grab_grabcar": {
+    "source": "owner Grab screenshots 2026-10-18",
+    "source_kind": "internal",
+    "source_date": "2026-10-18",
+    "date_basis": "owner Grab screenshots 2026-10-18. Наблюдение около 16:45 МСК, 20:45 Бангкок, воскресенье. Цены — котировка в приложении, не забронированная поездка, оплата наличными.",
+    "agreement": "agree",
+    "volatility": "owner",
+    "verified_by_us": true,
+    "source_user_facing": false,
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule",
+    "unit": "thb",
+    "kind": "value",
+    "value": 924,
+    "service": "GrabCar",
+    "direction": "BKK → DMK",
+    "template": "{service}, {direction}: {value} {unit_label}. Котировка в Grab наличными, не поездка."
+  },
+  "bkk_dmk_grab_taxi": {
+    "source": "owner Grab screenshots 2026-10-18",
+    "source_kind": "internal",
+    "source_date": "2026-10-18",
+    "date_basis": "owner Grab screenshots 2026-10-18. Наблюдение около 16:45 МСК, 20:45 Бангкок, воскресенье. Цены — котировка в приложении, не забронированная поездка, оплата наличными.",
+    "agreement": "agree",
+    "volatility": "owner",
+    "verified_by_us": true,
+    "source_user_facing": false,
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule",
+    "unit": "thb",
+    "kind": "range",
+    "value_min": 567,
+    "value_max": 851,
+    "service": "GrabTaxi",
+    "direction": "BKK → DMK",
+    "template": "{service}, {direction}: от {value_min} до {value_max} {unit_label}, счётчик. Котировка в Grab наличными, не поездка."
+  },
+  "dmk_bkk_grab_standard": {
+    "source": "owner Grab screenshots 2026-10-18",
+    "source_kind": "internal",
+    "source_date": "2026-10-18",
+    "date_basis": "owner Grab screenshots 2026-10-18. Наблюдение около 16:45 МСК, 20:45 Бангкок, воскресенье. Цены — котировка в приложении, не забронированная поездка, оплата наличными.",
+    "agreement": "agree",
+    "volatility": "owner",
+    "verified_by_us": true,
+    "source_user_facing": false,
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule",
+    "unit": "thb",
+    "kind": "value",
+    "value": 623,
+    "service": "Standard Car",
+    "direction": "DMK → BKK",
+    "numbers": {
+      "eta": {
+        "value": 8,
+        "unit": "minutes"
+      }
+    },
+    "template": "{service}, {direction}: {value} {unit_label}, подача {eta} {eta_label}. Котировка в Grab наличными, не поездка."
+  },
+  "dmk_bkk_grab_van": {
+    "source": "owner Grab screenshots 2026-10-18",
+    "source_kind": "internal",
+    "source_date": "2026-10-18",
+    "date_basis": "owner Grab screenshots 2026-10-18. Наблюдение около 16:45 МСК, 20:45 Бангкок, воскресенье. Цены — котировка в приложении, не забронированная поездка, оплата наличными.",
+    "agreement": "agree",
+    "volatility": "owner",
+    "verified_by_us": true,
+    "source_user_facing": false,
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule",
+    "unit": "thb",
+    "kind": "value",
+    "value": 1038,
+    "service": "Van",
+    "direction": "DMK → BKK",
+    "numbers": {
+      "seats": {
+        "value": 10,
+        "unit": "seats"
+      }
+    },
+    "template": "{service}, {direction}: {value} {unit_label}, {seats} {seats_label}. Котировка в Grab наличными, не поездка."
+  },
+  "dmk_bkk_grab_plus": {
+    "source": "owner Grab screenshots 2026-10-18",
+    "source_kind": "internal",
+    "source_date": "2026-10-18",
+    "date_basis": "owner Grab screenshots 2026-10-18. Наблюдение около 16:45 МСК, 20:45 Бангкок, воскресенье. Цены — котировка в приложении, не забронированная поездка, оплата наличными.",
+    "agreement": "agree",
+    "volatility": "owner",
+    "verified_by_us": true,
+    "source_user_facing": false,
+    "transfer_topic": "taxi_price",
+    "transfer_measure": "price_schedule",
+    "unit": "thb",
+    "kind": "value",
+    "value": 1038,
+    "service": "Plus SUV",
+    "direction": "DMK → BKK",
+    "template": "{service}, {direction}: {value} {unit_label}. Котировка в Grab наличными, не поездка."
+  },
+  "bkk_dmk_grab_route_tolls": {
+    "source": "owner Grab screenshots 2026-10-18",
+    "source_kind": "internal",
+    "source_date": "2026-10-18",
+    "date_basis": "owner Grab screenshots 2026-10-18. Наблюдение около 16:45 МСК, 20:45 Бангкок, воскресенье. Цены — котировка в приложении, не забронированная поездка, оплата наличными.",
+    "agreement": "agree",
+    "volatility": "owner",
+    "verified_by_us": true,
+    "source_user_facing": false,
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time",
+    "unit": "minutes",
+    "kind": "value",
+    "template": "{slot_label}: {value} {unit_label}, {distance}, {tolls_label}.",
+    "value": 52,
+    "slot_label": "лучший вариант",
+    "distance": "50,2 км",
+    "tolls_label": "с платными дорогами"
+  },
+  "bkk_dmk_grab_route_notolls_longer": {
+    "source": "owner Grab screenshots 2026-10-18",
+    "source_kind": "internal",
+    "source_date": "2026-10-18",
+    "date_basis": "owner Grab screenshots 2026-10-18. Наблюдение около 16:45 МСК, 20:45 Бангкок, воскресенье. Цены — котировка в приложении, не забронированная поездка, оплата наличными.",
+    "agreement": "agree",
+    "volatility": "owner",
+    "verified_by_us": true,
+    "source_user_facing": false,
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time",
+    "unit": "minutes",
+    "kind": "value",
+    "template": "{slot_label}: {value} {unit_label}, {distance}, {tolls_label}.",
+    "value": 55,
+    "slot_label": "без платных, длиннее",
+    "distance": "47,4 км",
+    "tolls_label": "без платных дорог"
+  },
+  "bkk_dmk_grab_route_notolls_shorter": {
+    "source": "owner Grab screenshots 2026-10-18",
+    "source_kind": "internal",
+    "source_date": "2026-10-18",
+    "date_basis": "owner Grab screenshots 2026-10-18. Наблюдение около 16:45 МСК, 20:45 Бангкок, воскресенье. Цены — котировка в приложении, не забронированная поездка, оплата наличными.",
+    "agreement": "agree",
+    "volatility": "owner",
+    "verified_by_us": true,
+    "source_user_facing": false,
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time",
+    "unit": "minutes",
+    "kind": "value",
+    "template": "{slot_label}: {value} {unit_label}, {distance}, {tolls_label}.",
+    "value": 45,
+    "slot_label": "без платных, короче",
+    "distance": "42,2 км",
+    "tolls_label": "без платных дорог"
+  },
+  "dmk_bkk_grab_route_tolls": {
+    "source": "owner Grab screenshots 2026-10-18",
+    "source_kind": "internal",
+    "source_date": "2026-10-18",
+    "date_basis": "owner Grab screenshots 2026-10-18. Наблюдение около 16:45 МСК, 20:45 Бангкок, воскресенье. Цены — котировка в приложении, не забронированная поездка, оплата наличными.",
+    "agreement": "agree",
+    "volatility": "owner",
+    "verified_by_us": true,
+    "source_user_facing": false,
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time",
+    "unit": "minutes",
+    "kind": "value",
+    "template": "{slot_label}: {value} {unit_label}, {distance}, {tolls_label}.",
+    "value": 44,
+    "slot_label": "лучший вариант",
+    "distance": "47,9 км",
+    "tolls_label": "с платными дорогами"
+  },
+  "dmk_bkk_grab_route_notolls_longer": {
+    "source": "owner Grab screenshots 2026-10-18",
+    "source_kind": "internal",
+    "source_date": "2026-10-18",
+    "date_basis": "owner Grab screenshots 2026-10-18. Наблюдение около 16:45 МСК, 20:45 Бангкок, воскресенье. Цены — котировка в приложении, не забронированная поездка, оплата наличными.",
+    "agreement": "agree",
+    "volatility": "owner",
+    "verified_by_us": true,
+    "source_user_facing": false,
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time",
+    "unit": "minutes",
+    "kind": "value",
+    "template": "{slot_label}: {value} {unit_label}, {distance}, {tolls_label}.",
+    "value": 53,
+    "slot_label": "без платных, длиннее",
+    "distance": "47 км",
+    "tolls_label": "без платных дорог"
+  },
+  "dmk_bkk_grab_route_notolls_shorter": {
+    "source": "owner Grab screenshots 2026-10-18",
+    "source_kind": "internal",
+    "source_date": "2026-10-18",
+    "date_basis": "owner Grab screenshots 2026-10-18. Наблюдение около 16:45 МСК, 20:45 Бангкок, воскресенье. Цены — котировка в приложении, не забронированная поездка, оплата наличными.",
+    "agreement": "agree",
+    "volatility": "owner",
+    "verified_by_us": true,
+    "source_user_facing": false,
+    "transfer_topic": "airport_pair",
+    "transfer_measure": "travel_time",
+    "unit": "minutes",
+    "kind": "value",
+    "template": "{slot_label}: {value} {unit_label}, {distance}, {tolls_label}.",
+    "value": 41,
+    "slot_label": "без платных, короче",
+    "distance": "38 км",
+    "tolls_label": "без платных дорог"
   }
 }
