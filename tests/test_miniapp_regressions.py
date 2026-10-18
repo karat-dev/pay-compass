@@ -359,15 +359,10 @@ process.stdout.write(JSON.stringify({ plans, groups, closed, opened, headers }))
 """
 
 
-def _zones(html):
-    return __import__("re").findall(r'<div class="fact-group" data-zone="([^"]+)">', html)
-
-
-def _ids_in_zone(html, zone, following):
+def _group_fact_ids(html):
     import re
-    start = html.index(f'<div class="fact-group" data-zone="{zone}">')
-    end = html.index(following, start) if following else len(html)
-    return re.findall(r'data-fact-id="([^"]+)"', html[start:end])
+    chunks = re.split(r'<section class="fact-group"', html)[1:]
+    return [re.findall(r'data-fact-id="([^"]+)"', chunk.split("</section>", 1)[0]) for chunk in chunks]
 
 
 def test_back_from_a_deep_link_goes_to_the_parent_screen():
@@ -401,37 +396,42 @@ def test_back_from_a_deep_link_goes_to_the_parent_screen():
     assert 'data-action="back"' not in painted["headers"]["intro"]
 
 
-def test_section_facts_are_grouped_by_confidence_and_date():
+def test_section_facts_stay_collapsed_and_ordered_inside_a_topic():
     catalog = get_catalog()
     painted = _render_catalog(catalog, BACK_AND_FACTS)
     closed = painted["closed"]
     opened = painted["opened"]
-    assert _zones(closed) == ["green", "yellow"]
-    assert "Подтверждено" in closed
-    assert "Скорее всего верно" in closed
+    assert 'class="card-summary"' in closed
+    assert 'class="fact-group-body" hidden' in closed
+    assert 'aria-expanded="false"' in closed
+    assert 'aria-expanded="true"' not in closed
     assert "Сначала подтверждённые, внутри группы — более свежая проверка выше." in closed
+    assert "Показать непроверенное" in closed
+    assert "Сообщить о неточности" in closed
     assert "Мало подтверждений" not in closed
     assert "Устарело или опровергнуто" not in closed
-    assert _zones(opened)[:2] == ["green", "yellow"]
-    assert "red" in _zones(opened)
-    assert "black" in _zones(opened)
-    assert opened.index("Скрыть непроверенное") < opened.index('<div class="fact-group" data-zone="red">')
+    assert 'data-zone="red"' not in closed
+    assert 'data-zone="black"' not in closed
+    assert opened.index("Скрыть непроверенное") < opened.index('data-zone="red"')
     assert opened.index('<div class="instruction-block">') > opened.index('data-zone="black"')
     assert "По шагам" in opened.split('<div class="instruction-block">')[1]
 
     section = next(item for item in next(country for country in catalog["countries"] if country["slug"] == "turkey")["sections"] if item["key"] == "2_pay_on_site")
-    green_ids = _ids_in_zone(closed, "green", '<div class="fact-group" data-zone="yellow">')
+    pooled = list(section["facts"])
+    for subsection in section["subsections"]:
+        pooled.extend(subsection["facts"])
+    by_id = {fact["id"]: fact for fact in pooled}
+    rank = {group["name"]: index for index, group in enumerate(catalog["zone_groups"])}
 
     def checked(fact):
         day, month, year = fact["date"].split(".")
         return (year, month, day)
 
-    expected = sorted(
-        [fact for fact in section["facts"] if fact["zone"] == "green" and not fact["hidden"]],
-        key=checked,
-        reverse=True,
-    )
-    assert green_ids == [fact["id"] for fact in expected]
+    for ids in _group_fact_ids(closed):
+        facts = [by_id[fact_id] for fact_id in ids]
+        assert [rank[fact["zone"]] for fact in facts] == sorted(rank[fact["zone"]] for fact in facts)
+        greens = [fact for fact in facts if fact["zone"] == "green"]
+        assert greens == sorted(greens, key=checked, reverse=True)
     assert [group["title"] for group in painted["groups"]] == [
         "Подтверждено", "Скорее всего верно", "Мало подтверждений", "Устарело или опровергнуто",
     ]

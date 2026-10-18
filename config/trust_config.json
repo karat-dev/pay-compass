@@ -100,6 +100,12 @@
       "gap": "не исследовано",
       "advice-unsupported": "непроверено"
     },
+    "summary": {
+      "preview_items": 4,
+      "label_max_chars": 32,
+      "prefix_max_chars": 24,
+      "min_facts": 2
+    },
     "legend": [
       {
         "zones": ["green"],

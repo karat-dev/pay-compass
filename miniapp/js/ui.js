@@ -122,6 +122,205 @@ export function groupFacts(facts, catalog) {
   return groups;
 }
 
+export function orderFacts(facts, catalog) {
+  return groupFacts(facts, catalog).flatMap((group) => group.facts);
+}
+
+export function presentationLimits(catalog) {
+  const summary = (catalog && catalog.summary) || {};
+  return {
+    previewItems: Number.isInteger(summary.preview_items) ? summary.preview_items : null,
+    prefixMax: Number.isInteger(summary.prefix_max_chars) ? summary.prefix_max_chars : null,
+    minFacts: Number.isInteger(summary.min_facts) ? summary.min_facts : null,
+  };
+}
+
+function topicSlug(value) {
+  return String(value || "topic").trim().toLowerCase().replace(/\s+/g, "-");
+}
+
+function colonPrefix(text, maxChars) {
+  if (!Number.isInteger(maxChars) || maxChars < 1) return "";
+  const cleaned = String(text || "").replace(/\s+/g, " ").trim();
+  const colon = cleaned.indexOf(":");
+  if (colon <= 0 || colon > maxChars) return "";
+  return cleaned.slice(0, colon).trim();
+}
+
+export function topicGroups(facts, options = {}) {
+  const catalog = options.catalog;
+  const fallbackId = options.fallbackId || "all";
+  const fallbackTitle = options.fallbackTitle || "";
+  const prefixMax = options.prefixMax;
+  const minFacts = options.minFacts;
+  const ordered = orderFacts(facts, catalog);
+  const counts = new Map();
+  if (Number.isInteger(minFacts)) {
+    ordered.forEach((fact) => {
+      if (fact.topic) return;
+      const prefix = colonPrefix(fact.text, prefixMax);
+      if (prefix) counts.set(prefix, (counts.get(prefix) || 0) + 1);
+    });
+  }
+  const groups = [];
+  const index = new Map();
+  const push = (id, title, fact) => {
+    if (!index.has(id)) {
+      const group = { id, title, facts: [] };
+      index.set(id, group);
+      groups.push(group);
+    }
+    index.get(id).facts.push(fact);
+  };
+  ordered.forEach((fact) => {
+    if (fact.topic) {
+      push(topicSlug(fact.topic), fact.topic, fact);
+      return;
+    }
+    const prefix = colonPrefix(fact.text, prefixMax);
+    if (prefix && Number.isInteger(minFacts) && (counts.get(prefix) || 0) >= minFacts) {
+      push(topicSlug(prefix), prefix, fact);
+      return;
+    }
+    push(fallbackId, fallbackTitle, fact);
+  });
+  return groups;
+}
+
+export function sectionPools(section) {
+  if (!section) return [];
+  const pools = [{
+    id: section.key || "main",
+    title: section.short_title || section.title || "",
+    facts: section.facts || [],
+    note: "",
+  }];
+  (section.subsections || []).forEach((sub) => {
+    const closed = sub.applicable === false;
+    pools.push({
+      id: sub.id || sub.title || "sub",
+      title: sub.title || "",
+      facts: closed ? [] : (sub.facts || []),
+      note: closed ? (sub.note || "Не применимо.") : "",
+    });
+  });
+  return pools;
+}
+
+export function sectionTopicGroups(section, catalog, hiddenOnly) {
+  const limits = presentationLimits(catalog);
+  const groups = [];
+  sectionPools(section).forEach((pool) => {
+    const facts = (pool.facts || []).filter((fact) => (hiddenOnly ? Boolean(fact.hidden) : !fact.hidden));
+    if (!facts.length) return;
+    topicGroups(facts, {
+      fallbackId: "all",
+      fallbackTitle: pool.title,
+      prefixMax: limits.prefixMax,
+      minFacts: limits.minFacts,
+      catalog,
+    }).forEach((group) => {
+      groups.push({ ...group, id: `${pool.id}:${group.id}` });
+    });
+  });
+  return groups;
+}
+
+export function groupDomIdForFact(section, factId, catalog, cardId) {
+  let hidden = false;
+  let found = false;
+  sectionPools(section).forEach((pool) => {
+    (pool.facts || []).forEach((fact) => {
+      if (fact.id === factId) {
+        hidden = Boolean(fact.hidden);
+        found = true;
+      }
+    });
+  });
+  if (!found) return "";
+  const group = sectionTopicGroups(section, catalog, hidden).find((item) => item.facts.some((fact) => fact.id === factId));
+  if (!group) return "";
+  return `${cardId}:${group.id}${hidden ? ":hidden" : ""}`;
+}
+
+export function cardSummary(groups, previewItems) {
+  const items = [];
+  (groups || []).forEach((group) => {
+    (group.facts || []).forEach((fact) => {
+      items.push({
+        groupId: group.domId || group.id,
+        factId: fact.id,
+        label: fact.short_label || fact.text || "",
+        title: group.title || "",
+      });
+    });
+  });
+  const limit = Number.isInteger(previewItems) ? Math.max(0, previewItems) : items.length;
+  const shown = items.slice(0, limit);
+  const lines = [];
+  shown.forEach((item) => {
+    const last = lines[lines.length - 1];
+    if (!last || last.title !== item.title) lines.push({ title: item.title, labels: [item] });
+    else last.labels.push(item);
+  });
+  return { items, shown, lines, more: items.length - shown.length };
+}
+
+export function summaryPlain(groups, previewItems) {
+  const summary = cardSummary(groups, previewItems);
+  if (!summary.lines.length) return "";
+  const text = summary.lines.map((line) => `${line.title}: ${line.labels.map((item) => item.label).join(", ")}`).join(". ");
+  return summary.more > 0 ? `${text}, ещё` : text;
+}
+
+export function zoneMix(facts, catalog) {
+  const order = ((catalog && catalog.zone_groups) || []).map((group) => group.name);
+  const counts = new Map();
+  (facts || []).forEach((fact) => {
+    const zone = fact.gap && catalog && catalog.gap_zone ? catalog.gap_zone : (fact.zone || (catalog && catalog.missing_zone) || "");
+    if (!zone) return;
+    counts.set(zone, (counts.get(zone) || 0) + 1);
+  });
+  const names = order.filter((name) => counts.has(name));
+  counts.forEach((_count, name) => {
+    if (!names.includes(name)) names.push(name);
+  });
+  return names.map((zone) => ({ zone, count: counts.get(zone) }));
+}
+
+export function zoneReason(zone, catalog) {
+  const legend = ((catalog && catalog.zone_legend) || []).find((item) => (item.zones || []).includes(zone));
+  if (legend && legend.text) return legend.text;
+  const titled = ((catalog && catalog.zone_groups) || []).find((item) => item.name === zone);
+  if (titled && titled.title) return titled.title;
+  return zoneName(zone, catalog);
+}
+
+const EXPANDED_STORAGE_KEY = "ut-open";
+
+export function readExpanded(storage) {
+  const empty = { groups: {}, facts: {}, summaries: {} };
+  if (!storage) return empty;
+  try {
+    const raw = storage.getItem(EXPANDED_STORAGE_KEY);
+    if (!raw) return empty;
+    const data = JSON.parse(raw);
+    const object = (value) => (value && typeof value === "object" && !Array.isArray(value) ? value : {});
+    return { groups: object(data.groups), facts: object(data.facts), summaries: object(data.summaries) };
+  } catch (error) {
+    return empty;
+  }
+}
+
+export function writeExpanded(storage, expanded) {
+  if (!storage) return;
+  storage.setItem(EXPANDED_STORAGE_KEY, JSON.stringify({
+    groups: (expanded && expanded.groups) || {},
+    facts: (expanded && expanded.facts) || {},
+    summaries: (expanded && expanded.summaries) || {},
+  }));
+}
+
 export function hasHidden(facts) {
   return (facts || []).some((fact) => fact.hidden);
 }
@@ -203,7 +402,7 @@ export function searchRows(catalog) {
             kind: "fact",
             title: fact.text,
             note: `${place.title} · ${section.short_title}`,
-            haystack: `${fact.text} ${section.short_title} ${section.title} ${bucket.title} ${place.title}`,
+            haystack: `${fact.text} ${fact.short_label || ""} ${section.short_title} ${section.title} ${bucket.title} ${place.title}`,
             hash: `/guide/${country.slug}/${section.key}?fact=${encodeURIComponent(fact.id)}`,
             hidden: fact.hidden,
             slug: country.slug,
