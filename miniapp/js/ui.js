@@ -50,15 +50,9 @@ export function daysUntil(iso) {
   return Math.round((target - today) / 86400000);
 }
 
-export function zoneName(zone) {
-  return {
-    green: "зелёная зона",
-    yellow: "жёлтая зона",
-    red: "красная зона",
-    black: "чёрная зона",
-    gap: "не исследовано",
-    "advice-unsupported": "непроверено",
-  }[zone] || "зона";
+export function zoneName(zone, catalog) {
+  const titles = (catalog && catalog.zone_titles) || {};
+  return titles[zone] || "зона";
 }
 
 export function factMeta(fact) {
@@ -84,17 +78,6 @@ export function visibleFacts(facts, showHidden) {
   return (facts || []).filter((fact) => showHidden || !fact.hidden);
 }
 
-const FACT_GROUP_ORDER = ["green", "yellow", "gap", "red", "advice-unsupported", "black"];
-
-const FACT_GROUP_TITLES = {
-  green: "Подтверждено",
-  yellow: "Скорее всего верно",
-  gap: "Не исследовано",
-  red: "Мало подтверждений",
-  "advice-unsupported": "Непроверено",
-  black: "Устарело или опровергнуто",
-};
-
 export function factStamp(fact) {
   const value = String((fact && (fact.date_iso || fact.date)) || "");
   const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
@@ -104,13 +87,17 @@ export function factStamp(fact) {
   return 0;
 }
 
-export function groupFacts(facts) {
-  const buckets = new Map(FACT_GROUP_ORDER.map((zone) => [zone, []]));
+export function groupFacts(facts, catalog) {
+  const presentation = catalog || {};
+  const ordered = presentation.zone_groups || [];
+  const gapZone = presentation.gap_zone;
+  const missingZone = presentation.missing_zone;
+  const buckets = new Map(ordered.map((group) => [group.name, []]));
   const extra = [];
   (facts || []).forEach((fact, index) => {
-    const zone = fact.gap ? "gap" : (fact.zone || "yellow");
+    const zone = fact.gap && gapZone ? gapZone : (fact.zone || missingZone);
     const item = { fact, index };
-    if (buckets.has(zone)) buckets.get(zone).push(item);
+    if (zone && buckets.has(zone)) buckets.get(zone).push(item);
     else extra.push(item);
   });
   const sortNewest = (items) => items
@@ -118,12 +105,15 @@ export function groupFacts(facts) {
     .sort((a, b) => factStamp(b.fact) - factStamp(a.fact) || a.index - b.index)
     .map((item) => item.fact);
   const groups = [];
-  for (const zone of FACT_GROUP_ORDER) {
-    const items = sortNewest(buckets.get(zone));
-    if (items.length) groups.push({ zone, title: FACT_GROUP_TITLES[zone], facts: items });
+  for (const group of ordered) {
+    const items = sortNewest(buckets.get(group.name) || []);
+    if (items.length) groups.push({ zone: group.name, title: group.title, facts: items });
   }
   const rest = sortNewest(extra);
-  if (rest.length) groups.push({ zone: "yellow", title: FACT_GROUP_TITLES.yellow, facts: rest });
+  if (rest.length) {
+    const fallback = ordered.find((group) => group.name === missingZone) || ordered[0] || { name: missingZone, title: "" };
+    groups.push({ zone: fallback.name, title: fallback.title, facts: rest });
+  }
   return groups;
 }
 

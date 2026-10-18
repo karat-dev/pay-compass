@@ -105,6 +105,14 @@ _PRIVATE_KEYS = {
     "agreement",
     "refuted",
     "verified_by_us",
+    "stored_zone",
+    "volatility_class",
+    "next_zone",
+    "drops_on",
+    "at_risk",
+    "at_risk_reason",
+    "reports",
+    "contradicted_by_own",
 }
 
 
@@ -416,6 +424,14 @@ def build_catalog() -> Dict[str, Any]:
         "checked_label": DATE_VERIFIED,
         "display_min": TRUST_CONFIG["display"]["default_min"],
         "gap_label": TRUST_CONFIG["display"]["gap_label"],
+        "gap_zone": (TRUST_CONFIG["display"].get("gap_zones") or [None])[0],
+        "missing_zone": TRUST_CONFIG["display"]["missing_zone"],
+        "zone_groups": [
+            {"name": name, "title": TRUST_CONFIG["display"]["group_titles"][name]}
+            for name in TRUST_CONFIG["display"]["group_order"]
+        ],
+        "zone_titles": dict(TRUST_CONFIG["display"]["zone_titles"]),
+        "zone_legend": [dict(item) for item in TRUST_CONFIG["display"]["legend"]],
         "sources": [
             "database/data/countries.json",
             "config/trust_config.json",

@@ -338,7 +338,9 @@ assert(hkgUrl.includes("MOW1211HKG1") && hkgUrl.includes("marker=765617"), hkgUr
     intro = screens.split("function introScreen", 1)[1].split("function dateFields", 1)[0]
     assert "Платите за границей без сюрпризов" in intro
     assert "Мы честно показываем, насколько уверены" in intro
-    assert "Показать непроверенное" in intro
+    assert "zone_legend" in intro
+    legend = json.loads((root / "config" / "trust_config.json").read_text(encoding="utf-8"))
+    assert any("Показать непроверенное" in item["text"] for item in legend["display"]["legend"])
     assert "не исследовано" in intro
     assert "Всё к поездке в одном месте" in intro
     assert "Без лишнего" in intro

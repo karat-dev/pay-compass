@@ -6,7 +6,7 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -84,16 +84,16 @@ def test_july_own_experience_stays_a_manual_check():
     july = [
         fact
         for fact in built["facts"]
-        if fact["last_check_date"] == "2026-07-16" and "own_experience_override" in fact["flags"]
+        if fact["last_check_date"] == "2026-07-16" and fact["current_zone"] == "green"
     ]
     assert len(july) == 10
     for fact in july:
         assert fact["current_zone"] == "green"
         assert fact["score_zone"] == "black"
-        assert fact["computed_zone"] == "green"
-        assert fact["status"] == "stale"
-        assert fact["suggested_action"] == "owner_manual_check"
-        assert fact["automatic"] is False
+        assert fact["computed_zone"] != "green"
+        assert fact["status"] == "fail"
+        assert fact["suggested_action"] == "downgrade"
+        assert fact["automatic"] is True
 
 
 def test_corpus_counts_match_the_guide():
@@ -135,6 +135,65 @@ def test_three_independent_fresh_confirmations_upgrade_only_to_yellow():
     assert row["owner_prompt"] == "3 подтверждений, поднять до зелёного?"
 
 
+def test_live_zones_do_not_upgrade_without_the_rule():
+    built = _bundle_report()
+    order = [zone["name"] for zone in sorted(CONFIG["zones"], key=lambda item: item["min"])]
+    rank = {name: index for index, name in enumerate(order)}
+    for fact in built["facts"]:
+        current = fact["current_zone"]
+        computed = fact["computed_zone"]
+        if current not in rank or computed not in rank:
+            continue
+        assert rank[computed] <= rank[current], fact["text"]
+
+
+def test_early_warning_before_the_class_window_closes():
+    share = CONFIG["early_warning"]["share"]
+    window = CONFIG["volatility"]["classes"]["fast"]["window_days"]
+    green_max = CONFIG["volatility"]["classes"]["fast"]["green_max_days"]
+    # The last day inside the green cap is inside the warning share of the class window.
+    age = green_max
+    assert (green_max + 1 - age) < share * window
+    checked = (AS_OF - timedelta(days=age)).isoformat()
+    row = _assess(_fact(
+        zone="green",
+        source_kind="official",
+        reports=0,
+        agreement="agree",
+        source="https://www.rshb.ru/tariffs",
+        date_verified=checked,
+        volatility_class="fast",
+    ))
+    assert row["computed_zone"] == CONFIG["upgrade"]["green_zone"]
+    assert row["next_zone"] == CONFIG["upgrade"]["yellow_zone"]
+    assert row["at_risk"] is True
+    assert row["drops_on"]
+    assert row["suggested_action"] == CONFIG["early_warning"]["refresh_action"]
+    assert "Скоро съедут" in report.render_text({"as_of": "2026-10-18", "scope_label": "тест", "summary": {
+        "checked": 1, "confirmed": 0, "not_confirmed": 0, "stale": 0, "could_not_check": 0,
+        "needs_owner_decision": 0, "needs_owner_manual_check": 0, "gaps": 0, "unknown_zone": 0,
+        "no_public_source": 0, "green_prompts": 0, "at_risk": 1,
+    }, "facts": [row]})
+
+
+def test_conflict_and_a_failed_source_are_at_risk_without_a_near_drop():
+    conflict = _assess(_fact(zone="yellow", agreement=CONFIG["early_warning"]["conflict_agreement"], source_kind="media", reports=0, source="https://example.test/a"))
+    assert conflict["at_risk"] is True
+    assert CONFIG["early_warning"]["reasons"]["conflict"] in conflict["at_risk_reason"]
+    failed = _assess(_fact(
+        zone="yellow",
+        source_kind="official",
+        agreement="agree",
+        reports=0,
+        source="https://www.rshb.ru/tariffs",
+        source_failure_count=CONFIG["early_warning"]["source_failure_min_count"],
+        date_verified="2026-10-17",
+        volatility_class="slow",
+    ))
+    assert failed["at_risk"] is True
+    assert failed["suggested_action"] == CONFIG["early_warning"]["refresh_action"]
+
+
 def test_reposts_of_one_outlet_do_not_upgrade():
     confirmations = [
         {"outlet": "same.example", "date": "2026-10-01"},
@@ -143,7 +202,8 @@ def test_reposts_of_one_outlet_do_not_upgrade():
         {"outlet": "same.example", "date": "2026-10-04"},
         {"outlet": "same.example", "date": "2026-10-05"},
     ]
-    stats = report.confirmation_stats(_fact(confirmations=confirmations), AS_OF, 30)
+    fresh_days = CONFIG["volatility"]["classes"]["medium"]["fresh_days"]
+    stats = report.confirmation_stats(_fact(confirmations=confirmations), AS_OF, fresh_days)
     assert stats["independent"] is True
     assert stats["fresh_count"] == 1
     row = _assess(_fact(zone="red", reports=5, confirmations=confirmations))
@@ -214,6 +274,36 @@ def test_official_publisher_is_a_bank_operator_or_government_site():
     assert report.is_official_publisher("https://card-open.ru/vtb") is False
 
 
+def test_app_shows_live_unired_and_july_cards():
+    from database.knowledge_base import GEORGIA_DATA, INSTRUCTIONS, iter_facts
+
+    unired = [fact for fact in iter_facts(GEORGIA_DATA) if fact["text"].startswith("Unired:")]
+    assert len(unired) == 1
+    assert unired[0]["zone"] == "red"
+    assert unired[0]["stored_zone"] == "yellow"
+    july = [
+        fact for fact in iter_facts(GEORGIA_DATA)
+        if fact.get("date_verified") == "2026-07-16" and fact.get("verified_by_us")
+    ]
+    july.extend(
+        step for step in INSTRUCTIONS["tbc_georgia"]["steps"]
+        if step.get("date_verified") == "2026-07-16" and step.get("verified_by_us")
+    )
+    assert len(july) == 10
+    assert all(fact["zone"] != "green" for fact in july)
+
+
+def test_zone_module_reads_thresholds_from_config():
+    source = (ROOT / "database" / "trust_zones.py").read_text(encoding="utf-8")
+    report_source = (ROOT / "scripts" / "fact_check_report.py").read_text(encoding="utf-8")
+    for needle in ("90", "180", "0.25"):
+        assert needle not in source
+        assert needle not in report_source
+    assert "yellow_min_independent_confirmations" in source
+    assert CONFIG["verified_by_us_max_days"] == 90
+    assert CONFIG["early_warning"]["share"] == 0.25
+
+
 def test_country_scope_and_bad_slug():
     georgia = _bundle_report(scope="country", country="georgia")
     assert georgia["summary"]["checked"] > 0
@@ -266,8 +356,14 @@ def test_script_does_not_write_product_data():
         "http_results",
         "last_check_date",
         "suggested_action",
+        "next_zone",
+        "drops_on",
+        "at_risk",
+        "at_risk_reason",
     }
+    assert "at_risk" in payload["summary"]
     text = Path("/tmp/fact_check_report.txt").read_text(encoding="utf-8")
+    assert "Скоро съедут" in text
     assert "Ручные проверки владельца" in text
     assert "Проверено:" in text
 

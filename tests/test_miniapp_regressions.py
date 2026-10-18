@@ -286,7 +286,7 @@ const groups = groupFacts([
   { id: "yellow", zone: "yellow", date: "01.06.2025" },
   { id: "red", zone: "red", date: "01.01.2020" },
   { id: "black", zone: "black", date: "01.02.2020" },
-]);
+], catalog);
 
 function paint(hash, extra = {}) {
   location.hash = hash;
