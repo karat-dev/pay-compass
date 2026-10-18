@@ -15,7 +15,7 @@ from database.knowledge_base import (
     normalize_fact,
 )
 from database.partners import marker
-from database.trust_score import fact_date, score_fact, worst_zone
+from database.trust_zones import fact_moment, lowest_zone, zone_rank
 
 MODEL_DIR = Path(__file__).with_name("data") / "route_model"
 PARTNER_TOKEN = {
@@ -109,6 +109,27 @@ def _volatility(measurement: Dict[str, Any], rules: Dict[str, Any]) -> tuple:
     return name, classes[name]
 
 
+def _engine_class(measurement: Dict[str, Any], rules: Dict[str, Any]) -> str:
+    """Map a route label onto a live-zone class. The class name lives in rules.json."""
+    label, _ = _volatility(measurement, rules)
+    mapped = (rules.get("engine_volatility") or {}).get(label)
+    classes = TRUST_CONFIG["volatility"]["classes"]
+    if not isinstance(mapped, str) or mapped not in classes:
+        raise ValueError(f"Volatility {label!r} has no live-zone class in engine_volatility")
+    return mapped
+
+
+def _worst_zone(zones: List[Optional[str]], config: Dict[str, Any]) -> str:
+    """Lowest rank on the guide scale. Unknown names do not count."""
+    ranked = [zone for zone in zones if zone_rank(zone, config) is not None]
+    if not ranked:
+        hidden = (config.get("display") or {}).get("extra_hidden_zones") or []
+        if hidden:
+            return hidden[0]
+        return lowest_zone(config)
+    return min(ranked, key=lambda zone: zone_rank(zone, config))
+
+
 def _sources_checked(measurement: Dict[str, Any], rules: Dict[str, Any]) -> List[Dict[str, Any]]:
     checked = []
     for item in measurement.get("sources_checked") or []:
@@ -186,21 +207,9 @@ def measurement_fact(measurement_id: str, measurement: Dict[str, Any], rules: Di
         "reports": measurement.get("reports") or 0,
         "source_user_facing": measurement.get("source_user_facing", True),
         "checked_at": as_of.isoformat(),
+        "volatility_class": _engine_class(measurement, rules),
     }
-    scored = score_fact(raw, TRUST_CONFIG, as_of)
-    raw["status"] = _status_for(scored["computed_zone"])
-    raw["zone"] = scored["computed_zone"]
-    raw["score"] = scored["score"]
-    raw["score_breakdown"] = scored["score_breakdown"]
-    raw["status_derived_from"] = "zone"
-    raw["reason"] = (
-        f"источник {measurement.get('source_kind')}={scored['score_breakdown']['source']}; "
-        f"свежесть {scored['age_days']} дн.={scored['score_breakdown']['freshness']}; "
-        f"согласованность={scored['score_breakdown']['agreement']}"
-    )
-    fact = normalize_fact(raw)
-    fact["agreement"] = raw["agreement"]
-    fact["reports"] = raw.get("reports") or 0
+    fact = normalize_fact(raw, as_of=as_of)
     _stamp(fact, measurement, rules, measurement_id)
     if measurement.get("kind") == "range":
         fact["value_max"] = measurement["value_max"]
@@ -236,8 +245,8 @@ def allowance_fact(spec: Dict[str, Any], facts: Dict[str, Dict[str, Any]], rules
         value=total,
         unit_label=ru_plural(total, forms),
     )
-    zone = worst_zone([fact.get("zone") for fact in supports])
-    dates = [fact_date(fact) for fact in supports]
+    zone = _worst_zone([fact.get("zone") for fact in supports], TRUST_CONFIG)
+    dates = [fact_moment(fact) for fact in supports]
     dates = [item for item in dates if item is not None]
     verified = min(dates).isoformat() if dates else as_of.isoformat()
     raw = {

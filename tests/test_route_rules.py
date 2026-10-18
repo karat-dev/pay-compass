@@ -19,22 +19,33 @@ from database.route_model import (  # noqa: E402
     measurement_fact,
 )
 from database.routes import get_route, load_routes  # noqa: E402
-from database.trust_score import freshness_points, score_fact, source_points  # noqa: E402
+from database.trust_zones import resolve_zone  # noqa: E402
 
 AS_OF = date(2026, 10, 18)
 
 
 def test_route_score_uses_the_guide_formula():
-    assert report.freshness_points is freshness_points
-    assert report.source_points is source_points
+    assert report.resolve_zone is resolve_zone
     rules = json.loads((MODEL_DIR / "rules.json").read_text(encoding="utf-8"))
     measurements = json.loads((MODEL_DIR / "measurements.json").read_text(encoding="utf-8"))
     fact = measurement_fact("china_visa_free_days", measurements["china_visa_free_days"], rules, AS_OF)
-    scored = score_fact(fact, TRUST_CONFIG, AS_OF)
-    assert scored["age_days"] == (AS_OF - date(2026, 5, 20)).days
-    assert scored["score_breakdown"] == {"source": 50, "freshness": 0, "agreement": 20}
-    assert fact["zone"] == "yellow"
-    assert fact["score"] == 70
+    assert fact["volatility_class"] == rules["engine_volatility"]["statute"]
+    probed = {
+        "text": fact["text"],
+        "status": "unconfirmed",
+        "fact_type": "fact",
+        "source_kind": fact["source_kind"],
+        "agreement": fact["agreement"],
+        "date_verified": fact["date_verified"],
+        "volatility_class": fact["volatility_class"],
+        "reports": fact.get("reports") or 0,
+    }
+    resolved = resolve_zone(probed, config=TRUST_CONFIG, as_of=AS_OF, forecast=False)
+    assert resolved["age_days"] == (AS_OF - date(2026, 5, 20)).days
+    assert resolved["score_breakdown"] == {"source": 50, "freshness": 0, "agreement": 20}
+    assert fact["score_breakdown"] == resolved["score_breakdown"]
+    assert fact["zone"] == resolved["zone"] == "yellow"
+    assert fact["score"] == resolved["score"] == 70
     assert "zone" not in measurements["china_visa_free_days"]
 
 

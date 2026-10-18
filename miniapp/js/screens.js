@@ -341,7 +341,7 @@ function routeCard(state, route) {
   const iata = route.iata ? `<p class="iata">${esc(route.iata)}</p>` : "";
   const link = links.map((item) => `<a class="primary tickets" href="${esc(item.url)}" data-action="link" data-url="${esc(item.url)}">${esc(item.label)}</a>`).join("");
   const lead = (route.lead_facts || []).length
-    ? `${orderHint()}${factGroupHtml(route.lead_facts, factCard)}`
+    ? `${orderHint()}${factGroupHtml(route.lead_facts, (fact) => factCard(fact, state.catalog), state.catalog)}`
     : route.summary.map((paragraph) => `<p class="ticket-copy">${esc(passportLine(paragraph, state.profile))}</p>`).join("");
   return `<article class="ticket">
     <p class="eyebrow">Разбор маршрута</p>
@@ -380,7 +380,7 @@ function routeCopy(state, current) {
   const show = Boolean(state.unverified[current.id]);
   const visible = facts.filter((fact) => show || !fact.hidden);
   const hidden = facts.some((fact) => fact.hidden);
-  const groups = visible.length ? factGroupHtml(visible, factCard) : "";
+  const groups = visible.length ? factGroupHtml(visible, (fact) => factCard(fact, state.catalog), state.catalog) : "";
   const toggle = hidden
     ? `<button type="button" class="ghost wide" data-action="unverified" data-scope="${esc(current.id)}">${show ? "Скрыть непроверенное" : "Показать непроверенное"}</button>`
     : "";
