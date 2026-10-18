@@ -51,7 +51,7 @@ async def handle_route_section(callback: CallbackQuery):
     )
     pages = split_telegram_html(body)
     text = pages[0]
-    show_payment = callback.data.endswith(":5")
+    show_payment = callback.data in set(route.get("payment_callbacks") or [])
     await callback.message.edit_text(
         text,
         reply_markup=get_route_section_keyboard(route_id, show_payment_links=show_payment),

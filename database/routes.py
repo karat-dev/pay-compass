@@ -1,27 +1,18 @@
-"""Route breakdown cards loaded from generated Telegram JSON."""
+"""Route breakdown cards built from measurements and rules."""
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from database.partners import disclosure, link_replacements, marker
 
-ROUTES_DIR = Path(__file__).with_name("data") / "routes"
 AVIASALES_MARKER = marker()
 
 
 def _load_raw_routes() -> List[Dict[str, Any]]:
-    cards = []
-    if not ROUTES_DIR.exists():
-        return cards
-    for path in sorted(ROUTES_DIR.glob("*.json")):
-        with path.open(encoding="utf-8") as handle:
-            raw = json.load(handle)
-        raw["_file"] = path.name
-        cards.append(raw)
-    return cards
+    from database.route_model import build_routes
+
+    return build_routes()
 
 
 def substitute_placeholders(text: str) -> str:
@@ -53,13 +44,30 @@ def prepare_route(raw: Dict[str, Any]) -> Dict[str, Any]:
         key: substitute_placeholders(value)
         for key, value in (raw.get("callback_replies") or {}).items()
     }
-    return {
-        "id": _route_id(raw),
+    prepared = {
+        "id": raw.get("id") or _route_id(raw),
         "parse_mode": raw.get("parse_mode") or "HTML",
         "text": substitute_placeholders(raw.get("text") or ""),
         "reply_markup": raw.get("reply_markup") or {"inline_keyboard": []},
         "callback_replies": replies,
     }
+    for key in (
+        "ticket_links",
+        "payment_callbacks",
+        "payment_targets",
+        "departure_city_id",
+        "destination_slug",
+        "iata",
+        "airlines",
+        "airline_gap",
+        "summary",
+        "lead_facts",
+        "section_facts",
+        "section_roles",
+    ):
+        if key in raw:
+            prepared[key] = raw[key]
+    return prepared
 
 
 def load_routes() -> Dict[str, Dict[str, Any]]:
@@ -81,13 +89,27 @@ def lead_lines(text: str) -> List[str]:
     return [line.strip() for line in plain.splitlines() if line.strip()]
 
 
-def tickets_url(route: Dict[str, Any]) -> Optional[str]:
+def ticket_links(route: Dict[str, Any]) -> List[Dict[str, str]]:
+    links = route.get("ticket_links") or []
+    if links:
+        return links
+    url = None
     for row in route.get("reply_markup", {}).get("inline_keyboard") or []:
         for button in row:
-            url = button.get("url") or ""
-            if "aviasales" in url:
-                return url
-    return None
+            candidate = button.get("url") or ""
+            if "aviasales" in candidate:
+                url = candidate
+                break
+    if not url:
+        return []
+    return [{"label": "🔎 Найти билеты", "url": url}]
+
+
+def tickets_url(route: Dict[str, Any]) -> Optional[str]:
+    links = ticket_links(route)
+    if not links:
+        return None
+    return links[0]["url"]
 
 
 def section_buttons(route: Dict[str, Any]) -> List[Dict[str, str]]:

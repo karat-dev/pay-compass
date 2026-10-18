@@ -15,7 +15,7 @@ import {
   splitName,
   stepPosition,
   ruCount,
-  ticketsUrl,
+  ticketLinks,
   visibleFacts,
   visibleSteps,
   zoneName,
@@ -28,7 +28,7 @@ function factCard(fact, catalog) {
   const source = fact.source_url
     ? `<a class="source-link" href="${esc(fact.source_url)}" data-action="link" data-url="${esc(fact.source_url)}">Источник</a>`
     : `<span>Официальной ссылки нет.</span>`;
-  return `<article class="fact${fact.hidden ? " is-unverified" : ""}${fact.gap ? " is-gap" : ""}" data-zone="${esc(zone)}" data-fact-id="${esc(fact.id)}">
+  return `<div class="fact${fact.hidden ? " is-unverified" : ""}${fact.gap ? " is-gap" : ""}" data-zone="${esc(zone)}" data-fact-id="${esc(fact.id)}">
     <div class="fact-top">
       <span class="zone-dot" aria-hidden="true"></span>
       <span class="zone-name">${esc(zoneName(zone, catalog))}</span>
@@ -37,7 +37,7 @@ function factCard(fact, catalog) {
     <p class="fact-text">${esc(fact.text)}</p>
     <p class="source">${source}</p>
     <button type="button" class="text-btn" data-action="report" data-id="${esc(fact.id)}">Сообщить о неточности</button>
-  </article>`;
+  </div>`;
 }
 
 function choice(group, id, label, on, extra = "") {
@@ -293,7 +293,11 @@ function passportLine(text, profile) {
 
 function airlineFold(route) {
   const airlines = route.airlines || [];
-  if (!airlines.length) return "";
+  if (!airlines.length) {
+    const gap = route.airline_gap || "";
+    if (!gap) return "";
+    return `<details class="airline-fold"><summary>Авиакомпании на маршруте</summary><p class="hint">${esc(gap)}</p></details>`;
+  }
   const names = airlines.map((item) => `<span>${esc(item.name)}</span>`).join('<span class="dot">·</span>');
   const placeholder = airlines.some((item) => item.placeholder)
     ? `<p class="hint">Страницы авиакомпаний ещё не подключены — пока только названия.</p>`
@@ -332,17 +336,19 @@ function routeCard(state, route) {
     return `<button type="button" class="chip${on ? " is-on" : ""}" data-action="route-section" data-id="${esc(section.id)}" aria-expanded="${on ? "true" : "false"}">${esc(section.title)}</button>`;
   }).join("");
   const current = route.sections.find((section) => section.id === open);
-  const url = ticketsUrl(route, state.trip && state.trip.depart_date);
+  const depart = state.trip && state.trip.depart_date;
+  const links = ticketLinks(route, depart);
   const iata = route.iata ? `<p class="iata">${esc(route.iata)}</p>` : "";
-  const link = url
-    ? `<a class="primary tickets" href="${esc(url)}" data-action="link" data-url="${esc(url)}">Найти билеты</a>`
-    : "";
+  const link = links.map((item) => `<a class="primary tickets" href="${esc(item.url)}" data-action="link" data-url="${esc(item.url)}">${esc(item.label)}</a>`).join("");
+  const lead = (route.lead_facts || []).length
+    ? `${orderHint()}${factGroupHtml(route.lead_facts, (fact) => factCard(fact, state.catalog), state.catalog)}`
+    : route.summary.map((paragraph) => `<p class="ticket-copy">${esc(passportLine(paragraph, state.profile))}</p>`).join("");
   return `<article class="ticket">
     <p class="eyebrow">Разбор маршрута</p>
     <h2>${esc(route.title)}</h2>
     ${iata}
     <div class="ticket-rule"></div>
-    ${route.summary.map((paragraph) => `<p class="ticket-copy">${esc(passportLine(paragraph, state.profile))}</p>`).join("")}
+    ${lead}
     ${airlineFold(route)}
     ${link}
     <div class="chip-row">${chips}</div>
@@ -370,8 +376,20 @@ function routeCopy(state, current) {
     tail = text.slice(at + note.length).trim();
     text = text.slice(0, at).trim();
   }
+  const facts = current.facts || [];
+  const show = Boolean(state.unverified[current.id]);
+  const visible = facts.filter((fact) => show || !fact.hidden);
+  const hidden = facts.some((fact) => fact.hidden);
+  const groups = visible.length ? factGroupHtml(visible, (fact) => factCard(fact, state.catalog), state.catalog) : "";
+  const toggle = hidden
+    ? `<button type="button" class="ghost wide" data-action="unverified" data-scope="${esc(current.id)}">${show ? "Скрыть непроверенное" : "Показать непроверенное"}</button>`
+    : "";
+  const showProse = current.role === "payment" || !facts.length;
+  const prose = showProse && text
+    ? `<p>${compassText(state, passportLine(text, state.profile))}</p>`
+    : "";
   const disclosure = links.some((link) => link.partner) ? `<p class="partner-line">${partnerNote(state)}</p>` : "";
-  return `<div class="route-copy"><p>${compassText(state, passportLine(text, state.profile))}</p>${anchors ? `<p class="source">${anchors}</p>` : ""}${disclosure}${tail ? `<p>${compassText(state, passportLine(tail, state.profile))}</p>` : ""}</div>`;
+  return `<div class="route-copy">${groups}${prose}${anchors ? `<p class="source">${anchors}</p>` : ""}${disclosure}${tail && showProse ? `<p>${compassText(state, passportLine(tail, state.profile))}</p>` : ""}${toggle}</div>`;
 }
 
 function checklistOffers(state) {
