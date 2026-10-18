@@ -79,38 +79,31 @@ def test_unired_is_an_automatic_downgrade():
     assert row["fact_id"] == _fact_id("georgia/3_local_wallets_cards/wallets", row["text"])
 
 
-def test_july_own_experience_stays_a_manual_check():
+def test_expired_july_green_snapshot_is_gone():
     built = _bundle_report()
-    july = [
+    stale = [
         fact
         for fact in built["facts"]
         if fact["last_check_date"] == "2026-07-16" and fact["current_zone"] == "green"
     ]
-    assert len(july) == 10
-    for fact in july:
-        assert fact["current_zone"] == "green"
-        assert fact["score_zone"] == "black"
-        assert fact["computed_zone"] != "green"
-        assert fact["status"] == "fail"
-        assert fact["suggested_action"] == "downgrade"
-        assert fact["automatic"] is True
+    assert stale == []
 
 
 def test_corpus_counts_match_the_guide():
     built = _bundle_report()
     summary = built["summary"]
-    assert summary["checked"] == 277
+    assert summary["checked"] == 279
     assert summary["gaps"] == 13
-    assert summary["needs_owner_decision"] == 8
+    assert summary["needs_owner_decision"] == 10
     assert summary["needs_owner_manual_check"] == 12
     assert summary["unknown_zone"] == 39
     assert summary["refresh_search"] == 12
     country = [fact for fact in built["facts"] if fact["instruction_id"] is None]
     visible = [fact for fact in country if fact["current_zone"] in ("green", "yellow")]
     hidden_url = [fact for fact in visible if "no_public_source" in fact["flags"]]
-    assert len(visible) == 163
-    assert len(hidden_url) == 72
-    assert summary["confirmed"] + summary["not_confirmed"] + summary["stale"] + summary["could_not_check"] == 277
+    assert len(visible) == 160
+    assert len(hidden_url) == 66
+    assert summary["confirmed"] + summary["not_confirmed"] + summary["stale"] + summary["could_not_check"] == 279
 
 
 def test_traveler_green_asks_the_owner_in_the_exact_phrase():
@@ -290,7 +283,7 @@ def test_app_shows_live_unired_and_july_cards():
         step for step in INSTRUCTIONS["tbc_georgia"]["steps"]
         if step.get("date_verified") == "2026-07-16" and step.get("verified_by_us")
     )
-    assert len(july) == 10
+    assert [fact["text"] for fact in july] == ["Карта TBC работает везде, где платили (Грузия)."]
     assert all(fact["zone"] != "green" for fact in july)
 
 

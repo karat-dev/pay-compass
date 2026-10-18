@@ -365,7 +365,7 @@ def _action(
     current_rank = _rank(current, config)
     computed_rank = _rank(computed, config)
     fresh_days = fresh_limit_days(config)
-    stats = confirmation_stats(fact, as_of, fresh_days)
+    stats = confirmation_stats(fact, as_of, fresh_days, config)
     official = [url for url in urls if is_official_publisher(url, config)]
     traveler_kind = config["source_kinds"]["traveler"]
     green = config["upgrade"]["green_zone"]

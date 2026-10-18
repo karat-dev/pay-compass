@@ -158,6 +158,7 @@
   },
   "upgrade": {
     "yellow_min_independent_confirmations": 3,
+    "counted_confirmation_verdicts": ["confirms"],
     "yellow_zone": "yellow",
     "green_zone": "green",
     "traveler_unapproved_max_zone": "yellow",
