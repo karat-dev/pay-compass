@@ -19,7 +19,7 @@ from database.miniapp_catalog import (
     known_city_ids,
     known_country_slugs,
 )
-from database.miniapp_store import StoreError, get_store
+from database.miniapp_store import StoreError, citizenship_value, get_store
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +95,7 @@ def _clean_profile(payload: Mapping[str, Any], *, require_complete: bool) -> Dic
         "consent_given": consent,
         "onboarding_completed": completed,
         "intro_seen": bool(payload.get("intro_seen")),
+        "citizenship": citizenship_value(payload),
     }
 
 

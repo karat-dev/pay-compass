@@ -31,7 +31,7 @@ def test_route_card_loads_from_json():
     route = get_route("mow_hkg_via_pek")
     lines = lead_lines(route["text"])
     assert lines[0] == "Москва → Гонконг через Пекин"
-    assert lines[1].startswith("🛂 Виза не нужна")
+    assert lines[1].startswith("🛂 Виза не нужна для паспорта РФ")
     assert "Китай до 30 дней" in lines[1]
     assert "Гонконг до 14 дней" in lines[1]
     assert lines[2].startswith("⚠️ Главный риск")
@@ -82,8 +82,11 @@ def test_route_keyboard_and_menu_entry():
     assert "back_to_menu" in _callbacks(keyboard)
 
     payment = get_route_section_keyboard("mow_hkg_via_pek", show_payment_links=True)
-    assert "country_china" in _callbacks(payment)
-    assert "country_hong_kong" in _callbacks(payment)
+    web_apps = [button.web_app.url for row in payment.inline_keyboard for button in row if button.web_app]
+    assert any("startapp=section_china_2_pay_on_site" in url for url in web_apps)
+    assert any("startapp=section_hong_kong_2_pay_on_site" in url for url in web_apps)
+    assert "country_china" not in _callbacks(payment)
+    assert "country_hong_kong" not in _callbacks(payment)
     assert "route_open:mow_hkg_via_pek" in _callbacks(payment)
     transfer = get_route("mow_hkg_via_pek")["callback_replies"]["route:mow_hkg_via_pek:1"]
     assert 'href="https://kiwitaxi.tpk.lv/SYHLlog7?erid=2VtzqwJNmCZ"' in transfer

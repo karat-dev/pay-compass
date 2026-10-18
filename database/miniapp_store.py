@@ -42,6 +42,14 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def citizenship_value(fields: Dict[str, Any]) -> str:
+    """Only a Russian passport is offered. Missing values stay on that default."""
+    value = fields.get("citizenship") or "ru"
+    if value != "ru":
+        raise ValueError("Пока доступно только гражданство РФ.")
+    return "ru"
+
+
 def profile_row(telegram_id: int, fields: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "telegram_id": telegram_id,
@@ -54,6 +62,7 @@ def profile_row(telegram_id: int, fields: Dict[str, Any]) -> Dict[str, Any]:
         "consent_given": bool(fields.get("consent_given")),
         "onboarding_completed": bool(fields.get("onboarding_completed")),
         "intro_seen": bool(fields.get("intro_seen")),
+        "citizenship": citizenship_value(fields),
         "updated_at": _now(),
     }
 
@@ -99,6 +108,7 @@ def public_profile(row: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         "consent_given": bool(row.get("consent_given")),
         "onboarding_completed": bool(row.get("onboarding_completed")),
         "intro_seen": bool(row.get("intro_seen")),
+        "citizenship": row.get("citizenship") or "ru",
     }
 
 
