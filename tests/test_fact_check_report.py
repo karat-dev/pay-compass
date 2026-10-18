@@ -104,12 +104,12 @@ def test_corpus_counts_match_the_guide():
     assert summary["needs_owner_decision"] == 8
     assert summary["needs_owner_manual_check"] == 12
     assert summary["unknown_zone"] == 39
-    assert summary["refresh_search"] == 17
+    assert summary["refresh_search"] == 12
     country = [fact for fact in built["facts"] if fact["instruction_id"] is None]
     visible = [fact for fact in country if fact["current_zone"] in ("green", "yellow")]
     hidden_url = [fact for fact in visible if "no_public_source" in fact["flags"]]
-    assert len(visible) == 168
-    assert len(hidden_url) == 77
+    assert len(visible) == 163
+    assert len(hidden_url) == 72
     assert summary["confirmed"] + summary["not_confirmed"] + summary["stale"] + summary["could_not_check"] == 277
 
 

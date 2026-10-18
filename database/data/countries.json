@@ -1241,35 +1241,34 @@
             },
             {
               "text": "Возврат на карту российского банка не оформить — выбирайте наличные или карту иностранного банка",
-              "status": "unconfirmed",
+              "status": "outdated_or_refuted",
               "checked_at": "2026-10-18",
               "source": null,
-              "source_type": "заявление владельца",
+              "source_type": "наш опыт (владелец, старше 180 дней)",
               "needs_owner_check": false,
               "decision_needed": null,
               "unknown_zone": null,
-              "verified_by_us": false,
+              "verified_by_us": true,
               "refuted": false,
               "agreement": "agree",
               "fact_type": "fact",
               "source_kind": "internal",
               "reports": 0,
-              "source_date": "2026-10-18",
-              "date_estimated": false,
-              "date_basis": "заявление владельца 2026-10-18; свой ли это опыт — ещё не подтверждено",
+              "source_date": null,
+              "date_estimated": true,
+              "date_basis": "Личный опыт владельца: точная дата неизвестна, старше 180 дней; что это его опыт, владелец подтвердил 2026-10-18. Поиск 2026-10-18: Bank of China и налоговая не запрещают карты российских банков. АТОР 2026-05-28 ограничивает только залог моментального возврата и не внесён в подтверждения.",
               "source_user_facing": false,
-              "date_verified": "2026-10-18",
+              "date_verified": null,
               "status_derived_from": "zone",
-              "refresh_search": true,
-              "own_experience_unconfirmed": true,
-              "score": 50,
-              "zone": "yellow",
+              "score": 20,
+              "zone": "black",
               "score_breakdown": {
                 "source": 0,
-                "freshness": 30,
+                "freshness": 0,
                 "agreement": 20
               },
-              "reason": "источник internal=0; свежесть 0 дн.=30; согласованность ок=20. Дата: заявление владельца 2026-10-18; свой ли это опыт — ещё не подтверждено"
+              "reason": "источник internal=0; свежесть 0 дн.=30; согласованность ок=20. Дата: заявление владельца 2026-10-18; свой ли это опыт — ещё не подтверждено",
+              "own_date": null
             }
           ]
         }
@@ -2586,35 +2585,46 @@
             },
             {
               "text": "Возврат на карту российского банка не оформить — выбирайте наличные или карту иностранного банка",
-              "status": "unconfirmed",
+              "status": "outdated_or_refuted",
               "checked_at": "2026-10-18",
               "source": null,
-              "source_type": "заявление владельца",
+              "source_type": "наш опыт (владелец, старше 180 дней)",
               "needs_owner_check": false,
               "decision_needed": null,
               "unknown_zone": null,
-              "verified_by_us": false,
+              "verified_by_us": true,
               "refuted": false,
               "agreement": "agree",
               "fact_type": "fact",
               "source_kind": "internal",
               "reports": 0,
-              "source_date": "2026-10-18",
-              "date_estimated": false,
-              "date_basis": "заявление владельца 2026-10-18; свой ли это опыт — ещё не подтверждено",
+              "source_date": null,
+              "date_estimated": true,
+              "date_basis": "Личный опыт владельца: точная дата неизвестна, старше 180 дней; что это его опыт, владелец подтвердил 2026-10-18. Поиск 2026-10-18: Налоговый департамент называет схемы карт и не пишет страну выпуска. Подтверждения СМИ старше 90 дней.",
               "source_user_facing": false,
-              "date_verified": "2026-10-18",
+              "date_verified": null,
               "status_derived_from": "zone",
-              "refresh_search": true,
-              "own_experience_unconfirmed": true,
-              "score": 50,
-              "zone": "yellow",
+              "score": 20,
+              "zone": "black",
               "score_breakdown": {
                 "source": 0,
-                "freshness": 30,
+                "freshness": 0,
                 "agreement": 20
               },
-              "reason": "источник internal=0; свежесть 0 дн.=30; согласованность ок=20. Дата: заявление владельца 2026-10-18; свой ли это опыт — ещё не подтверждено"
+              "reason": "источник internal=0; свежесть 0 дн.=30; согласованность ок=20. Дата: заявление владельца 2026-10-18; свой ли это опыт — ещё не подтверждено",
+              "own_date": null,
+              "confirmations": [
+                {
+                  "outlet": "life-thai.com",
+                  "url": "https://life-thai.com/vernite-mne-moi-den-gi-ili-vat-refund/",
+                  "date": "2026-03-04"
+                },
+                {
+                  "outlet": "pumainthailand.com",
+                  "url": "https://pumainthailand.com/vozvrat-vat-refund-v-tailande-2026/",
+                  "date": "2026-06-21"
+                }
+              ]
             }
           ]
         }
@@ -3343,35 +3353,41 @@
             },
             {
               "text": "Возврат на карту российского банка не оформить — выбирайте наличные или карту иностранного банка",
-              "status": "unconfirmed",
+              "status": "outdated_or_refuted",
               "checked_at": "2026-10-18",
               "source": null,
-              "source_type": "заявление владельца",
+              "source_type": "наш опыт (владелец, старше 180 дней)",
               "needs_owner_check": false,
               "decision_needed": null,
               "unknown_zone": null,
-              "verified_by_us": false,
+              "verified_by_us": true,
               "refuted": false,
               "agreement": "agree",
               "fact_type": "fact",
               "source_kind": "internal",
               "reports": 0,
-              "source_date": "2026-10-18",
-              "date_estimated": false,
-              "date_basis": "заявление владельца 2026-10-18; свой ли это опыт — ещё не подтверждено",
+              "source_date": null,
+              "date_estimated": true,
+              "date_basis": "Личный опыт владельца: точная дата неизвестна, старше 180 дней; что это его опыт, владелец подтвердил 2026-10-18. Поиск 2026-10-18: FTA и Planet называют схемы карт и не пишут страну выпуска. Радиоточка (гид 2025) допускает российский UnionPay и в подтверждения не внесена.",
               "source_user_facing": false,
-              "date_verified": "2026-10-18",
+              "date_verified": null,
               "status_derived_from": "zone",
-              "refresh_search": true,
-              "own_experience_unconfirmed": true,
-              "score": 50,
-              "zone": "yellow",
+              "score": 20,
+              "zone": "black",
               "score_breakdown": {
                 "source": 0,
-                "freshness": 30,
+                "freshness": 0,
                 "agreement": 20
               },
-              "reason": "источник internal=0; свежесть 0 дн.=30; согласованность ок=20. Дата: заявление владельца 2026-10-18; свой ли это опыт — ещё не подтверждено"
+              "reason": "источник internal=0; свежесть 0 дн.=30; согласованность ок=20. Дата: заявление владельца 2026-10-18; свой ли это опыт — ещё не подтверждено",
+              "own_date": null,
+              "confirmations": [
+                {
+                  "outlet": "avo.cards",
+                  "url": "https://avo.cards/blog/tax-free-vozvrat-nds-2026-na-kakuyu-kartu/",
+                  "date": "2026-10-09"
+                }
+              ]
             }
           ]
         }
@@ -4447,35 +4463,46 @@
             },
             {
               "text": "Возврат на карту российского банка не оформить — выбирайте наличные или карту иностранного банка",
-              "status": "unconfirmed",
+              "status": "outdated_or_refuted",
               "checked_at": "2026-10-18",
               "source": null,
-              "source_type": "заявление владельца",
+              "source_type": "наш опыт (владелец, старше 180 дней)",
               "needs_owner_check": false,
               "decision_needed": null,
               "unknown_zone": null,
-              "verified_by_us": false,
+              "verified_by_us": true,
               "refuted": false,
               "agreement": "agree",
               "fact_type": "fact",
               "source_kind": "internal",
               "reports": 0,
-              "source_date": "2026-10-18",
-              "date_estimated": false,
-              "date_basis": "заявление владельца 2026-10-18; свой ли это опыт — ещё не подтверждено",
+              "source_date": null,
+              "date_estimated": true,
+              "date_basis": "Личный опыт владельца: точная дата неизвестна, старше 180 дней; что это его опыт, владелец подтвердил 2026-10-18. Поиск 2026-10-18: открытые FAQ Planet и Global Blue запрет по эмитенту не пишут. tourofturkey.net 2026-09-07 пишет, что часть российских UnionPay зачисление принимает, и в подтверждения не внесён.",
               "source_user_facing": false,
-              "date_verified": "2026-10-18",
+              "date_verified": null,
               "status_derived_from": "zone",
-              "refresh_search": true,
-              "own_experience_unconfirmed": true,
-              "score": 50,
-              "zone": "yellow",
+              "score": 20,
+              "zone": "black",
               "score_breakdown": {
                 "source": 0,
-                "freshness": 30,
+                "freshness": 0,
                 "agreement": 20
               },
-              "reason": "источник internal=0; свежесть 0 дн.=30; согласованность ок=20. Дата: заявление владельца 2026-10-18; свой ли это опыт — ещё не подтверждено"
+              "reason": "источник internal=0; свежесть 0 дн.=30; согласованность ок=20. Дата: заявление владельца 2026-10-18; свой ли это опыт — ещё не подтверждено",
+              "own_date": null,
+              "confirmations": [
+                {
+                  "outlet": "vc.ru",
+                  "url": "https://vc.ru/travel/2945209-vozvrat-nds-v-turcii-dlya-turistov-iz-rossii",
+                  "date": "2026-05-24"
+                },
+                {
+                  "outlet": "avo.cards",
+                  "url": "https://avo.cards/blog/tax-free-vozvrat-nds-2026-na-kakuyu-kartu/",
+                  "date": "2026-10-09"
+                }
+              ]
             }
           ]
         }
@@ -6495,35 +6522,34 @@
             },
             {
               "text": "Возврат на карту российского банка не оформить — выбирайте наличные или карту иностранного банка",
-              "status": "unconfirmed",
+              "status": "outdated_or_refuted",
               "checked_at": "2026-10-18",
               "source": null,
-              "source_type": "заявление владельца",
+              "source_type": "наш опыт (владелец, старше 180 дней)",
               "needs_owner_check": false,
               "decision_needed": null,
               "unknown_zone": null,
-              "verified_by_us": false,
+              "verified_by_us": true,
               "refuted": false,
               "agreement": "agree",
               "fact_type": "fact",
               "source_kind": "internal",
               "reports": 0,
-              "source_date": "2026-10-18",
-              "date_estimated": false,
-              "date_basis": "заявление владельца 2026-10-18; свой ли это опыт — ещё не подтверждено",
+              "source_date": null,
+              "date_estimated": true,
+              "date_basis": "Личный опыт владельца: точная дата неизвестна, старше 180 дней; что это его опыт, владелец подтвердил 2026-10-18. Поиск 2026-10-18: буклет Налоговой службы и кодекс не называют платёжные системы. Публичного подтверждения запрета на карту российского банка не найдено.",
               "source_user_facing": false,
-              "date_verified": "2026-10-18",
+              "date_verified": null,
               "status_derived_from": "zone",
-              "refresh_search": true,
-              "own_experience_unconfirmed": true,
-              "score": 50,
-              "zone": "yellow",
+              "score": 20,
+              "zone": "black",
               "score_breakdown": {
                 "source": 0,
-                "freshness": 30,
+                "freshness": 0,
                 "agreement": 20
               },
-              "reason": "источник internal=0; свежесть 0 дн.=30; согласованность ок=20. Дата: заявление владельца 2026-10-18; свой ли это опыт — ещё не подтверждено"
+              "reason": "источник internal=0; свежесть 0 дн.=30; согласованность ок=20. Дата: заявление владельца 2026-10-18; свой ли это опыт — ещё не подтверждено",
+              "own_date": null
             }
           ]
         }

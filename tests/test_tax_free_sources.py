@@ -31,23 +31,49 @@ def _raw_tax(slug):
     return bundle["countries"][slug]["sections"]["8_tax_free"]["facts"]
 
 
-def test_owner_statement_replaces_probably_impossible_and_leaves_manual_checks():
+def test_owner_experience_is_old_and_the_live_rule_sets_the_zone():
+    fresh_days = CONFIG["volatility"]["classes"]["slow"]["fresh_days"]
+    red_min = next(zone["min"] for zone in CONFIG["zones"] if zone["name"] == "red")
+    expected_outlets = {
+        "china": set(),
+        "thailand": {"life-thai.com", "pumainthailand.com"},
+        "uae": {"avo.cards"},
+        "turkey": {"vc.ru", "avo.cards"},
+        "georgia": set(),
+    }
     for slug in ("china", "thailand", "uae", "turkey", "georgia"):
         matches = [fact for fact in _raw_tax(slug) if fact["text"] == OWNER]
         assert len(matches) == 1, slug
         fact = matches[0]
         assert fact["needs_owner_check"] is False
-        assert fact["verified_by_us"] is False
-        assert fact["own_experience_unconfirmed"] is True
-        assert fact["refresh_search"] is True
-        assert fact["source_type"] == "заявление владельца"
+        assert fact["verified_by_us"] is True
+        assert "own_experience_unconfirmed" not in fact
+        assert "refresh_search" not in fact
+        assert fact["source_type"] == "наш опыт (владелец, старше 180 дней)"
+        assert fact["source_kind"] == "internal"
         assert fact["source"] is None
-        assert fact["date_verified"] == CHECK
+        assert fact["date_verified"] is None
+        assert fact.get("own_date") is None
+        assert fact.get("source_date") is None
+        assert fact["date_estimated"] is True
+        outlets = {item["outlet"] for item in fact.get("confirmations") or []}
+        assert outlets == expected_outlets[slug]
         scored = score_fact(fact, CONFIG, AS_OF)
         live = resolve_zone(fact, config=CONFIG, as_of=AS_OF, section_key="8_tax_free")
+        assert scored["age_days"] is None
+        assert live["age_days"] is None
         assert fact["zone"] == scored["zone"] == live["zone"]
         assert fact["score"] == scored["score"] == live["score"]
-        assert fact["zone"] == "yellow"
+        assert fact["score_breakdown"] == scored["score_breakdown"] == live["score_breakdown"]
+        assert fact["score"] < red_min
+        assert live["upgraded"] is False
+        assert live["confirmations"]["fresh_count"] < CONFIG["upgrade"]["yellow_min_independent_confirmations"]
+        assert live["confirmations"]["count"] == len(outlets)
+        for item in fact.get("confirmations") or []:
+            age = (AS_OF - date.fromisoformat(item["date"])).days
+            assert age >= 0
+            if item["date"] >= "2026-07-20":
+                assert age <= fresh_days
     joined = "\n".join(fact["text"] for slug in ("china", "thailand", "uae", "turkey", "georgia") for fact in _raw_tax(slug))
     assert "вероятно" not in joined
     import sys
@@ -62,8 +88,7 @@ def test_owner_statement_replaces_probably_impossible_and_leaves_manual_checks()
         for fact in built["facts"]
         if fact["suggested_action"] == "refresh_search" and fact["text"] == OWNER
     ]
-    assert len(refresh) == 5
-    assert {fact["country"] for fact in refresh} == {"china", "thailand", "uae", "turkey", "georgia"}
+    assert refresh == []
 
 
 def test_thailand_uses_the_current_revenue_department_pages():
