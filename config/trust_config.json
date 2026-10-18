@@ -133,6 +133,31 @@
       "product": "product",
       "logic": "logic"
     },
+    "reason_label": "По причинам",
+    "reason_labels": {
+      "own_experience": "свой опыт",
+      "review_green": "зелёный только из отзывов",
+      "conflict": "конфликт источников",
+      "owner_check": "ручная проверка",
+      "decision": "решение владельца",
+      "refresh": "заявление без страницы оператора",
+      "gap": "пробел",
+      "unscored": "нет данных для формулы",
+      "advice": "формула без источника",
+      "uncovered_class": "класс вне расписаний"
+    },
+    "reason_order": [
+      "own_experience",
+      "review_green",
+      "conflict",
+      "owner_check",
+      "decision",
+      "refresh",
+      "gap",
+      "unscored",
+      "advice",
+      "uncovered_class"
+    ],
     "product": {
       "source_kinds": ["internal"],
       "verified_field": "verified_by_us",
@@ -151,7 +176,7 @@
         "hour": 6,
         "day_of_month": null,
         "day_of_week": 1,
-        "classes": ["fast", "medium", "slow", "fallback"]
+        "classes": ["fast", "medium", "slow", "fallback", "bank_procedure"]
       },
       {
         "id": "transfers",

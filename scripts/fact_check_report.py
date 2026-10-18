@@ -165,18 +165,19 @@ def _covering_schedules(
     return categorized or matched
 
 
-def _is_product_question(source: Dict[str, Any], resolved: Dict[str, Any], config: Dict[str, Any]) -> bool:
+def _product_reason(source: Dict[str, Any], resolved: Dict[str, Any], config: Dict[str, Any]) -> Optional[str]:
+    """First matching owner-experience reason. Tokens are auto_checks.reason_labels keys."""
     rules = (config.get("auto_checks") or {}).get("product") or {}
     verified = rules.get("verified_field")
     if verified and source.get(verified) is True:
-        return True
+        return "own_experience"
     if source.get("source_kind") in set(rules.get("source_kinds") or []):
-        return True
+        return "own_experience"
     conflict_field = rules.get("conflict_field")
     if conflict_field and source.get(conflict_field) == config["early_warning"]["conflict_agreement"]:
-        return True
+        return "conflict"
     if source.get("volatility") == rules.get("conflict_volatility"):
-        return True
+        return "conflict"
     review_kind = rules.get("review_source_kind")
     green = config["upgrade"]["green_zone"]
     if source.get("source_kind") == review_kind and (
@@ -184,11 +185,14 @@ def _is_product_question(source: Dict[str, Any], resolved: Dict[str, Any], confi
         or resolved.get("score_zone") == green
         or source.get("score_zone") == green
     ):
-        return True
-    for field in (rules.get("owner_check_field"), rules.get("decision_field"), rules.get("refresh_field")):
-        if field and source.get(field):
-            return True
-    return False
+        return "review_green"
+    if rules.get("owner_check_field") and source.get(rules["owner_check_field"]):
+        return "owner_check"
+    if rules.get("decision_field") and source.get(rules["decision_field"]):
+        return "decision"
+    if rules.get("refresh_field") and source.get(rules["refresh_field"]):
+        return "refresh"
+    return None
 
 
 def _uncovered_text(config: Dict[str, Any], kind: str) -> str:
@@ -209,35 +213,31 @@ def auto_check_fields(
     labels = config["auto_checks"]
     product = labels["kinds"]["product"]
     logic = labels["kinds"]["logic"]
-    if _is_product_question(source, resolved, config):
+
+    def question(kind: str, reason: str) -> Dict[str, Any]:
         return {
             "next_auto_check": None,
-            "owner_question_type": product,
-            "auto_check_text": _uncovered_text(config, product),
+            "owner_question_type": kind,
+            "owner_question_reason": reason,
+            "auto_check_text": _uncovered_text(config, kind),
         }
+
+    product_reason = _product_reason(source, resolved, config)
+    if product_reason:
+        return question(product, product_reason)
     kind = resolved.get("kind")
     gap = kind == "gap" or source.get("fact_type") == "gap" or source.get("gap") is True
-    if gap or kind == "unscored":
-        return {
-            "next_auto_check": None,
-            "owner_question_type": logic,
-            "auto_check_text": _uncovered_text(config, logic),
-        }
+    if gap:
+        return question(logic, "gap")
+    if kind == "unscored":
+        return question(logic, "unscored")
     automatic_sources = set(labels.get("source_kinds") or [])
     if source.get("fact_type") == "advice" and source.get("source_kind") not in automatic_sources:
-        return {
-            "next_auto_check": None,
-            "owner_question_type": logic,
-            "auto_check_text": _uncovered_text(config, logic),
-        }
+        return question(logic, "advice")
     class_name = resolved.get("volatility_class") or source.get("volatility_class")
     schedules = _covering_schedules(config, class_name=class_name, category=category)
     if not schedules:
-        return {
-            "next_auto_check": None,
-            "owner_question_type": logic,
-            "auto_check_text": _uncovered_text(config, logic),
-        }
+        return question(logic, "uncovered_class")
     planned = min(next_schedule_date(schedule, as_of) for schedule in schedules)
     if resolved.get("at_risk"):
         drop = parse_date(resolved.get("drops_on"))
@@ -246,6 +246,7 @@ def auto_check_fields(
     return {
         "next_auto_check": planned.isoformat(),
         "owner_question_type": None,
+        "owner_question_reason": None,
         "auto_check_text": labels["date_text"].format(date=planned.isoformat()),
     }
 
@@ -257,6 +258,7 @@ def summarize_auto_checks(rows: Sequence[Dict[str, Any]], config: Dict[str, Any]
     dates: Dict[str, int] = {}
     product_count = 0
     logic_count = 0
+    reasons: Dict[str, int] = {}
     for row in rows:
         when = row.get("next_auto_check")
         if when:
@@ -265,6 +267,21 @@ def summarize_auto_checks(rows: Sequence[Dict[str, Any]], config: Dict[str, Any]
             product_count += 1
         else:
             logic_count += 1
+        reason = row.get("owner_question_reason")
+        if reason:
+            reasons[str(reason)] = reasons.get(str(reason), 0) + 1
+    reason_labels = labels.get("reason_labels") or {}
+    ordered = []
+    for token in labels.get("reason_order") or []:
+        if reasons.get(token):
+            ordered.append({
+                "reason": token,
+                "label": reason_labels.get(token) or token,
+                "count": reasons[token],
+            })
+    for token, count in sorted(reasons.items()):
+        if token not in {item["reason"] for item in ordered}:
+            ordered.append({"reason": token, "label": reason_labels.get(token) or token, "count": count})
     return {
         "label": labels["summary_label"],
         "dates": [{"date": key, "count": dates[key]} for key in sorted(dates)],
@@ -276,6 +293,8 @@ def summarize_auto_checks(rows: Sequence[Dict[str, Any]], config: Dict[str, Any]
             product=product_count,
             logic=logic_count,
         ),
+        "reason_label": labels.get("reason_label") or "",
+        "reasons": ordered,
     }
 
 
@@ -286,6 +305,11 @@ def _auto_lines(block: Optional[Dict[str, Any]]) -> List[str]:
     for item in block.get("dates") or []:
         lines.append(f"{item['date']}: {item['count']}")
     lines.append(block["owner_label"])
+    if block.get("reasons"):
+        if block.get("reason_label"):
+            lines.append(block["reason_label"])
+        for item in block["reasons"]:
+            lines.append(f"{item['label']}: {item['count']}")
     lines.append("")
     return lines
 
@@ -360,6 +384,7 @@ def assess_fact(
         "at_risk_reason": None,
         "next_auto_check": None,
         "owner_question_type": None,
+        "owner_question_reason": None,
         "auto_check_text": "",
         "flags": flags,
     }

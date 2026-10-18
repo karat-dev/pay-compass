@@ -356,6 +356,7 @@ def test_script_does_not_write_product_data():
         "at_risk_reason",
         "next_auto_check",
         "owner_question_type",
+        "owner_question_reason",
         "auto_check_text",
     }
     assert "at_risk" in payload["summary"]
@@ -492,6 +493,13 @@ def test_next_auto_check_uses_config_schedules_and_names_owner_questions():
     assert report.next_schedule_date(schedules["transfers"], date(2026, 11, 10)).isoformat() == "2026-12-10"
     weekly = f"{schedules['fact_check']['minute']} {schedules['fact_check']['hour']} * * {schedules['fact_check']['day_of_week']}"
     assert weekly in WORKFLOW.read_text(encoding="utf-8")
+    covered_by_other = set()
+    for schedule in CONFIG["auto_checks"]["schedules"]:
+        if schedule["id"] != "fact_check" and schedule.get("classes") and not schedule.get("categories"):
+            covered_by_other.update(schedule["classes"])
+    for name in CONFIG["volatility"]["classes"]:
+        if name not in covered_by_other:
+            assert name in schedules["fact_check"]["classes"], name
 
     built = _bundle_report()
     labels = CONFIG["auto_checks"]
@@ -522,15 +530,18 @@ def test_next_auto_check_uses_config_schedules_and_names_owner_questions():
     own = _assess(_fact(zone="green", source_kind="internal", verified_by_us=True, agreement="agree", reports=0, date_verified="2026-07-16"))
     assert own["next_auto_check"] is None
     assert own["owner_question_type"] == product
+    assert own["owner_question_reason"] == "own_experience"
     assert own["auto_check_text"] == product_phrase
 
     reviews = _assess(_fact(zone="yellow", reports=5, source_kind="traveler", agreement="agree"))
     assert reviews["next_auto_check"] is None
     assert reviews["owner_question_type"] == product
+    assert reviews["owner_question_reason"] == "review_green"
 
     conflict = _assess(_fact(zone="yellow", agreement=CONFIG["early_warning"]["conflict_agreement"], source_kind="media", reports=0, source="https://example.test/a"))
     assert conflict["next_auto_check"] is None
     assert conflict["owner_question_type"] == product
+    assert conflict["owner_question_reason"] == "conflict"
 
     official = _assess(_fact(
         zone="green",
@@ -543,6 +554,18 @@ def test_next_auto_check_uses_config_schedules_and_names_owner_questions():
     ))
     assert official["next_auto_check"] == "2026-10-19"
     assert official["owner_question_type"] is None
+    bank_class = next(name for name in CONFIG["volatility"]["classes"] if name in schedules["fact_check"]["classes"] and name not in ("fast", "medium", "slow", "fallback"))
+    bank = _assess(_fact(
+        zone="yellow",
+        source_kind="official",
+        reports=0,
+        agreement="agree",
+        source="https://www.tbcbank.ge/tariffs",
+        date_verified="2026-10-10",
+        volatility_class=bank_class,
+    ))
+    assert bank["next_auto_check"] == report.next_schedule_date(schedules["fact_check"], AS_OF).isoformat()
+    assert bank["owner_question_reason"] is None
 
     visa = _assess(
         _fact(
@@ -575,6 +598,7 @@ def test_next_auto_check_uses_config_schedules_and_names_owner_questions():
     gap = _assess(_fact(zone="gap", fact_type="gap", source_kind=None, source=None, agreement="agree"))
     assert gap["next_auto_check"] is None
     assert gap["owner_question_type"] == logic
+    assert gap["owner_question_reason"] == "gap"
     assert gap["auto_check_text"] == logic_phrase
 
     dropping = _assess(
@@ -609,8 +633,13 @@ def test_next_auto_check_uses_config_schedules_and_names_owner_questions():
     assert night["owner_question_type"] == logic
     interval = next(row for row in rows if row["id"] == "bkk_dmk_interval")
     assert interval["owner_question_type"] == product
+    assert interval["owner_question_reason"] == "conflict"
     assert interval["auto_check_text"] == product_phrase
     block = built["transfers"]["auto_check"]
+    rendered = report.render_text(built)
+    for block_name in (guide, block):
+        assert sum(item["count"] for item in block_name["reasons"]) == block_name["product"] + block_name["logic"]
+        assert block_name["reason_label"] in rendered
     assert sum(item["count"] for item in block["dates"]) + block["product"] + block["logic"] == len(rows)
     assert any(item["date"] == "2026-11-10" and item["count"] > 0 for item in block["dates"])
 
