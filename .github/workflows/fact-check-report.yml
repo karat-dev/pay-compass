@@ -1,0 +1,50 @@
+name: Fact check report
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: Охват отчёта
+        required: true
+        type: choice
+        options:
+          - all
+          - country
+        default: all
+      country:
+        description: Slug страны, если охват country (china, georgia, …)
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build fact-check report
+        env:
+          FACT_CHECK_SCOPE: ${{ inputs.scope }}
+          FACT_CHECK_COUNTRY: ${{ inputs.country }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          OWNER_TELEGRAM_CHAT_ID: ${{ secrets.OWNER_TELEGRAM_CHAT_ID }}
+        run: python3 scripts/fact_check_report.py --json fact_check_report.json --text fact_check_report.txt --http --send-telegram
+
+      - name: Publish job summary
+        if: always()
+        run: cat fact_check_report.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fact-check-report
+          if-no-files-found: error
+          path: |
+            fact_check_report.txt
+            fact_check_report.json
