@@ -232,6 +232,146 @@ def test_intro_reset_workflow_updates_one_user():
     assert "303653591" not in text
 
 
+RENDER_ROUTE_DETAILS = r"""
+const chunks = [];
+for await (const chunk of process.stdin) chunks.push(chunk);
+const catalog = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+globalThis.location = { hash: "#/trip", search: "", hostname: "127.0.0.1" };
+globalThis.document = { documentElement: { dataset: {}, style: {} }, querySelector() { return null; } };
+const { render } = await import("./miniapp/js/screens.js");
+const trip = {
+  destination_slug: "hong_kong",
+  departure_city_id: "mow",
+  depart_date: "2026-11-12",
+  return_date: "2026-11-20",
+};
+const profile = {
+  bank_id: "tbank",
+  departure_city_id: "mow",
+  favorite_countries: ["hong_kong"],
+  notify_checklist: true,
+  notify_trip: true,
+  notify_alerts: false,
+  intro_seen: true,
+  citizenship: "ru",
+};
+function paint(openRoute) {
+  location.hash = "#/trip";
+  return render({
+    catalog,
+    trip,
+    profile,
+    progress: {},
+    unverified: {},
+    openRoute,
+    draft: {},
+    sheet: null,
+  });
+}
+const closed = paint("");
+const payment = paint("route:mow_hkg_via_pek:5");
+const transfer = paint("route:mow_hkg_via_pek:1");
+location.hash = "#/profile";
+const profileHtml = render({
+  catalog,
+  trip,
+  profile,
+  progress: {},
+  unverified: {},
+  openRoute: "",
+  draft: {},
+  sheet: null,
+});
+process.stdout.write(JSON.stringify({ closed, payment, transfer, profileHtml }));
+"""
+
+
+def test_route_airlines_are_deduped_and_collapsed():
+    painted = _render_catalog(get_catalog(), RENDER_ROUTE_DETAILS)["closed"]
+    ticket = painted.split('<article class="ticket">')[1].split("</article>")[0]
+    fold = ticket.split('<details class="airline-fold">', 1)
+    assert len(fold) == 2
+    assert not fold[1].startswith(" open")
+    assert "<summary>Авиакомпании на маршруте (7)</summary>" in ticket
+    assert ticket.count("Air China") == 1
+    assert "Cathay Pacific" in ticket
+    assert "Hong Kong Airlines" in ticket
+    assert "Страницы авиакомпаний ещё не подключены — пока только названия." in fold[1]
+    assert "для паспорта РФ" in ticket
+    assert 'class="airline-row"' in fold[1]
+    assert ticket.index("airline-row") > ticket.index("<details")
+
+
+def test_payment_compass_opens_guide_sections():
+    painted = _render_catalog(get_catalog(), RENDER_ROUTE_DETAILS)
+    payment = painted["payment"]
+    assert 'class="jump" data-action="open-section" data-slug="china" data-key="2_pay_on_site">Компас оплаты → Китай</button>' in payment
+    assert 'class="jump" data-action="open-section" data-slug="hong_kong" data-key="2_pay_on_site">Компас оплаты → Гонконг</button>' in payment
+    transfer = painted["transfer"].split('<div class="route-copy">')[1]
+    assert "PEK → город" in transfer
+    assert "open-section" not in transfer
+    assert "Компас оплаты" not in transfer
+
+
+def test_profile_passport_setting_is_russian_citizenship():
+    painted = _render_catalog(get_catalog(), RENDER_ROUTE_DETAILS)["profileHtml"]
+    screen = painted.split('<section class="screen">')[1].split("</section>")[0]
+    assert screen.count('data-group="citizenship"') == 1
+    assert 'data-id="ru"' in screen
+    assert "Гражданство РФ" in screen
+    assert "Визы и правила въезда считаем для граждан РФ. Другие паспорта появятся позже." in screen
+    assert "скоро" not in screen
+
+
+def test_citizenship_defaults_to_ru_and_rejects_other_passports(local_store):
+    status, marked = dispatch("POST", "miniapp/intro", b"{}", _dev_headers())
+    assert status == 200, marked
+    assert marked["profile"]["citizenship"] == "ru"
+    assert "passport_number" not in marked["profile"]
+
+    body = {
+        "bank_id": "sber",
+        "departure_city_id": "mow",
+        "favorite_countries": ["china"],
+        "notify_checklist": True,
+        "notify_trip": True,
+        "notify_alerts": False,
+        "consent_given": True,
+        "onboarding_completed": True,
+    }
+    status, saved = dispatch("POST", "miniapp/profile", json.dumps(body).encode(), _dev_headers())
+    assert status == 200, saved
+    assert saved["profile"]["citizenship"] == "ru"
+
+    rejected = dict(body)
+    rejected["citizenship"] = "de"
+    rejected["passport_number"] = "0000"
+    status, error = dispatch("POST", "miniapp/profile", json.dumps(rejected).encode(), _dev_headers())
+    assert status == 400
+    assert error["error"] == "Пока доступно только гражданство РФ."
+
+    status, session = dispatch("POST", "miniapp/session", b"{}", _dev_headers())
+    assert session["profile"]["citizenship"] == "ru"
+    stored = json.loads(local_store.path.read_text(encoding="utf-8"))
+    row = stored["profiles"]["1001"]
+    assert row["citizenship"] == "ru"
+    assert "passport_number" not in row
+    assert "phone" not in row
+    assert "first_name" not in row
+
+
+def test_citizenship_migration_only_adds_a_column():
+    supabase_sql = (ROOT / "supabase" / "migrations" / "20261017120000_citizenship.sql").read_text(encoding="utf-8")
+    mirror = (ROOT / "database" / "migrations" / "005_citizenship.sql").read_text(encoding="utf-8")
+    for text in (supabase_sql, mirror):
+        assert "ADD COLUMN IF NOT EXISTS citizenship TEXT NOT NULL DEFAULT 'ru'" in text
+        assert "DROP " not in text
+        assert "UPDATE " not in text
+        assert "DELETE " not in text
+    assert "miniapp_profiles" in supabase_sql
+    assert "miniapp_trips" not in supabase_sql
+
+
 def test_georgia_country_page_does_not_scroll_at_320px():
     chrome = shutil.which("google-chrome") or shutil.which("google-chrome-stable")
     if chrome is None and Path("/usr/local/bin/google-chrome").is_file():

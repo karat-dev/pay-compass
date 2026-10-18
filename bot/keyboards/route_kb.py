@@ -1,5 +1,6 @@
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 
+from bot.keyboards.miniapp_kb import miniapp_url
 from database.routes import get_route, section_buttons, tickets_url
 
 
@@ -30,8 +31,14 @@ def get_route_section_keyboard(route_id: str, *, show_payment_links: bool = Fals
         rows.append([InlineKeyboardButton(text="🔎 Найти билеты", url=url)])
     if show_payment_links:
         rows.append([
-            InlineKeyboardButton(text="Компас оплаты · Китай", callback_data="country_china"),
-            InlineKeyboardButton(text="Гонконг", callback_data="country_hong_kong"),
+            InlineKeyboardButton(
+                text="Компас оплаты · Китай",
+                web_app=WebAppInfo(url=miniapp_url("section_china_2_pay_on_site")),
+            ),
+            InlineKeyboardButton(
+                text="Гонконг",
+                web_app=WebAppInfo(url=miniapp_url("section_hong_kong_2_pay_on_site")),
+            ),
         ])
     rows.append([InlineKeyboardButton(text="« К маршруту", callback_data=f"route_open:{route_id}")])
     rows.append([InlineKeyboardButton(text="« Главное меню", callback_data="back_to_menu")])

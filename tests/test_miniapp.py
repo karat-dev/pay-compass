@@ -99,10 +99,14 @@ def test_banks_come_from_guides_and_route_card_has_no_price():
     assert "₽" not in "\n".join(route["summary"])
     assert any(line.startswith("🛂") for line in route["summary"])
     assert any("PKX" in line and "PEK" in line for line in route["summary"])
-    assert [item["name"] for item in route["airlines"][:5]] == [
+    airline_names = [item["name"] for item in route["airlines"]]
+    assert airline_names == [
         "Аэрофлот", "Air China", "China Eastern", "China Southern", "Hainan Airlines",
+        "Cathay Pacific", "Hong Kong Airlines",
     ]
+    assert airline_names.count("Air China") == 1
     assert all(item["placeholder"] for item in route["airlines"])
+    assert any("для паспорта РФ" in line for line in route["summary"])
     assert [section["title"] for section in route["sections"]] == [
         "Пересадка", "Трансфер", "Связь", "Ввоз и вывоз", "Штампы и отметки", "Оплата",
     ]

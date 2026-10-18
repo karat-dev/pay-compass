@@ -109,6 +109,7 @@ function emptyProfile(introSeen) {
     consent_given: false,
     onboarding_completed: false,
     intro_seen: Boolean(introSeen),
+    citizenship: "ru",
   };
 }
 
@@ -116,6 +117,7 @@ function applySession(session) {
   state.introSeen = Boolean(session.intro_seen || (session.profile && session.profile.intro_seen));
   state.profile = session.profile || emptyProfile(state.introSeen);
   state.profile.intro_seen = state.introSeen;
+  if (!state.profile.citizenship) state.profile.citizenship = "ru";
   state.trip = session.trip;
   state.progress = {};
   for (const item of session.progress || []) state.progress[item.item_id] = item;
@@ -233,6 +235,7 @@ function seedPreview(name) {
     consent_given: !bare,
     onboarding_completed: !bare && name !== "pick" && name !== "onboarding",
     intro_seen: !intro,
+    citizenship: "ru",
   };
   state.trip = bare ? null : {
     destination_slug: china ? "china" : "hong_kong",
@@ -350,6 +353,7 @@ async function finishPick() {
     consent_given: true,
     onboarding_completed: true,
     intro_seen: true,
+    citizenship: (state.profile && state.profile.citizenship) || "ru",
   };
   const trip = {
     destination_slug: state.draft.destination_slug,
@@ -432,6 +436,7 @@ app.addEventListener("click", (event) => {
     if (el.dataset.group === "bank") target.bank_id = el.dataset.id;
     if (el.dataset.group === "city") target.departure_city_id = el.dataset.id;
     if (el.dataset.group === "country") target.destination_slug = el.dataset.id;
+    if (el.dataset.group === "citizenship") target.citizenship = "ru";
     state.message = "";
     if (screen.name === "profile") queueProfileSave();
     draw();
