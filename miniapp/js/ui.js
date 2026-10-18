@@ -105,9 +105,24 @@ export function groupFacts(facts, catalog) {
     if (zone && buckets.has(zone)) buckets.get(zone).push(item);
     else extra.push(item);
   });
+  const strength = (fact) => {
+    const badge = fact && fact.community_badge;
+    if (!badge || badge.strength == null || badge.strength === "") return null;
+    const value = Number(badge.strength);
+    return Number.isFinite(value) ? value : null;
+  };
   const sortNewest = (items) => items
     .slice()
-    .sort((a, b) => factStamp(b.fact) - factStamp(a.fact) || a.index - b.index)
+    .sort((a, b) => {
+      const left = strength(a.fact);
+      const right = strength(b.fact);
+      if (left != null || right != null) {
+        if (left == null) return 1;
+        if (right == null) return -1;
+        if (right !== left) return right - left;
+      }
+      return factStamp(b.fact) - factStamp(a.fact) || a.index - b.index;
+    })
     .map((item) => item.fact);
   const groups = [];
   for (const group of ordered) {
@@ -356,13 +371,15 @@ export function parseRoute(hash) {
   }
   if (parts[0] === "sos") return { name: "sos", tab: "sos", parts, params };
   if (parts[0] === "profile") return { name: "profile", tab: "profile", parts, params };
+  if (parts[0] === "review") return { name: "review", tab: "profile", parts, params };
+  if (parts[0] === "moderation") return { name: "moderation", tab: "profile", parts, params };
   if (parts[0] === "search") return { name: "search", tab: "", parts, params };
   return { name: "trip", tab: "trip", parts, params };
 }
 
 export function mapStart(catalog, value) {
   if (!value) return "";
-  if (["trip", "guide", "sos", "profile", "search"].includes(value)) return `/${value}`;
+  if (["trip", "guide", "sos", "profile", "search", "review", "moderation"].includes(value)) return `/${value}`;
   if (value.startsWith("guide_")) return `/guide/${value.slice("guide_".length)}`;
   if (value.startsWith("instruction_")) {
     const id = value.slice("instruction_".length);

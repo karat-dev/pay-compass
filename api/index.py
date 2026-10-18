@@ -41,7 +41,11 @@ class handler(BaseHTTPRequestHandler):
             return False
         length = int(self.headers.get("Content-Length", 0) or 0) if method == "POST" else 0
         body = self.rfile.read(length) if length else b""
-        status, payload = dispatch(method, route, body, dict(self.headers.items()))
+        from urllib.parse import parse_qs, urlparse
+
+        parsed = urlparse(self.path)
+        query = {key: values[-1] for key, values in parse_qs(parsed.query).items()}
+        status, payload = dispatch(method, route, body, dict(self.headers.items()), query)
         self._send_json(status, payload)
         return True
 

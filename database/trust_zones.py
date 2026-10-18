@@ -239,6 +239,44 @@ def _outlet_key(item: Dict[str, Any]) -> Optional[tuple]:
     return None
 
 
+def _full_vote_weight(config: Optional[Dict[str, Any]]) -> Any:
+    community = config.get("community") if isinstance(config, dict) else None
+    if not isinstance(community, dict) or "full_vote_weight" not in community:
+        from database.config_error import ConfigError
+
+        raise ConfigError("В конфиге нет ключа community.full_vote_weight")
+    return community["full_vote_weight"]
+
+
+def _partial_verdict_name(config: Optional[Dict[str, Any]]) -> Optional[str]:
+    community = config.get("community") if isinstance(config, dict) else None
+    if not isinstance(community, dict):
+        return None
+    mapping = community.get("result_to_verdict") or {}
+    return mapping.get("partial")
+
+
+def _item_weight(item: Dict[str, Any], config: Optional[Dict[str, Any]]) -> Any:
+    """Whole confirms count as full_vote_weight. A partial with an explicit weight counts as that weight.
+
+    Older partial sources have no weight and stay outside the upgrade sum.
+    """
+    if not isinstance(item, dict):
+        return None
+    full = _full_vote_weight(config)
+    counted = ((config or {}).get("upgrade") or {}).get("counted_confirmation_verdicts")
+    verdict = item.get("verdict")
+    explicit = item.get("weight")
+    partial = _partial_verdict_name(config)
+    if verdict is None or (counted and verdict in counted):
+        if explicit is None:
+            return full
+        return explicit
+    if partial and verdict == partial and explicit is not None:
+        return explicit
+    return None
+
+
 def _counts_toward_upgrade(item: Dict[str, Any], config: Optional[Dict[str, Any]]) -> bool:
     """A listed source with a verdict counts only when that verdict is a confirmation.
 
@@ -269,25 +307,50 @@ def confirmation_stats(
         moment = fact_moment(fact)
         age = age_days(moment, as_of)
         fresh = fresh_days is not None and age is not None and 0 <= age <= fresh_days
-        return {"count": reports, "fresh_count": reports if fresh else 0, "independent": False}
-    keys = []
-    fresh_keys = []
+        fresh_reports = reports if fresh else 0
+        return {
+            "count": reports,
+            "fresh_count": fresh_reports,
+            "fresh_weight": fresh_reports,
+            "independent": False,
+        }
+    chosen: Dict[Any, Dict[str, Any]] = {}
+    order: List[Any] = []
     for item in items:
         if not isinstance(item, dict):
             continue
-        if not _counts_toward_upgrade(item, config):
+        weight = _item_weight(item, config)
+        if weight is None:
             continue
         key = _outlet_key(item)
         if key is None:
             continue
-        keys.append(key)
         moment = parse_date(item.get("date"))
-        age = age_days(moment, as_of)
+        current = chosen.get(key)
+        replace = current is None
+        if current is not None and item.get("user_id") is not None:
+            previous = current.get("moment")
+            if previous is None or (moment is not None and moment >= previous):
+                replace = True
+        if not replace:
+            continue
+        if current is None:
+            order.append(key)
+        chosen[key] = {"moment": moment, "weight": weight}
+    fresh_keys = []
+    fresh_weight = 0
+    for key in order:
+        row = chosen[key]
+        age = age_days(row.get("moment"), as_of)
         if fresh_days is not None and age is not None and 0 <= age <= fresh_days:
             fresh_keys.append(key)
-    distinct = list(dict.fromkeys(keys))
-    fresh_distinct = list(dict.fromkeys(fresh_keys))
-    return {"count": len(distinct), "fresh_count": len(fresh_distinct), "independent": True}
+            fresh_weight = fresh_weight + row["weight"]
+    return {
+        "count": len(order),
+        "fresh_count": len(fresh_keys),
+        "fresh_weight": fresh_weight,
+        "independent": True,
+    }
 
 
 def _gap_zones(config: Dict[str, Any]) -> set:
@@ -406,8 +469,7 @@ def _score_zone(
         if too_old:
             formula = cap_zone(formula, zone_below(green, config), config)
     kinds = config["source_kinds"]
-    approved_field = config["upgrade"]["owner_approved_field"]
-    if fact.get("source_kind") == kinds["traveler"] and not fact.get(approved_field):
+    if fact.get("source_kind") == kinds["traveler"]:
         formula = cap_zone(formula, config["upgrade"]["traveler_unapproved_max_zone"], config)
     return {
         "ok": True,
@@ -437,10 +499,11 @@ def _apply_upgrade(
     allowed = stored
     yellow = config["upgrade"]["yellow_zone"]
     green = config["upgrade"]["green_zone"]
-    needed = int(config["upgrade"]["yellow_min_independent_confirmations"])
+    needed = config["upgrade"]["yellow_min_independent_confirmations"]
+    fresh_weight = stats["fresh_weight"] if "fresh_weight" in stats else stats["fresh_count"]
     if (
         stats["independent"]
-        and stats["fresh_count"] >= needed
+        and fresh_weight >= needed
         and formula_level >= zone_rank(yellow, config)
         and stored_level < zone_rank(yellow, config)
     ):
@@ -452,13 +515,7 @@ def _apply_upgrade(
         and bool(official_urls(fact, config))
         and formula == green
     )
-    approved_field = config["upgrade"]["owner_approved_field"]
-    traveler_ok = (
-        fact.get("source_kind") == config["source_kinds"]["traveler"]
-        and fact.get(approved_field) is True
-        and formula == green
-    )
-    if official_ok or traveler_ok:
+    if official_ok:
         allowed = green
     return cap_zone(allowed, formula, config) or stored
 
@@ -551,13 +608,7 @@ def resolve_zone(
     shown_level = zone_rank(shown, config)
     downgraded = stored_level is not None and shown_level is not None and shown_level < stored_level
     upgraded = stored_level is not None and shown_level is not None and shown_level > stored_level
-    green = config["upgrade"]["green_zone"]
     prompt = None
-    traveler = fact.get("source_kind") == config["source_kinds"]["traveler"]
-    approved = fact.get(config["upgrade"]["owner_approved_field"]) is True
-    if traveler and not approved and scored["score_zone"] == green and shown != green:
-        count = stats["fresh_count"] if stats["independent"] else stats["count"]
-        prompt = config["upgrade"]["owner_prompt_template"].format(n=count)
 
     action = None
     automatic = False
@@ -569,16 +620,12 @@ def resolve_zone(
         action = "upgrade_candidate"
         automatic = True
         upgrade_to = shown
-    elif prompt:
-        action = "owner_decision"
 
     reason = messages.get("matched") or ""
     if downgraded:
         reason = (messages.get("downgrade") or "").format(stored=stored, zone=shown, as_of=as_of.isoformat())
     elif upgraded:
         reason = (messages.get("upgrade") or "").format(stored=stored, zone=shown)
-    elif prompt:
-        reason = prompt
 
     drop = {"next_zone": None, "drops_on": None}
     if forecast and scored["ok"]:
@@ -603,7 +650,7 @@ def resolve_zone(
         share = warning["share"]
         if window is not None and remaining < share * window:
             reasons.append(warning["reasons"]["window"])
-    if fact.get("agreement") == warning["conflict_agreement"]:
+    if fact.get("agreement") == warning["conflict_agreement"] or fact.get("community_conflict") is True:
         reasons.append(warning["reasons"]["conflict"])
     if _source_failed(fact, http_results, config):
         reasons.append(warning["reasons"]["source_failed"])

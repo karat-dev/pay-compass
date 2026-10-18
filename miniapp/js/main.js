@@ -50,6 +50,12 @@ const state = {
   saveTimer: 0,
   toastTimer: 0,
   scrolledFact: "",
+  community: null,
+  review: null,
+  queue: [],
+  queueLoaded: false,
+  queueLoading: false,
+  seenFacts: {},
 };
 
 const app = document.getElementById("app");
@@ -73,6 +79,16 @@ function initData() {
   const value = tg || launchInitData() || (isLocalHost() ? "dev:1001" : "");
   if (value) cachedInitData = value;
   return value;
+}
+
+async function getAuthJSON(path) {
+  const response = await fetch(path, {
+    cache: "no-store",
+    headers: { "X-Telegram-Init-Data": initData() },
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Не удалось загрузить данные.");
+  return payload;
 }
 
 async function getJSON(path) {
@@ -135,6 +151,7 @@ function applySession(session) {
     state.draft.depart_date = state.trip.depart_date || "";
     state.draft.return_date = state.trip.return_date || "";
   }
+  if (session.community) state.community = session.community;
 }
 
 function findFact(id) {
@@ -361,6 +378,162 @@ function draw() {
     }
   }
   syncBackButton();
+  if (screen.name === "moderation" && state.community && state.community.is_owner && !state.queueLoaded && !state.queueLoading) {
+    loadQueue();
+  }
+  noteVisibleFacts();
+}
+
+function blankReview(extra) {
+  const trip = state.trip || {};
+  const profile = state.profile || {};
+  return Object.assign({
+    country: trip.destination_slug || "",
+    city: "",
+    trip_date_start: trip.depart_date || "",
+    trip_date_end: trip.return_date || "",
+    topic: "",
+    fact_id: "",
+    changed: false,
+    action_text: "",
+    result: "",
+    changed_text: "",
+    amount: "",
+    currency: "",
+    fee: "",
+    fee_kind: "",
+    duration_value: "",
+    duration_unit: "",
+    place_type: "",
+    place_name: "",
+    citizenship: profile.citizenship || "ru",
+    payment_method: "",
+    ready_to_recheck: false,
+    is_anonymous: false,
+    consent: Boolean(profile.consent_given),
+    suggestions: [],
+    photo_note: "",
+  }, extra || {});
+}
+
+function readReviewDom() {
+  if (!state.review) state.review = blankReview();
+  document.querySelectorAll("[data-review]").forEach((el) => {
+    state.review[el.dataset.review] = el.value;
+  });
+  return state.review;
+}
+
+function loadSuggestions() {
+  const form = state.review;
+  if (!form || !form.country || !form.topic) return;
+  const params = new URLSearchParams({
+    country: form.country,
+    city: form.city || "",
+    topic: form.topic,
+  });
+  getAuthJSON(`/api/miniapp/review-suggest?${params.toString()}`).then((payload) => {
+    if (!state.review) return;
+    state.review.suggestions = payload.facts || [];
+    draw();
+  }).catch((error) => {
+    state.message = error.message;
+    draw();
+  });
+}
+
+function loadQueue() {
+  state.queueLoading = true;
+  postJSON("/api/miniapp/moderation", { action: "list" }).then((payload) => {
+    state.queue = payload.items || [];
+    state.queueLoaded = true;
+    state.queueLoading = false;
+    draw();
+  }).catch((error) => {
+    state.queue = [];
+    state.queueLoaded = true;
+    state.queueLoading = false;
+    state.message = error.message;
+    draw();
+  });
+}
+
+function noteVisibleFacts() {
+  if (state.preview) return;
+  const screen = parseRoute(location.hash);
+  if (screen.name !== "section" && screen.name !== "instruction") return;
+  document.querySelectorAll("[data-fact-id]").forEach((node) => {
+    const id = node.getAttribute("data-fact-id");
+    if (!id || state.seenFacts[id]) return;
+    state.seenFacts[id] = true;
+    postJSON("/api/miniapp/fact-view", { fact_id: id }).catch(() => {});
+  });
+}
+
+function readPhoto(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result || "");
+      const comma = text.indexOf(",");
+      resolve(comma >= 0 ? text.slice(comma + 1) : text);
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+function openFactReview(factId, changed) {
+  const fact = findFact(factId);
+  if (!fact) return;
+  state.review = blankReview({
+    country: fact.country_slug || (state.trip && state.trip.destination_slug) || "",
+    topic: fact.topic || "",
+    fact_id: fact.id,
+    changed,
+  });
+  state.message = "";
+  state.returnTo = location.hash.replace(/^#/, "") || "/profile";
+  navigate("/review");
+  loadSuggestions();
+}
+
+async function submitReview(addAnother) {
+  const form = readReviewDom();
+  const fileInput = document.querySelector("[data-review-photo]");
+  const file = fileInput && fileInput.files && fileInput.files[0];
+  const limit = state.catalog && state.catalog.community && state.catalog.community.photo_max_bytes;
+  if (file && limit && file.size > limit) {
+    state.message = "Фото больше допустимого размера.";
+    draw();
+    return;
+  }
+  let photo = "";
+  if (file) photo = await readPhoto(file);
+  const payload = Object.assign({}, form, { photo_base64: photo || undefined });
+  delete payload.suggestions;
+  delete payload.photo_note;
+  try {
+    const saved = await postJSON("/api/miniapp/review", payload);
+    const note = saved.review && saved.review.photo_note;
+    showToast("Отзыв отправлен");
+    if (addAnother) {
+      state.review = blankReview({
+        country: form.country,
+        city: form.city,
+        trip_date_start: form.trip_date_start,
+        trip_date_end: form.trip_date_end,
+        photo_note: note || "",
+      });
+    } else if (note) {
+      state.review.photo_note = note;
+    }
+    state.message = "";
+    draw();
+  } catch (error) {
+    state.message = error.message;
+    draw();
+  }
 }
 
 function seedPreview(name) {
@@ -782,6 +955,63 @@ app.addEventListener("click", (event) => {
     draw();
     return;
   }
+  if (action === "confirm-fact" || action === "changed-fact") {
+    openFactReview(el.dataset.id, action === "changed-fact");
+    return;
+  }
+  if (action === "open-review") {
+    state.review = blankReview();
+    state.message = "";
+    state.returnTo = "/profile";
+    navigate("/review");
+    return;
+  }
+  if (action === "open-moderation") {
+    state.queueLoaded = false;
+    state.message = "";
+    navigate("/moderation");
+    return;
+  }
+  if (action === "pick-fact") {
+    readReviewDom();
+    state.review.fact_id = el.dataset.id;
+    state.review.changed = false;
+    draw();
+    return;
+  }
+  if (action === "no-fact") {
+    readReviewDom();
+    state.review.fact_id = "";
+    draw();
+    return;
+  }
+  if (action === "review-flag") {
+    readReviewDom();
+    const flag = el.dataset.flag;
+    state.review[flag] = !state.review[flag];
+    draw();
+    return;
+  }
+  if (action === "submit-review" || action === "add-review") {
+    submitReview(action === "add-review");
+    return;
+  }
+  if (action === "moderate") {
+    const verdictNode = document.querySelector(`[data-queue-verdict="${el.dataset.id}"]`);
+    postJSON("/api/miniapp/moderation", {
+      action: el.dataset.decision,
+      queue_id: el.dataset.id,
+      verdict: verdictNode ? verdictNode.value : null,
+    }).then(() => {
+      state.queueLoaded = false;
+      state.message = "";
+      loadQueue();
+    }).catch((error) => {
+      state.message = error.message;
+      draw();
+    });
+    return;
+  }
   if (action === "open-result") {
     if (el.dataset.hidden === "1") {
       if (el.dataset.instruction) state.unverified[`instruction:${el.dataset.instruction}`] = true;
@@ -796,6 +1026,9 @@ app.addEventListener("input", (event) => {
     state.query = event.target.value;
     draw();
   }
+  if (event.target.dataset && event.target.dataset.review && state.review) {
+    state.review[event.target.dataset.review] = event.target.value;
+  }
 });
 
 app.addEventListener("change", (event) => {
@@ -804,6 +1037,15 @@ app.addEventListener("change", (event) => {
     state.draft[field === "depart_date" ? "depart_date" : "return_date"] = event.target.value;
     state.message = "";
     draw();
+  }
+  if (event.target.dataset && event.target.dataset.review && state.review) {
+    state.review[event.target.dataset.review] = event.target.value;
+    const key = event.target.dataset.review;
+    if (key === "country" || key === "city" || key === "topic") {
+      state.message = "";
+      draw();
+      loadSuggestions();
+    }
   }
 });
 

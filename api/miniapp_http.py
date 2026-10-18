@@ -23,7 +23,7 @@ from database.miniapp_store import StoreError, citizenship_value, get_store
 
 logger = logging.getLogger(__name__)
 
-READ_ROUTES = {"catalog", "miniapp/config"}
+READ_ROUTES = {"catalog", "miniapp/config", "miniapp/review-suggest"}
 WRITE_ROUTES = {
     "miniapp/session",
     "miniapp/profile",
@@ -32,6 +32,9 @@ WRITE_ROUTES = {
     "miniapp/report",
     "miniapp/onboarding",
     "miniapp/intro",
+    "miniapp/review",
+    "miniapp/fact-view",
+    "miniapp/moderation",
 }
 MAX_BODY = 100_000
 
@@ -132,7 +135,7 @@ def _identity(headers: Mapping[str, str], body: Mapping[str, Any]) -> Dict[str, 
 def normalize_screen(raw: str) -> str:
     """Deep-link target. Unknown values fall back to the trip tab."""
     value = (raw or "").strip()
-    if value in {"trip", "guide", "sos", "profile", "search"}:
+    if value in {"trip", "guide", "sos", "profile", "search", "review", "moderation"}:
         return value
     slugs = known_country_slugs()
     if value.startswith("guide_"):
@@ -176,9 +179,27 @@ async def _mark_consent(identity: Dict[str, Any], profile: Dict[str, Any]) -> No
         logger.warning("miniapp consent sync skipped: %s", exc)
 
 
-async def _handle(method: str, route: str, body: bytes, headers: Mapping[str, str]) -> tuple:
+def _request_limit(route: str) -> int:
+    if route != "miniapp/review":
+        return MAX_BODY
+    from database.community import need
+    from database.knowledge_base import TRUST_CONFIG
+
+    return int(need(TRUST_CONFIG, "community", "photo", "max_request_bytes"))
+
+
+async def _handle(
+    method: str,
+    route: str,
+    body: bytes,
+    headers: Mapping[str, str],
+    query: Optional[Mapping[str, str]] = None,
+) -> tuple:
+    query = query or {}
     if route == "catalog" and method == "GET":
-        return 200, get_catalog()
+        from database.community_service import enrich_catalog
+
+        return 200, enrich_catalog(get_catalog())
     if route == "miniapp/config" and method == "GET":
         return 200, {
             "dev_auth": bool(settings.MINIAPP_DEV_AUTH),
@@ -188,13 +209,28 @@ async def _handle(method: str, route: str, body: bytes, headers: Mapping[str, st
             "bot_url": bot_url(),
             "token_configured": telegram_bot_token_configured(),
         }
+    if route == "miniapp/review-suggest" and method == "GET":
+        try:
+            identity = _identity(headers, {})
+        except AuthError as exc:
+            return _error(exc.status, exc.message)
+        try:
+            from database.community_service import suggest
+
+            return 200, suggest(
+                country=str(query.get("country") or ""),
+                city=str(query.get("city") or ""),
+                topic=str(query.get("topic") or ""),
+            )
+        except ValueError as exc:
+            return _error(400, str(exc))
     if route not in WRITE_ROUTES:
         if route in READ_ROUTES:
             return _error(405, "Метод не поддерживается.")
         return _error(404, "Не найдено.")
     if method != "POST":
         return _error(405, "Метод не поддерживается.")
-    if len(body) > MAX_BODY:
+    if len(body) > _request_limit(route):
         return _error(413, "Слишком большой запрос.")
     try:
         payload = json.loads(body.decode("utf-8") or "{}")
@@ -218,6 +254,9 @@ async def _handle(method: str, route: str, body: bytes, headers: Mapping[str, st
             bundle["intro_seen"] = bool(bundle.get("intro_seen"))
             raw_screen = identity.get("start_param") or payload.get("screen") or ""
             bundle["screen"] = normalize_screen(raw_screen) if raw_screen else None
+            from database.community_service import author_public
+
+            bundle["community"] = author_public(telegram_id)
             return 200, bundle
         if route == "miniapp/intro":
             marked = await store.mark_intro_seen(telegram_id)
@@ -273,11 +312,49 @@ async def _handle(method: str, route: str, body: bytes, headers: Mapping[str, st
                 "comment": comment,
             })
             return 200, {"report": saved}
+        if route == "miniapp/review":
+            from database.community_service import submit_review
+
+            header_map = {str(key).lower(): value for key, value in headers.items()}
+            init_data = str(header_map.get("x-telegram-init-data") or payload.get("init_data") or "")
+            saved = submit_review(user_id=telegram_id, init_data=init_data, payload=payload)
+            return 200, {"review": saved}
+        if route == "miniapp/fact-view":
+            from database.community_service import record_view
+
+            saved = record_view(user_id=telegram_id, fact_id=str(payload.get("fact_id") or ""))
+            return 200, saved
+        if route == "miniapp/moderation":
+            from database.community_service import decide, list_queue
+
+            action = payload.get("action") or "list"
+            if action == "list":
+                return 200, list_queue(owner_id=telegram_id)
+            saved = decide(
+                owner_id=telegram_id,
+                queue_id=str(payload.get("queue_id") or ""),
+                action=str(action),
+                verdict=payload.get("verdict"),
+            )
+            return 200, saved
+    except PermissionError as exc:
+        return _error(403, str(exc))
     except ValueError as exc:
         return _error(400, str(exc))
     except StoreError as exc:
         logger.warning("miniapp store: %s", exc)
         return _error(503, str(exc))
+    except Exception as exc:
+        from database.community_store import CommunityStoreError
+        from database.config_error import ConfigError
+
+        if isinstance(exc, CommunityStoreError):
+            logger.warning("community store: %s", exc)
+            return _error(503, str(exc))
+        if isinstance(exc, ConfigError):
+            logger.error("community config: %s", exc)
+            return _error(500, "Ошибка конфигурации сообщества.")
+        raise
     return _error(404, "Не найдено.")
 
 
@@ -287,5 +364,11 @@ def _uses_supabase() -> bool:
     return supabase_is_configured()
 
 
-def dispatch(method: str, route: str, body: bytes, headers: Optional[Mapping[str, str]] = None) -> tuple:
-    return asyncio.run(_handle(method.upper(), route.strip("/"), body or b"", headers or {}))
+def dispatch(
+    method: str,
+    route: str,
+    body: bytes,
+    headers: Optional[Mapping[str, str]] = None,
+    query: Optional[Mapping[str, str]] = None,
+) -> tuple:
+    return asyncio.run(_handle(method.upper(), route.strip("/"), body or b"", headers or {}, query or {}))

@@ -35,6 +35,17 @@ async def main():
     dp.include_router(stars_router)
 
     try:
+        try:
+            from bot.notifications import deliver_community_notices
+            from database.community_service import mark_reminded, pending_notifications
+
+            notes = pending_notifications()
+            deliver_community_notices(notes)
+            for note in notes:
+                if note.get("kind") == "recheck_reminder" and note.get("review_id"):
+                    mark_reminded(note["review_id"])
+        except Exception:
+            logger.exception("community reminders skipped")
         logger.info("Starting bot polling loop...")
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
     finally:

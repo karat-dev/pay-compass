@@ -466,6 +466,29 @@ textarea { width: 100%; min-height: 110px; resize: vertical; }
 .fact.is-unverified { background: color-mix(in srgb, var(--red) 8%, var(--elev)); }
 .fact-top { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin-bottom: 8px; font-size: 12px; font-weight: 700; }
 .zone-dot { width: 8px; height: 8px; border-radius: 99px; background: var(--zone, var(--hint)); }
+.community-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: #e7f6ee;
+  color: #0b6b3a;
+  font-size: 11px;
+  font-weight: 700;
+}
+.community-badge small { font-weight: 600; color: #146b3a; }
+.fact-actions, .queue-card { display: flex; flex-wrap: wrap; gap: 8px; }
+.queue-card {
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.field { display: grid; gap: 6px; margin: 10px 0; font-size: 13px; font-weight: 700; color: var(--hint); }
+.field input, .field select, .field textarea { width: 100%; }
+.helped { font-weight: 700; }
 .zone-dot[data-zone="green"] { background: var(--green); }
 .zone-dot[data-zone="yellow"] { background: var(--yellow); }
 .zone-dot[data-zone="red"] { background: var(--red); }

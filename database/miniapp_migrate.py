@@ -11,7 +11,7 @@ import re
 from typing import Dict, Iterable, List, Optional, Sequence, Set
 
 BASELINE_VERSION = "20260913000000"
-MINIAPP_VERSIONS = ("20261014000000", "20261016000000")
+MINIAPP_VERSIONS = ("20261014000000", "20261016000000", "20261018160000")
 BASELINE_TABLES = frozenset({"users", "countries"})
 
 _URL_RE = re.compile(r"postgres(?:ql)?://\S+", re.IGNORECASE)

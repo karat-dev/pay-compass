@@ -4666,7 +4666,6 @@
                   "note": "Только с паспортом — отказ; до 2 недель."
                 }
               ],
-              "owner_approved": false,
               "official_confirmed": false
             },
             {
@@ -4704,7 +4703,6 @@
                 }
               ],
               "official_confirmed": false,
-              "owner_approved": false,
               "status_derived_from": "zone",
               "zone": "yellow",
               "score": 65,
@@ -4833,7 +4831,6 @@
                   "note": "Если сотрудник знает русский, может перейти на него. Это частный случай «по-русски — не везде», не подтверждение фразы целиком."
                 }
               ],
-              "owner_approved": false,
               "official_confirmed": false
             },
             {
@@ -5097,7 +5094,6 @@
                   "person": "aidarfilm"
                 }
               ],
-              "owner_approved": false,
               "official_confirmed": false
             },
             {
@@ -5566,7 +5562,6 @@
                     "note": "Усиленная проверка, отказы (заинтересованный источник)."
                   }
                 ],
-                "owner_approved": false,
                 "official_confirmed": false
               },
               {
@@ -5686,7 +5681,6 @@
                     "note": "Слух «50 лари каждый месяц» (06.10, вопрос без подтверждения)."
                   }
                 ],
-                "owner_approved": false,
                 "official_confirmed": true
               },
               {
@@ -5859,7 +5853,6 @@
                     "note": "Россиянам только GEL и только Грузия — устарело (~2023)."
                   }
                 ],
-                "owner_approved": false,
                 "official_confirmed": false
               },
               {
@@ -8824,7 +8817,6 @@
               "note": "Сотрудник может перейти на русский. Это частный случай «по-русски — не везде», не подтверждение фразы целиком."
             }
           ],
-          "owner_approved": false,
           "official_confirmed": false
         },
         {
@@ -8974,7 +8966,6 @@
               "note": "Упоминает отделение на пл. Свободы — там подруге автора пришлось платить 50 GEL."
             }
           ],
-          "owner_approved": false,
           "official_confirmed": false
         },
         {
@@ -9109,7 +9100,6 @@
               "note": "Нужно подтверждение источника средств."
             }
           ],
-          "owner_approved": false,
           "official_confirmed": false
         },
         {
@@ -9257,7 +9247,6 @@
               "date_estimated": true
             }
           ],
-          "owner_approved": false,
           "official_confirmed": true
         },
         {
@@ -9295,7 +9284,6 @@
             }
           ],
           "official_confirmed": false,
-          "owner_approved": false,
           "status_derived_from": "zone",
           "zone": "yellow",
           "score": 65,

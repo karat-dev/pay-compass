@@ -31,6 +31,7 @@ MIGRATIONS = ROOT / "supabase" / "migrations"
 FILES = {
     "20261014000000": MIGRATIONS / "20261014000000_miniapp.sql",
     "20261016000000": MIGRATIONS / "20261016000000_drop_username.sql",
+    "20261018160000": MIGRATIONS / "20261018160000_community.sql",
 }
 
 
@@ -112,6 +113,7 @@ def record_applied(url: str, version: str) -> None:
         "20260913000000": "initial_schema",
         "20261014000000": "miniapp",
         "20261016000000": "drop_username",
+        "20261018160000": "community",
     }
     name = names.get(version, "migration")
     sql = f"""

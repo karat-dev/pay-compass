@@ -436,6 +436,9 @@ def set_store(store: Any) -> None:
 async def delete_miniapp_user(telegram_id: int) -> None:
     try:
         await get_store().delete_user(telegram_id)
+        from database.community_service import delete_community_user
+
+        delete_community_user(telegram_id)
     except StoreError:
         raise
     except Exception as exc:
