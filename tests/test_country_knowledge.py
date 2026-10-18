@@ -248,7 +248,7 @@ def test_unverified_button_and_eight_section_hub():
 
     guide = render_instruction("tbc_georgia", show_unverified=False)
     hidden_guide = render_instruction("tbc_georgia", show_unverified=True)
-    assert "Поставить приложение-переводчик" not in guide
+    assert "Поставить приложение-переводчик" in guide
     assert "Поставить приложение-переводчик" in hidden_guide
     assert "Добавить карту в Apple Pay" not in guide
     assert "Добавить карту в Apple Pay" in hidden_guide

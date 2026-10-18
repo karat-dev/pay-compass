@@ -167,39 +167,36 @@ def test_language_cards_use_the_softer_sentence():
             assert "по-русски — не везде" in item["note"]
 
 
-def test_research_counts_of_three_stay_outside_the_medium_window():
-    """The research 90-day count is not the medium-class window of 30 days.
+def test_sixty_day_window_moves_only_the_language_cards():
+    """Cards 1, 2, 7 and 9 each have three confirms inside the research's 90 days.
 
-    Cards 1, 2, 7 and 9 each have three confirms inside that research cutoff.
-    Only dates on or after 2026-09-18 count. Partial and contradicting rows
-    never count. Same Yandex host with a different person stays independent.
-    A date_estimated flag does not drop a parseable date. Cards 3 and 6 stay
-    on the July observation.
+    The bank-procedure window is 60 days (on or after 2026-08-19). That adds
+    the confirms aged 41 and 59 days, which is enough for cards 2 and 7.
+    Card 1's next confirms are 68 and 72 days old. Card 9's next one is 65.
+    Those stay outside, so the cards stay black.
     """
     cards = _cards(_bundle())
-    window = CONFIG["volatility"]["classes"]["medium"]["fresh_days"]
-    assert window == 30
-    expected = {1: 2, 2: 1, 7: 1, 9: 1}
-    floor = lowest_zone(CONFIG)
-    for number, fresh in expected.items():
+    window = CONFIG["volatility"]["classes"]["bank_procedure"]["fresh_days"]
+    assert window == 60
+    expected = {1: (2, "black"), 2: (3, "yellow"), 7: (3, "yellow"), 9: (2, "black")}
+    for number, (fresh, zone) in expected.items():
         fact = cards[number]
+        assert fact["volatility_class"] == "bank_procedure"
         stats = confirmation_stats(fact, AS_OF, window, CONFIG)
         assert stats["fresh_count"] == fresh
-        assert fact["zone"] == floor
-        confirms = [item for item in fact["confirmations"] if item["verdict"] == "confirms"]
-        assert len(confirms) >= 3
-        outside = [
-            item for item in confirms
-            if item.get("date") and item["date"] < "2026-09-18"
-        ]
-        assert outside
-        assert len({item.get("person") or item["outlet"] for item in confirms}) == len(confirms)
-    assert cards[3]["zone"] == floor
+        assert fact["zone"] == zone
+        shown = _live(fact, CONTEXTS[number])
+        assert shown["volatility_class"] == "bank_procedure"
+        assert shown["zone"] == zone
+    assert cards[3].get("volatility_class") is None
+    assert cards[3]["zone"] == lowest_zone(CONFIG)
     assert cards[3]["verified_by_us"] is True
     assert cards[3]["date_verified"] == "2026-07-16"
-    assert cards[6]["zone"] == floor
-    assert cards[6]["verified_by_us"] is False
+    assert _live(cards[3], CONTEXTS[3])["volatility_class"] == "fast"
+    assert cards[6]["volatility_class"] == "bank_procedure"
+    assert cards[6]["zone"] == lowest_zone(CONFIG)
     assert cards[6]["own_date"] == "2026-07-16"
+    assert confirmation_stats(cards[6], AS_OF, window, CONFIG)["fresh_count"] == 1
 
 
 def test_monthly_fee_has_no_hardcoded_ruble_figure():
@@ -293,7 +290,7 @@ def test_timing_conflict_stays_on_the_owner_decision_list():
         assert cards[number]["decision_needed"] in match["reason"]
 
 
-def test_instruction_keeps_the_translator_step_hidden_until_it_earns_a_zone():
+def test_translator_step_is_yellow_under_the_bank_procedure_window():
     step = next(step for step in INSTRUCTIONS["tbc_georgia"]["steps"] if step["text"].startswith("Поставить приложение-переводчик"))
-    assert step["zone"] != CONFIG["upgrade"]["yellow_zone"]
-    assert step["zone"] != CONFIG["upgrade"]["green_zone"]
+    assert step["volatility_class"] == "bank_procedure"
+    assert step["zone"] == CONFIG["upgrade"]["yellow_zone"]
