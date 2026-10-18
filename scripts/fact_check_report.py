@@ -276,6 +276,18 @@ def assess_fact(
         automatic = False
         reason = resolved["at_risk_reason"] or reason
         prompt = resolved["owner_prompt"] or prompt
+    if fact.get("refresh_search") and action not in ("downgrade", "upgrade_candidate"):
+        action = config["early_warning"]["refresh_action"]
+        automatic = False
+        checked = fact.get("date_verified") or fact.get("checked_at") or ""
+        owner_reason = (
+            f"Заявление владельца {checked}: нужен новый поиск подтверждения у оператора или в СМИ. "
+            "Свой ли это опыт, ещё не подтверждено."
+        )
+        if resolved["at_risk"] and resolved.get("at_risk_reason"):
+            reason = f"{owner_reason} {resolved['at_risk_reason']}"
+        else:
+            reason = owner_reason
     base["suggested_action"] = action
     base["automatic"] = automatic
     base["upgrade_to"] = upgrade_to
@@ -652,6 +664,7 @@ def _summary(facts: Sequence[Dict[str, Any]]) -> Dict[str, int]:
         "no_public_source": count(lambda fact: "no_public_source" in fact["flags"]),
         "green_prompts": count(lambda fact: bool(fact.get("owner_prompt"))),
         "at_risk": count(lambda fact: fact.get("at_risk")),
+        "refresh_search": count(lambda fact: fact.get("suggested_action") == "refresh_search"),
     }
 
 
@@ -688,6 +701,7 @@ def render_text(report: Dict[str, Any]) -> str:
         f"Внутренние пометки: {summary['unknown_zone']}",
         f"Вопросов «поднять до зелёного»: {summary['green_prompts']}",
         f"Скоро съедут: {summary['at_risk']}",
+        f"Обновить поиск источника: {summary['refresh_search']}",
         "",
     ]
     lines.extend(_section(report, "Не сошлось с формулой", lambda fact: fact["status"] == "fail"))
@@ -704,6 +718,14 @@ def render_text(report: Dict[str, Any]) -> str:
     else:
         for fact in prompts:
             lines.append(f"- {fact['country']} · {fact['owner_prompt']} · {fact['text']}")
+    lines.append("")
+    refresh = [fact for fact in report["facts"] if fact.get("suggested_action") == "refresh_search"]
+    lines.append("Обновить поиск источника")
+    if not refresh:
+        lines.append("Таких фактов нет.")
+    else:
+        for fact in refresh:
+            lines.append(f"- [{fact['fact_id']}] {fact['country']} · {fact['current_zone']} · {fact['text']}")
     lines.append("")
     manual = [fact for fact in report["facts"] if "needs_owner_check" in fact["flags"]]
     lines.append("Ручные проверки владельца")
