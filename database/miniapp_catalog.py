@@ -18,6 +18,7 @@ from database.knowledge_base import (
     COUNTRIES_KNOWLEDGE_BASE,
     DATE_VERIFIED,
     INSTRUCTION_LABELS,
+    INSTRUCTION_SECTION,
     INSTRUCTIONS,
     SECTION_KEYS,
     SECTION_ORDER,
@@ -275,6 +276,9 @@ def publish_fact(
         published["n"] = step_n
     if stage:
         published["stage"] = stage
+    community_topic = _topic_for(section_key, instruction_id)
+    if community_topic:
+        published["community_topic"] = community_topic
     return published
 
 
@@ -539,6 +543,7 @@ def build_catalog() -> Dict[str, Any]:
         "section_keys": list(SECTION_KEYS),
         "partner_note": disclosure(),
         "offers": public_offers(),
+        "community": _public_form(),
     }
     _assert_public(catalog)
     return catalog
@@ -583,6 +588,96 @@ def find_fact(fact_id: str) -> Optional[Dict[str, Any]]:
     return _FACT_INDEX.get(fact_id)
 
 
+def _topic_for(section_key: Optional[str], instruction_id: Optional[str]) -> Optional[str]:
+    from database.community import topic_for_fact
+
+    return topic_for_fact(TRUST_CONFIG, section_key=section_key, instruction_id=instruction_id)
+
+
+def _public_form() -> Dict[str, Any]:
+    from database.community import public_community_form
+
+    return public_community_form(TRUST_CONFIG)
+
+
+def _remember_source(index: Dict[str, Dict[str, Any]], fact: Dict[str, Any], scope: str, **meta: Any) -> None:
+    if not isinstance(fact, dict) or not user_visible_fact(fact):
+        return
+    text = fact.get("text") or ""
+    if not text:
+        return
+    index[_fact_id(scope, text)] = {
+        "fact": fact,
+        "section_key": meta.get("section_key"),
+        "subsection": meta.get("subsection"),
+        "instruction_id": meta.get("instruction_id"),
+        "country_slug": meta.get("country_slug"),
+    }
+
+
+_SOURCE_INDEX: Optional[Dict[str, Dict[str, Any]]] = None
+
+
+def source_facts_by_id() -> Dict[str, Dict[str, Any]]:
+    """Raw facts keyed by the same id publish_fact uses.
+
+    Normalized facts drop confirmations and official confirmation, so a zone
+    recalculation has to start from the file again.
+    """
+    global _SOURCE_INDEX
+    if _SOURCE_INDEX is not None:
+        return _SOURCE_INDEX
+    index: Dict[str, Dict[str, Any]] = {}
+    raw = _RAW if isinstance(_RAW, dict) else {}
+    for slug, country in (raw.get("countries") or {}).items():
+        if not isinstance(country, dict):
+            continue
+        for key, section in (country.get("sections") or {}).items():
+            if not isinstance(section, dict):
+                continue
+            for fact in section.get("facts") or []:
+                _remember_source(index, fact, f"{slug}/{key}", country_slug=slug, section_key=key)
+            for name, subsection in (section.get("subsections") or {}).items():
+                facts = subsection if isinstance(subsection, list) else []
+                if isinstance(subsection, dict):
+                    facts = subsection.get("facts") or []
+                for fact in facts:
+                    _remember_source(
+                        index,
+                        fact,
+                        f"{slug}/{key}/{name}",
+                        country_slug=slug,
+                        section_key=key,
+                        subsection=name,
+                    )
+    for instruction_id, instruction in (raw.get("instructions") or {}).items():
+        if not isinstance(instruction, dict):
+            continue
+        section_key = INSTRUCTION_SECTION.get(instruction_id)
+        country_slug = (instruction.get("countries") or [None])[0]
+        for index_n, step in enumerate(instruction.get("steps") or [], start=1):
+            if not isinstance(step, dict):
+                continue
+            step_n = step.get("n") or index_n
+            _remember_source(
+                index,
+                step,
+                f"instruction/{instruction_id}/{step_n}",
+                country_slug=country_slug,
+                section_key=section_key,
+                instruction_id=instruction_id,
+            )
+    for route_id, route in ROUTES.items():
+        slug = route.get("destination_slug") or ""
+        for index_n, fact in enumerate(route.get("lead_facts") or []):
+            _remember_source(index, fact, f"route/{route_id}/lead/{index_n}", country_slug=slug)
+        for callback, facts in (route.get("section_facts") or {}).items():
+            for fact in facts or []:
+                _remember_source(index, fact, f"route/{route_id}/{callback}", country_slug=slug)
+    _SOURCE_INDEX = index
+    return index
+
+
 def known_bank_ids() -> set:
     return {bank["id"] for bank in get_catalog()["banks"]}
 
@@ -597,8 +692,9 @@ def known_country_slugs() -> set:
 
 def reload_catalog() -> Dict[str, Any]:
     """Test helper. The data files do not change at runtime."""
-    global _CATALOG
+    global _CATALOG, _SOURCE_INDEX
     _CATALOG = None
+    _SOURCE_INDEX = None
     return get_catalog()
 
 

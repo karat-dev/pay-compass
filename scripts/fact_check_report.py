@@ -497,8 +497,6 @@ def assess_fact(
     base["upgrade_to"] = upgrade_to
     base["owner_prompt"] = prompt or resolved["owner_prompt"]
     base["reason"] = reason
-    if base["suggested_action"] == "owner_decision" and base["owner_prompt"]:
-        flags.append("traveler_green_needs_owner")
     return _finalize_http(base, flags, config, source=fact, resolved=resolved, as_of=as_of)
 
 
@@ -581,15 +579,12 @@ def _action(
     fresh_days = fresh_limit_days(config)
     stats = confirmation_stats(fact, as_of, fresh_days, config)
     official = [url for url in urls if is_official_publisher(url, config)]
-    traveler_kind = config["source_kinds"]["traveler"]
     green = config["upgrade"]["green_zone"]
     yellow = config["upgrade"]["yellow_zone"]
     needed = int(config["upgrade"]["yellow_min_independent_confirmations"])
     green_rank = _rank(green, config)
     yellow_rank = _rank(yellow, config)
-    traveler_only = fact.get("source_kind") == traveler_kind and not official
-    count_for_prompt = stats["fresh_count"] if stats["independent"] else stats["count"]
-    green_prompt = config["upgrade"]["owner_prompt_template"].format(n=count_for_prompt)
+    fresh_weight = stats["fresh_weight"] if "fresh_weight" in stats else stats["fresh_count"]
 
     if current_rank is not None and computed_rank is not None and current_rank > computed_rank:
         return (
@@ -600,28 +595,24 @@ def _action(
             config["messages"]["downgrade"].format(stored=current, zone=computed, as_of=as_of.isoformat()),
         )
 
-    raise_green = traveler_only and score_zone == green and current_rank is not None and green_rank is not None and current_rank < green_rank
     score_rank = _rank(score_zone, config)
     auto_yellow = (
         stats["independent"]
-        and stats["fresh_count"] >= needed
+        and fresh_weight >= needed
         and current_rank is not None
         and yellow_rank is not None
         and current_rank < yellow_rank
         and score_rank is not None
         and score_rank >= yellow_rank
     )
-    if raise_green and auto_yellow:
+    if auto_yellow:
         return (
             "upgrade_candidate",
             True,
             yellow,
-            green_prompt,
-            config["messages"]["upgrade"].format(stored=current, zone=yellow) + " " + green_prompt,
+            None,
+            config["messages"]["upgrade"].format(stored=current, zone=yellow),
         )
-    if raise_green:
-        why = "Независимость людей и площадок в данных не размечена, поэтому жёлтый сам не ставится. " if not stats["independent"] else ""
-        return ("owner_decision", False, None, green_prompt, why + green_prompt)
 
     if official and score_zone == green and current_rank is not None and green_rank is not None and current_rank < green_rank:
         if _page_confirms(http_results, config):
@@ -646,33 +637,6 @@ def _action(
             return ("rerun", False, None, None, "Официальную страницу не удалось прочитать, прогон нужно повторить.")
         if not check_http:
             return ("rerun", False, None, None, "Чтобы решить зелёный, нужно открыть официальную страницу. В этом прогоне HTTP выключен.")
-
-    if (
-        stats["independent"]
-        and stats["fresh_count"] >= needed
-        and current_rank is not None
-        and yellow_rank is not None
-        and current_rank < yellow_rank
-        and score_rank is not None
-        and score_rank >= yellow_rank
-    ):
-        return (
-            "upgrade_candidate",
-            True,
-            yellow,
-            None,
-            config["messages"]["upgrade"].format(stored=current, zone=yellow),
-        )
-
-    if traveler_only and current == green and score_zone == green:
-        shown = stats["fresh_count"] if stats["independent"] else stats["count"]
-        return (
-            "owner_decision",
-            False,
-            None,
-            None,
-            f"Зелёный держится на отзывах ({shown}), официальной страницы нет. Само так не оставляем, нужно решение владельца.",
-        )
 
     if fact.get("needs_owner_check"):
         return ("owner_manual_check", False, None, None, "Пометка needs_owner_check: нужна ручная проверка владельца.")
@@ -1040,7 +1004,7 @@ def build_report(
             "yellow_min_independent_confirmations": int(config["upgrade"]["yellow_min_independent_confirmations"]),
             "yellow": "automatic when independent fresh confirmations reach yellow_min_independent_confirmations",
             "green": "automatic only when an official publisher page opens and content_confirmed is true",
-            "traveler_green": "owner_decision, prompt '{n} подтверждений, поднять до зелёного?'",
+            "traveler_green": "reviews never set green; the formula stays at traveler_unapproved_max_zone",
             "early_warning_share": config["early_warning"]["share"],
             "refresh_action": config["early_warning"]["refresh_action"],
         },

@@ -109,7 +109,7 @@ def test_visit_cards_take_the_zone_the_upgrade_rule_returns():
         shown = _live(fact, ctx)
         assert fact["zone"] == shown["zone"]
         assert fact["score"] == shown["score"]
-        assert fact["owner_approved"] is False
+        assert "owner_approved" not in fact
         fresh = shown["confirmations"]["fresh_count"]
         owner_checked = (
             fact.get("verified_by_us") is True
@@ -225,7 +225,7 @@ def test_deposit_before_plastic_is_its_own_fact():
         assert fact["source_kind"] == "traveler"
         assert fact["reports"] == 1
         assert fact["official_confirmed"] is False
-        assert fact["owner_approved"] is False
+        assert "owner_approved" not in fact
         assert len(fact["confirmations"]) == 1
         assert fact["confirmations"][0]["date"] == "2026-09-29"
         assert fact["confirmations"][0]["verdict"] == "confirms"

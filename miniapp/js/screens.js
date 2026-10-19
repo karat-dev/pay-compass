@@ -28,7 +28,7 @@ import {
   zoneReason,
 } from "./ui.js";
 
-const ORDER_HINT = "Сначала подтверждённые, внутри группы — более свежая проверка выше.";
+const ORDER_HINT = "Сначала подтверждённые, внутри группы — более свежая проверка выше. Бейдж сообщества внутри той же зоны выше.";
 
 function factZone(fact, catalog) {
   return fact.gap && catalog && catalog.gap_zone ? catalog.gap_zone : (fact.zone || (catalog && catalog.missing_zone) || "");
@@ -44,14 +44,27 @@ function factCard(fact, state) {
   const reason = zoneReason(zone, catalog);
   const meta = factMeta(fact);
   const details = [reason, meta].filter((item, index, list) => item && list.indexOf(item) === index);
+  const actions = (catalog && catalog.community && catalog.community.actions) || {};
+  const badge = fact.community_badge;
+  const badgeHtml = badge
+    ? `<span class="community-badge">${esc(badge.label || "")}<small>${esc(badge.caption || "")}</small></span>`
+    : "";
+  const reviewButtons = actions.confirm
+    ? `<div class="fact-actions">
+        <button type="button" class="ghost" data-action="confirm-fact" data-id="${esc(fact.id)}">${esc(actions.confirm)}</button>
+        <button type="button" class="ghost" data-action="changed-fact" data-id="${esc(fact.id)}">${esc(actions.changed || "")}</button>
+      </div>`
+    : "";
   return `<div class="fact${fact.hidden ? " is-unverified" : ""}${fact.gap ? " is-gap" : ""}" data-zone="${esc(zone)}" data-fact-id="${esc(fact.id)}">
     <button type="button" class="fact-key" data-action="toggle-fact" data-id="${esc(fact.id)}" aria-expanded="${open ? "true" : "false"}">
       <span class="zone-dot" data-zone="${esc(zone)}" aria-hidden="true"></span>
       <span class="fact-text">${esc(fact.text)}</span>
+      ${badgeHtml}
     </button>
     <div class="fact-details"${open ? "" : " hidden"}>
       <p class="fact-meta">${esc(details.join(" · "))}</p>
       <p class="source">${source}</p>
+      ${reviewButtons}
       <button type="button" class="text-btn" data-action="report" data-id="${esc(fact.id)}">Сообщить о неточности</button>
     </div>
   </div>`;
@@ -103,6 +116,8 @@ function header(state, screen) {
     search: "Поиск",
     intro: "Умный туризм",
     pick: "Подбор под поездку",
+    review: "Отзыв",
+    moderation: "Модерация",
   };
   let title = titles[screen.name] || "Умный туризм";
   if (screen.name === "country") {
@@ -760,6 +775,7 @@ function profileScreen(state) {
     <div class="stack">${cities}</div>
     <h2>Избранные страны</h2>
     <div class="stack">${favorites}</div>
+    ${profileCommunity(state)}
     <h2>Уведомления</h2>
     <p class="hint">Бот пришлёт сообщение со ссылкой в приложение. Расписание уведомлений включим после запуска.</p>
     <div class="stack">${notifies}</div>
@@ -816,6 +832,132 @@ function sheet(state) {
   </div></div>`;
 }
 
+function profileCommunity(state) {
+  const community = state.community || {};
+  const achievements = (community.achievements || []).map((item) => `<p class="hint">${esc(item.title || "")}</p>`).join("");
+  const helped = community.helped_text ? `<p class="helped">${esc(community.helped_text)}</p>` : "";
+  const owner = community.is_owner
+    ? `<button type="button" class="ghost wide" data-action="open-moderation">Очередь модерации</button>`
+    : "";
+  return `<h2>Отзывы</h2>
+    ${helped}
+    ${achievements}
+    <button type="button" class="ghost wide" data-action="open-review">Оставить отзыв</button>
+    ${owner}`;
+}
+
+function reviewScreen(state) {
+  const form = state.review || {};
+  const community = (state.catalog && state.catalog.community) || {};
+  const hints = community.form_hints || {};
+  const actions = community.actions || {};
+  const topics = (community.topics || []).map((topic) => `<option value="${esc(topic.code)}"${form.topic === topic.code ? " selected" : ""}>${esc(topic.title)}</option>`).join("");
+  const results = (community.results || []).map((item) => `<option value="${esc(item.code)}"${form.result === item.code ? " selected" : ""}>${esc(item.title)}</option>`).join("");
+  const methods = (community.payment_methods || []).map((item) => `<option value="${esc(item.code)}"${form.payment_method === item.code ? " selected" : ""}>${esc(item.title)}</option>`).join("");
+  const places = (community.place_types || []).map((item) => `<option value="${esc(item.code)}"${form.place_type === item.code ? " selected" : ""}>${esc(item.title)}</option>`).join("");
+  const citizenships = (community.citizenships || []).map((item) => `<option value="${esc(item.code)}"${form.citizenship === item.code ? " selected" : ""}>${esc(item.title)}</option>`).join("");
+  const units = (community.duration_units || []).map((item) => `<option value="${esc(item.code)}"${form.duration_unit === item.code ? " selected" : ""}>${esc(item.title)}</option>`).join("");
+  const fees = (community.fee_kinds || []).map((item) => `<option value="${esc(item.code)}"${form.fee_kind === item.code ? " selected" : ""}>${esc(item.title)}</option>`).join("");
+  const cities = ((community.cities_by_country || {})[form.country] || []);
+  const cityList = cities.map((city) => `<option value="${esc(city)}"></option>`).join("");
+  const needsMethod = (community.payment_method_topics || []).includes(form.topic);
+  const suggestions = (form.suggestions || []).map((fact) => `<button type="button" class="choice${form.fact_id === fact.id ? " is-on" : ""}" data-action="pick-fact" data-id="${esc(fact.id)}"><span>${esc(fact.text)}</span></button>`).join("");
+  return `<section class="screen review-form">
+    <h2>Отзыв о поездке</h2>
+    <p class="hint">${esc(hints.topic || "")}</p>
+    <label class="field">Страна
+      <select data-review="country">${(state.catalog.countries || []).map((country) => `<option value="${esc(country.slug)}"${form.country === country.slug ? " selected" : ""}>${esc(country.name)}</option>`).join("")}</select>
+    </label>
+    <label class="field">Город
+      <input data-review="city" list="review-cities" value="${esc(form.city || "")}">
+      <datalist id="review-cities">${cityList}</datalist>
+    </label>
+    <p class="hint">${esc(hints.dates || "")}</p>
+    <div class="dates">
+      <label>Начало<input type="date" data-review="trip_date_start" value="${esc(form.trip_date_start || "")}"></label>
+      <label>Конец<input type="date" data-review="trip_date_end" value="${esc(form.trip_date_end || "")}"></label>
+    </div>
+    <label class="field">Тема
+      <select data-review="topic"><option value="">Выберите тему</option>${topics}</select>
+    </label>
+    <p class="hint">${esc(hints.fact || "")}</p>
+    <div class="stack">${suggestions}</div>
+    <button type="button" class="text-btn" data-action="no-fact">${esc(hints.no_matching_fact || "")}</button>
+    <label class="field">${esc(hints.action || "Что сделали")}
+      <textarea data-review="action_text">${esc(form.action_text || "")}</textarea>
+    </label>
+    <label class="field">Результат
+      <select data-review="result"><option value="">Выберите результат</option>${results}</select>
+    </label>
+    <label class="field">${esc(hints.changed || "")}
+      <textarea data-review="changed_text">${esc(form.changed_text || "")}</textarea>
+    </label>
+    <p class="hint">${esc(hints.amount || "")}</p>
+    <div class="dates">
+      <label>Сумма<input data-review="amount" inputmode="decimal" value="${esc(form.amount || "")}"></label>
+      <label>Валюта<input data-review="currency" value="${esc(form.currency || "")}"></label>
+    </div>
+    <div class="dates">
+      <label>Комиссия<input data-review="fee" inputmode="decimal" value="${esc(form.fee || "")}"></label>
+      <label>Вид<select data-review="fee_kind"><option value=""></option>${fees}</select></label>
+    </div>
+    <p class="hint">${esc(hints.duration || "")}</p>
+    <div class="dates">
+      <label>Длительность<input data-review="duration_value" inputmode="decimal" value="${esc(form.duration_value || "")}"></label>
+      <label>Единица<select data-review="duration_unit"><option value=""></option>${units}</select></label>
+    </div>
+    <p class="hint">${esc(hints.place || "")}</p>
+    <div class="dates">
+      <label>Тип места<select data-review="place_type"><option value=""></option>${places}</select></label>
+      <label>Название<input data-review="place_name" value="${esc(form.place_name || "")}"></label>
+    </div>
+    <label class="field">${esc(hints.citizenship || "")}
+      <select data-review="citizenship">${citizenships}</select>
+    </label>
+    ${needsMethod ? `<label class="field">Способ оплаты<select data-review="payment_method"><option value="">Выберите способ</option>${methods}</select></label>` : ""}
+    <p class="hint">${esc(hints.photo || "")}</p>
+    <label class="field">Фото<input type="file" accept="image/*" data-review-photo></label>
+    ${form.photo_note ? `<p class="hint">${esc(form.photo_note)}</p>` : ""}
+    <button type="button" class="choice${form.ready_to_recheck ? " is-on" : ""}" data-action="review-flag" data-flag="ready_to_recheck" aria-pressed="${form.ready_to_recheck ? "true" : "false"}"><span>${esc(hints.recheck || "")}</span></button>
+    <button type="button" class="choice${form.is_anonymous ? " is-on" : ""}" data-action="review-flag" data-flag="is_anonymous" aria-pressed="${form.is_anonymous ? "true" : "false"}"><span>${esc(hints.anonymous || "")}</span></button>
+    <button type="button" class="choice${form.consent ? " is-on" : ""}" data-action="review-flag" data-flag="consent" aria-pressed="${form.consent ? "true" : "false"}"><span>${esc(hints.consent || "")}</span></button>
+    ${state.message ? `<p class="form-error">${esc(state.message)}</p>` : ""}
+    <button type="button" class="primary wide" data-action="submit-review">${esc(actions.submit || "")}</button>
+    <button type="button" class="ghost wide" data-action="add-review">${esc(actions.add_another || hints.add_another || "")}</button>
+  </section>`;
+}
+
+function moderationScreen(state) {
+  const community = state.community || {};
+  if (!community.is_owner) {
+    return `<section class="screen"><h2>Модерация</h2><p class="lead">Очередь доступна только владельцу.</p></section>`;
+  }
+  const items = state.queue || [];
+  if (!items.length) {
+    return `<section class="screen moderation-queue"><h2>Модерация</h2><p class="lead">Очередь пуста.</p></section>`;
+  }
+  const cards = items.map((item) => {
+    const review = item.review || {};
+    const actions = item.actions || {};
+    const idea = item.kind === "idea";
+    const keys = idea ? ["accept_idea", "close_idea"] : ["count", "ignore", "reject", "change_verdict"];
+    const buttons = keys.map((key) => `<button type="button" class="ghost" data-action="moderate" data-id="${esc(item.id)}" data-decision="${esc(key)}">${esc(actions[key] || "")}</button>`).join("");
+    const verdicts = (item.verdicts || []).map((code) => `<option value="${esc(code)}"${item.verdict === code ? " selected" : ""}>${esc(code)}</option>`).join("");
+    const flags = (item.flags || []).join(", ");
+    return `<article class="queue-card" data-queue-id="${esc(item.id)}">
+      <p class="eyebrow">${esc(item.kind || "")}${item.trigger ? ` · ${esc(item.trigger)}` : ""}</p>
+      <p class="fact-text">${esc(review.action_text || "")}</p>
+      <p class="hint">${esc(review.country || "")}, ${esc(review.city || "")} · ${esc(review.result || "")}</p>
+      <p class="hint">${esc(item.fact_text || "Факт не выбран")}</p>
+      <p class="hint">Вердикт: ${esc(item.verdict || "—")}</p>
+      ${flags ? `<p class="form-error">${esc(flags)}</p>` : ""}
+      <label class="field">Вердикт<select data-queue-verdict="${esc(item.id)}">${verdicts}</select></label>
+      <div class="fact-actions">${buttons}</div>
+    </article>`;
+  }).join("");
+  return `<section class="screen moderation-queue"><h2>Модерация</h2>${cards}</section>`;
+}
+
 function missing() {
   return `<section class="screen"><h2>Раздел не найден</h2><button type="button" class="primary" data-action="tab" data-tab="guide">К справочнику</button></section>`;
 }
@@ -838,6 +980,8 @@ export function render(state) {
   else if (screen.name === "instruction") body = instructionScreen(state, screen);
   else if (screen.name === "sos") body = sosScreen(state);
   else if (screen.name === "profile") body = profileScreen(state);
+  else if (screen.name === "review") body = reviewScreen(state);
+  else if (screen.name === "moderation") body = moderationScreen(state);
   else if (screen.name === "search") body = searchScreen(state);
   const showNav = state.catalog && screen.name !== "intro";
   const toast = state.toast ? `<p class="toast" role="status">${esc(state.toast)}</p>` : "";

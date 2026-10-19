@@ -38,6 +38,41 @@ async def ensure_menu_button(bot) -> None:
         logger.warning("Mini App menu button was not set: %s", exc)
 
 
+def deliver_community_notices(notices: list) -> None:
+    """Send community reminders to Telegram. A missing bot token skips delivery."""
+    import os
+
+    import httpx
+
+    from bot.keyboards.miniapp_kb import miniapp_url
+    from config.settings import bot_token, settings, telegram_bot_token_configured
+
+    if not notices or not telegram_bot_token_configured():
+        return
+
+    owner = os.environ.get("OWNER_TELEGRAM_CHAT_ID") or settings.ADMIN_TELEGRAM_ID
+    token = bot_token()
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    for notice in notices:
+        screen = str(notice.get("screen") or "")
+        text, markup = notification_message(str(notice.get("text") or ""), screen)
+        link = miniapp_url(normalize_screen(screen))
+        if link and link not in text:
+            text = text + "\n" + link
+        chat = owner if notice.get("kind") == "moderation_queue" else (notice.get("user_id") or owner)
+        payload = {"chat_id": chat, "text": text}
+        try:
+            payload["reply_markup"] = markup.model_dump(exclude_none=True)
+        except Exception:
+            payload.pop("reply_markup", None)
+        try:
+            response = httpx.post(url, json=payload, timeout=10)
+            if response.status_code >= 400:
+                httpx.post(url, json={"chat_id": chat, "text": text}, timeout=10)
+        except Exception as exc:
+            logger.warning("community notice was not delivered: %s", exc)
+
+
 def screen_from_start(text: str | None) -> str:
     parts = (text or "").split(maxsplit=1)
     if len(parts) < 2:

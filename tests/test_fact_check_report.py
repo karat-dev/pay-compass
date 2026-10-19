@@ -106,13 +106,12 @@ def test_corpus_counts_match_the_guide():
     assert summary["confirmed"] + summary["not_confirmed"] + summary["stale"] + summary["could_not_check"] == 279
 
 
-def test_traveler_green_asks_the_owner_in_the_exact_phrase():
+def test_traveler_green_does_not_ask_the_owner():
     row = _assess(_fact(zone="yellow", reports=5, source_kind="traveler", agreement="agree"))
     assert row["score_zone"] == "green"
-    assert row["suggested_action"] == "owner_decision"
-    assert row["automatic"] is False
-    assert row["upgrade_to"] is None
-    assert row["owner_prompt"] == "5 подтверждений, поднять до зелёного?"
+    assert row["computed_zone"] == "yellow"
+    assert row["suggested_action"] != "owner_decision"
+    assert row["owner_prompt"] is None
 
 
 def test_three_independent_fresh_confirmations_upgrade_only_to_yellow():
@@ -126,7 +125,7 @@ def test_three_independent_fresh_confirmations_upgrade_only_to_yellow():
     assert row["suggested_action"] == "upgrade_candidate"
     assert row["automatic"] is True
     assert row["upgrade_to"] == "yellow"
-    assert row["owner_prompt"] == "3 подтверждений, поднять до зелёного?"
+    assert row["owner_prompt"] is None
 
 
 def test_live_zones_do_not_upgrade_without_the_rule():
@@ -197,13 +196,16 @@ def test_reposts_of_one_outlet_do_not_upgrade():
         {"outlet": "same.example", "date": "2026-10-05"},
     ]
     fresh_days = CONFIG["volatility"]["classes"]["medium"]["fresh_days"]
-    stats = report.confirmation_stats(_fact(confirmations=confirmations), AS_OF, fresh_days)
+    stats = report.confirmation_stats(_fact(confirmations=confirmations), AS_OF, fresh_days, CONFIG)
     assert stats["independent"] is True
     assert stats["fresh_count"] == 1
+    assert stats["fresh_weight"] == 1
     row = _assess(_fact(zone="red", reports=5, confirmations=confirmations))
-    assert row["suggested_action"] == "owner_decision"
+    assert row["computed_zone"] == "red"
+    assert row["suggested_action"] is None
     assert row["automatic"] is False
     assert row["upgrade_to"] is None
+    assert row["owner_prompt"] is None
 
 
 def test_official_page_confirms_green_only_when_wording_is_checked():

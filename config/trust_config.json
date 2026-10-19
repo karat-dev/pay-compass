@@ -300,9 +300,7 @@
     "yellow_zone": "yellow",
     "green_zone": "green",
     "traveler_unapproved_max_zone": "yellow",
-    "owner_approved_field": "owner_approved",
-    "official_confirmed_field": "official_confirmed",
-    "owner_prompt_template": "{n} подтверждений, поднять до зелёного?"
+    "official_confirmed_field": "official_confirmed"
   },
   "early_warning": {
     "share": 0.25,
@@ -367,6 +365,264 @@
       "service_fee_of_price_ex_vat": "0.04",
       "bank_fee_of_remainder": "0.03",
       "result_decimal_places": 1
+    }
+  },
+  "community": {
+    "source_kind": "traveler",
+    "outlet": "community",
+    "verdicts": ["confirms", "refutes", "partial"],
+    "result_to_verdict": {"success": "confirms", "fail": "refutes", "partial": "partial"},
+    "partial_vote_weight": 0.5,
+    "full_vote_weight": 1,
+    "min_refutes_to_downgrade": 2,
+    "fact_date_field": "trip_date_end",
+    "max_trip_age_days_on_submit": 90,
+    "suggest_facts_limit": 5,
+    "recheck_reminder_days": 30,
+    "nick_max_length": 32,
+    "moderation": {
+      "mode": "all",
+      "modes": ["all", "disputes_only"],
+      "review_all_mode": "all",
+      "disputes_only_mode": "disputes_only",
+      "dispute_triggers": ["official_conflict", "fraud_suspected", "refute_spike"],
+      "trigger_codes": {
+        "official_conflict": "official_conflict",
+        "fraud_suspected": "fraud_suspected",
+        "refute_spike": "refute_spike"
+      },
+      "refute_spike": {"window_days": 14, "min_refutes": 3},
+      "actions": {
+        "count": "count",
+        "ignore": "ignore",
+        "reject": "reject",
+        "change_verdict": "change_verdict",
+        "accept_idea": "accept_idea",
+        "close_idea": "close_idea"
+      }
+    },
+    "weights": {
+      "base": 1,
+      "photo_multiplier": 1.5,
+      "default_level": "novice",
+      "level_multipliers": {"novice": 1}
+    },
+    "badge": {
+      "label": "Подтверждено сообществом",
+      "caption": "по отзывам путешественников",
+      "refute_penalty": 1,
+      "max_refutes": 1,
+      "levels": [
+        {"code": "confirmed", "title": "Подтверждено сообществом", "min_strength": 3},
+        {"code": "many", "title": "Много подтверждений", "min_strength": 6},
+        {"code": "strong", "title": "Сильно подтверждено", "min_strength": 12}
+      ]
+    },
+    "antifraud": {
+      "min_tg_account_age_days": 30,
+      "max_reviews_per_day": 5,
+      "max_reviews_per_fact_window": 3,
+      "tg_id_anchor_min": 2,
+      "tg_id_anchors": [
+        {"telegram_id": 100000000, "on": "2015-06-01"},
+        {"telegram_id": 1000000000, "on": "2020-10-01"},
+        {"telegram_id": 5000000000, "on": "2023-06-01"},
+        {"telegram_id": 8000000000, "on": "2026-01-01"}
+      ],
+      "linked_account_groups": [],
+      "flag_names": {
+        "young": "tg_account_young",
+        "age_unknown": "tg_age_unknown",
+        "daily": "review_rate",
+        "fact_window": "fact_rate",
+        "future": "future_date",
+        "overlap": "overlapping_trips",
+        "amount": "amount_outlier",
+        "fee": "fee_outlier",
+        "linked": "linked_account"
+      },
+      "outlier_check": {
+        "future_dates": true,
+        "overlapping_trips": true,
+        "amount_ratio": 3,
+        "fee_ratio": 3,
+        "min_samples": 2
+      }
+    },
+    "achievements": {
+      "recheck_month": {
+        "code": "recheck_month",
+        "title": "Проверено через месяц",
+        "recheck_min_days": 28,
+        "recheck_max_days": 45
+      }
+    },
+    "downgrade": {
+      "method": "refuted",
+      "flag_by_method": {
+        "refuted": "refuted",
+        "contradicted": "contradicted_by_own"
+      }
+    },
+    "statuses": {
+      "pending": "pending",
+      "approved": "approved",
+      "rejected": "rejected",
+      "idea": "idea"
+    },
+    "queue": {
+      "statuses": {"open": "open", "closed": "closed"},
+      "kinds": {"review": "review", "dispute": "dispute", "idea": "idea"},
+      "decisions": {
+        "count": "count",
+        "ignore": "ignore",
+        "reject": "reject",
+        "change_verdict": "change_verdict",
+        "accept_idea": "accept_idea",
+        "close_idea": "close_idea"
+      }
+    },
+    "verdict_sources": {"auto": "auto", "owner": "owner"},
+    "not_counted_reasons": {
+      "antifraud": "antifraud",
+      "pending_owner": "pending_owner",
+      "owner": "owner",
+      "rejected": "rejected",
+      "replaced": "replaced",
+      "idea": "idea"
+    },
+    "topics": [
+      {"code": "payment", "title": "Оплата"},
+      {"code": "bank_card", "title": "Банк/карта"},
+      {"code": "tax_free", "title": "Tax free"},
+      {"code": "transfer", "title": "Трансфер"},
+      {"code": "border_visa", "title": "Граница/виза"},
+      {"code": "connectivity", "title": "Связь"}
+    ],
+    "topic_by_section": {
+      "1_checklist": "connectivity",
+      "2_pay_on_site": "payment",
+      "3_local_wallets_cards": "bank_card",
+      "4_cash_exchange": "payment",
+      "5_atms": "payment",
+      "6_transport": "transfer",
+      "7_risks": "border_visa",
+      "8_tax_free": "tax_free"
+    },
+    "topic_by_instruction": {
+      "mts_tr_qr": "payment",
+      "tbank_qr_abroad": "payment",
+      "mts_china_wallets": "payment",
+      "vtb_china_wallets": "payment",
+      "wechat_pay": "payment",
+      "alipay": "payment",
+      "tbc_georgia": "bank_card"
+    },
+    "payment_methods": [
+      {"code": "mir", "title": "Мир"},
+      {"code": "unionpay", "title": "UnionPay"},
+      {"code": "foreign", "title": "Иностранная"},
+      {"code": "cash", "title": "Наличные"},
+      {"code": "wallet", "title": "Кошелёк"}
+    ],
+    "payment_method_topics": ["payment", "bank_card"],
+    "place_types": [
+      {"code": "branch", "title": "Отделение"},
+      {"code": "airport", "title": "Аэропорт"},
+      {"code": "terminal", "title": "Терминал"},
+      {"code": "shop", "title": "Магазин"}
+    ],
+    "results": [
+      {"code": "success", "title": "Получилось"},
+      {"code": "fail", "title": "Не получилось"},
+      {"code": "partial", "title": "Частично"}
+    ],
+    "citizenships": [{"code": "ru", "title": "Гражданство РФ"}],
+    "cities_by_country": {
+      "china": ["Пекин", "Шанхай", "Гуанчжоу"],
+      "hong_kong": ["Гонконг"],
+      "thailand": ["Бангкок", "Пхукет", "Паттайя"],
+      "uae": ["Дубай", "Абу-Даби"],
+      "turkey": ["Стамбул", "Анталья"],
+      "georgia": ["Тбилиси", "Батуми"]
+    },
+    "duration_units": [
+      {"code": "min", "title": "минуты", "minutes": 1},
+      {"code": "hour", "title": "часы", "minutes": 60}
+    ],
+    "fee_kinds": [
+      {"code": "amount", "title": "сумма"},
+      {"code": "percent", "title": "%"}
+    ],
+    "form_hints": {
+      "dates": "Точная дата важнее всего: по ней считаем свежесть",
+      "topic": "Одна тема в одном отзыве",
+      "fact": "Выберите факт, который проверяли. Если стало по-другому, нажмите «стало иначе»",
+      "action": "Например: оплатил QR в кафе, открыл карту в отделении",
+      "changed": "Опишите, что изменилось",
+      "amount": "Сумма и комиссия делают отзыв ценнее",
+      "duration": "Сколько заняло: очередь, открытие карты, граница",
+      "place": "Конкретное место помогает следующим",
+      "photo": "Фото повышает вес отзыва. Закройте номер карты и паспорт, мы тоже проверим",
+      "citizenship": "Влияет на применимость факта",
+      "recheck": "Напомним в боте. Повторное подтверждение даёт достижение",
+      "anonymous": "Ник и уровень не покажем",
+      "add_another": "Добавить ещё отзыв",
+      "no_matching_fact": "Нет подходящего",
+      "consent": "Нужно согласие на обработку данных"
+    },
+    "actions": {
+      "confirm": "Подтвердить",
+      "changed": "Стало иначе",
+      "submit": "Отправить отзыв",
+      "add_another": "Добавить ещё отзыв",
+      "count": "Учесть",
+      "ignore": "Не учитывать",
+      "change_verdict": "Поменять вердикт",
+      "reject": "Отклонить",
+      "accept_idea": "Принять идею",
+      "close_idea": "Закрыть"
+    },
+    "helped_counter": {"dedupe_per_user": true},
+    "helped_template": "Помог {n}",
+    "photo": {
+      "confidence_min": 0.55,
+      "clean_status": "clean",
+      "review_status": "needs_review",
+      "max_bytes": 4000000,
+      "max_request_bytes": 6000000,
+      "jpeg_quality": 85,
+      "card_min_digits": 13,
+      "card_max_digits": 19,
+      "mrz_marker": "<",
+      "mrz_min_chevrons": 2,
+      "redaction_rgb": [0, 0, 0],
+      "face_cascade": "haarcascade_frontalface_default.xml",
+      "face_scale_factor": 1.1,
+      "face_min_neighbors": 5,
+      "detector_ran_confidence": 0.9,
+      "detector_failed_confidence": 0,
+      "empty_ocr_confidence": 0.85,
+      "ocr_unknown_confidence": -1,
+      "ocr_confidence_scale": 100
+    },
+    "messages": {
+      "moderation_queue": "Очередь сообщества: {kind}, триггер {trigger}. Откройте модерацию в приложении.",
+      "recheck_reminder": "Вы отмечали, что готовы подтвердить отзыв через месяц. Если правило на месте, откройте форму ещё раз.",
+      "achievement": "Достижение «{title}».",
+      "helped": "Ваш отзыв помог {n} путешественникам.",
+      "trip_too_old": "Дата поездки старше окна, в котором отзыв ещё считается свежим.",
+      "future_date": "Дата поездки ещё не наступила.",
+      "missing_field": "Заполните обязательное поле.",
+      "bad_field": "Поле заполнено неверно.",
+      "consent": "Нужно согласие на обработку данных.",
+      "payment_method": "Для этой темы выберите карту или способ оплаты.",
+      "changed_required": "Опишите, что изменилось.",
+      "not_owner": "Очередь модерации доступна только владельцу.",
+      "unknown_action": "Неизвестное действие модерации.",
+      "queue_missing": "Элемент очереди не найден.",
+      "fact_missing": "Факт не найден.",
+      "photo_rejected": "Фото не опубликовано: распознавание личных данных не уверено."
     }
   }
 }

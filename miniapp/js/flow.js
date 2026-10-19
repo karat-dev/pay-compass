@@ -73,6 +73,7 @@ export function logicalParent(screen, extra = {}) {
     if (screen.instructionSection) return `/guide/${screen.slug}/${screen.instructionSection}`;
     return screen.slug ? `/guide/${screen.slug}` : "/guide";
   }
+  if (screen.name === "review" || screen.name === "moderation") return extra.returnTo || "/profile";
   if (screen.name === "intro") return extra.introSeen ? "/profile" : "";
   if (screen.name === "pick") return "/trip";
   return "";

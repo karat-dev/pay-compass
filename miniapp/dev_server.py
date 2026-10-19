@@ -13,7 +13,7 @@ os.environ["MINIAPP_DEV_AUTH"] = "1"
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from api.miniapp_http import READ_ROUTES, WRITE_ROUTES, dispatch, extract_route
 
@@ -44,7 +44,9 @@ class Handler(BaseHTTPRequestHandler):
         if route in READ_ROUTES or route in WRITE_ROUTES:
             length = int(self.headers.get("Content-Length", "0") or 0) if method == "POST" else 0
             body = self.rfile.read(length) if length else b""
-            status, payload = dispatch(method, route, body, dict(self.headers.items()))
+            parsed = urlparse(self.path)
+            query = {key: values[-1] for key, values in parse_qs(parsed.query).items()}
+            status, payload = dispatch(method, route, body, dict(self.headers.items()), query)
             raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             self.send_response(status)
             self.send_header("Content-Type", "application/json; charset=utf-8")
