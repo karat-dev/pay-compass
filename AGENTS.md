@@ -15,3 +15,4 @@
 11. Spend report Tue/Fri/Sun (Sunday = weekly total): spent, remaining, new daily guide = remaining / remaining days. Overspend is allowed; the guide is recalculated.
 12. Alarm when a day uses more than 2x the daily guide or one agent dominates spend.
 13. Recurring reports and checks run via scripts or cheap models.
+14. Every `CREATE TABLE` in schema `public` includes explicit `GRANT`s in the same migration. Since 2026-10-30 Supabase does not auto-grant Data API roles on new `public` tables, including when the schema is rebuilt from migrations. Grant `SELECT, INSERT, UPDATE, DELETE` on the table to `service_role`, and `USAGE, SELECT` on its sequences to `service_role`. Grant `anon` and `authenticated` only `SELECT`, and only on tables the client reads with the anon key.
