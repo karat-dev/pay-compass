@@ -85,7 +85,8 @@ body.ut-shell {
 .ut-header-tools { display: flex; align-items: center; gap: 8px; }
 .ut-theme, .ut-sos, .ut-linkish, .ut-inline-link, .ut-replay, .ut-chip, .ut-primary, .ut-secondary,
 .ut-country, .ut-row, .ut-useful, .ut-trip, .ut-promo-btn, .ut-nav-btn, .ut-support, .ut-toast-go, .ut-toast-x,
-.ut-sheet-cancel, .ut-sheet-ok, .ut-privacy-btn, .ut-back, .ut-demo button {
+.ut-sheet-cancel, .ut-sheet-ok, .ut-privacy-btn, .ut-back, .ut-demo button,
+.ut-tile, .ut-opt, .ut-more, .ut-flight-del, .ut-check {
   font: inherit;
   cursor: pointer;
 }
@@ -209,6 +210,7 @@ body.ut-shell {
   font-weight: 600;
   padding: 0;
 }
+.ut-trip .ut-inline-link { display: block; margin-top: 10px; text-align: left; }
 .ut-promo-brand { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
 .ut-promo-brand > span:first-child {
   width: 42px;
@@ -318,6 +320,10 @@ body.ut-shell {
   background: var(--ut-blue);
   box-shadow: 0 6px 16px rgba(26, 115, 232, 0.14);
 }
+.ut-primary.is-idle {
+  background: #9bb8e8;
+  box-shadow: none;
+}
 .ut-empty .ut-primary, .ut-form .ut-primary, .ut-save { width: 100%; margin: 12px 0 0; }
 .ut-save { margin: 16px 16px 0; width: calc(100% - 32px); }
 .ut-secondary {
@@ -370,11 +376,17 @@ body.ut-shell {
 }
 .ut-tile {
   position: relative;
+  min-width: 0;
   min-height: 115px;
   border-radius: 18px;
   padding: 13px 12px 30px;
   border: 1px solid rgba(255, 255, 255, 0.8);
   box-shadow: 0 6px 16px rgba(40, 50, 90, 0.07);
+}
+button.ut-tile {
+  width: 100%;
+  color: inherit;
+  text-align: left;
 }
 .ut-tile b { display: block; font-size: 14px; line-height: 1.25; padding-right: 22px; }
 .ut-tile p { margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--ut-muted); }
@@ -671,3 +683,129 @@ body.ut-shell {
 }
 .ut-sheet-cancel { background: #f1f3f7; color: var(--ut-ink); }
 .ut-sheet-ok { background: var(--ut-blue); color: #fff; }
+
+.ut-ctx { margin: 0 16px 14px; font-size: 13px; color: var(--ut-muted); line-height: 1.4; font-weight: 500; }
+.ut-seg {
+  box-sizing: border-box;
+  margin: 0 16px 10px;
+  background: rgba(255, 255, 255, 0.81);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  box-shadow: 0 6px 16px rgba(40, 50, 90, 0.07);
+  padding: 12px 14px;
+}
+.ut-seg-title { font-size: 13px; font-weight: 750; margin: 0 0 8px; }
+.ut-cols { display: flex; gap: 8px; min-width: 0; }
+.ut-cols > label { flex: 1; min-width: 0; }
+.ut-lab { display: block; font-size: 11px; font-weight: 700; color: var(--ut-muted); margin: 0 0 6px; }
+.ut-field {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  background: #fff;
+  border: 1px solid #e8ebf1;
+  border-radius: 12px;
+  padding: 11px 12px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--ut-ink);
+  min-height: 44px;
+}
+.ut-field::placeholder { color: #8a93a3; font-weight: 500; }
+.ut-field.is-bad { border-color: #e24a4a; }
+.ut-err { margin: 6px 0 0; font-size: 11px; color: #c0392b; font-weight: 600; line-height: 1.35; }
+.ut-ver { margin: 8px 0 0; font-size: 11px; color: #4a5568; font-weight: 600; line-height: 1.35; }
+.ut-ver .ut-dot { margin-right: 6px; vertical-align: 1px; }
+.ut-warnbox {
+  margin-top: 8px;
+  background: #fff6d8;
+  border: 1px solid #f0dd8a;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b5500;
+  line-height: 1.4;
+}
+.ut-soft {
+  margin-top: 8px;
+  background: #f4f1ea;
+  border: 1px solid #e4dcc8;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #5b5340;
+  line-height: 1.4;
+}
+.ut-hintline { margin: 8px 0 0; font-size: 11px; color: #697488; line-height: 1.4; font-weight: 500; }
+.ut-opt {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #e8ebf1;
+  border-radius: 12px;
+  background: #fff;
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 650;
+  text-align: left;
+  color: inherit;
+}
+.ut-opt.is-on { border-color: #c5d4ef; background: #eef3fc; }
+.ut-radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #9aa3b2; flex: none; box-sizing: border-box; }
+.ut-opt.is-on .ut-radio, .ut-check.is-on .ut-radio { border-color: #1a73e8; box-shadow: inset 0 0 0 4px #1a73e8; }
+.ut-more {
+  margin: 4px 16px 0;
+  border: 0;
+  background: transparent;
+  color: #1a73e8;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 6px 0;
+}
+.ut-flight-list { margin: 0 16px 4px; display: flex; flex-direction: column; gap: 8px; }
+.ut-flight {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+}
+.ut-flight b { font-size: 14px; }
+.ut-flight p { margin: 4px 0 0; font-size: 12px; color: var(--ut-muted); }
+.ut-flight .ut-ver { margin-top: 4px; }
+.ut-flight-del {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: #c0392b;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0;
+}
+.ut-check {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: calc(100% - 32px);
+  margin: 6px 16px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.92);
+  text-align: left;
+  color: inherit;
+}
+.ut-check b { display: block; font-size: 15px; }
+.ut-check.is-on { background: #eef3fc; border-color: #c5d4ef; }
+.ut-slot .ut-inline-link { display: inline-block; margin-top: 10px; }

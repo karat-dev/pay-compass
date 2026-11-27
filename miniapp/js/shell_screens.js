@@ -1,15 +1,26 @@
 /** Screen frames for the Mini App shell. Later steps fill elements marked data-slot. */
 
 import { esc } from "./ui.js";
+import {
+  TRIP_CHECKS,
+  assessFlightRows,
+  checklistCaption,
+  flightsWord,
+  guideSlugFor,
+  tripChecks,
+} from "./trip_flow.js";
 
 export const DEMO_TRIP = {
   id: "demo-shanghai-2026",
   origin: "Москва",
   destination: "Шанхай",
+  country: "Китай",
   depart: "2026-12-12",
   ret: "2026-12-20",
   stepsDone: 2,
   stepsTotal: 6,
+  checks: ["entry", "docs"],
+  flights: [],
 };
 
 const MONTHS = [
@@ -150,6 +161,7 @@ export function shellState(extra = {}) {
     payGroup: "system",
     notice: "",
     focusSearch: false,
+    flightDraft: null,
     ...extra,
     settings: { ...defaultSettings(), ...(extra.settings || {}) },
     route,
@@ -244,7 +256,7 @@ function renderHome(state) {
       <span class="ut-trip-top"><b>${esc(trip.origin || "Москва")} → ${esc(trip.destination)}</b><span aria-hidden="true">✈️</span></span>
       <span class="ut-trip-dates">${esc(formatStay(trip.depart, trip.ret))}</span>
       <span class="ut-track" aria-hidden="true"><span style="width:${progressWidth(trip)}"></span></span>
-      <span class="ut-trip-foot"><span>Подготовка: ${Number(trip.stepsDone) || 0} из ${Number(trip.stepsTotal) || 6} шагов</span><span>открыть ›</span></span>
+      <span class="ut-trip-foot"><span>Подготовка: ${tripChecks(trip).length} из ${TRIP_CHECKS.length} шагов</span><span>открыть ›</span></span>
     </button>` : `<section class="ut-empty">
       <b>Пока нет поездки</b>
       <p>Добавьте направление — подскажем въезд, оплату, связь и транспорт</p>
@@ -274,8 +286,8 @@ function renderHome(state) {
 }
 
 function progressWidth(trip) {
-  const total = Number(trip.stepsTotal) || 0;
-  const done = Number(trip.stepsDone) || 0;
+  const total = TRIP_CHECKS.length;
+  const done = tripChecks(trip).length;
   if (!total) return "0%";
   return `${Math.max(0, Math.min(100, Math.round((done / total) * 100)))}%`;
 }
@@ -284,45 +296,193 @@ function renderTrip(state) {
   const trip = activeTrip(state);
   if (!trip) {
     return `${headerBar("Поездка", false)}
-      <p class="ut-lead">Сохраните направление на этом устройстве — шаги подготовки появятся здесь.</p>
+      <section class="ut-empty" data-slot="trip-empty">
+        <b>Пока нет поездки</b>
+        <p>Добавьте направление и даты с годом. Поездка сохранится только на этом устройстве.</p>
+      </section>
       <form class="ut-form" data-shell-form="trip" data-slot="trip-form">
         <label>Откуда<input name="origin" maxlength="40" autocomplete="off" value="Москва"></label>
-        <label>Куда<input name="destination" maxlength="40" autocomplete="off" placeholder="Страна или город"></label>
+        <label>Куда<input name="destination" maxlength="40" autocomplete="off" placeholder="Город"></label>
+        <label>Страна<input name="country" maxlength="40" autocomplete="off" placeholder="Китай"></label>
         <label>Туда<input name="depart" type="date" autocomplete="off"></label>
         <label>Обратно<input name="ret" type="date" autocomplete="off"></label>
         <button type="submit" class="ut-primary">Сохранить поездку</button>
         <p class="ut-fine">Поездка хранится только у вас. Даты указывайте с годом.</p>
       </form>`;
   }
+  const flights = Array.isArray(trip.flights) ? trip.flights : [];
+  const slug = guideSlugFor(trip);
+  const flightNote = flights.length ? "сведения не сверены" : "нужно действие";
+  const flightDesc = flights.length
+    ? `В поездке ${flights.length} ${flightsWord(flights.length)}`
+    : "Добавьте рейс для проверки пересадок";
   const tiles = [
-    ["#fff0e3", "🛂", "Въезд", "Условия въезда и проверка паспорта", "green", "сведения сверены 01.11.2026"],
-    ["#edf0f6", "📋", "Чек-лист", "Шаг 3 из 6: страховка", "green", "сведения сверены 01.11.2026"],
-    ["#e8f1fa", "🛫", "Перелёт и пересадки", "Добавьте рейс для проверки пересадок", "yellow", "нужно действие"],
-    ["#e9f2fc", "💳", "Оплата", "Что подготовить до вылета", "green", "сведения сверены 01.11.2026"],
-    ["#f0ebfc", "📶", "Связь", "eSIM на даты поездки, ссылки партнёров", "green", "сведения сверены 01.11.2026"],
-    ["#f0f3e9", "🛡", "Страховка", "Подобрать полис на даты", "yellow", "нужно действие"],
-    ["#edf0f6", "🚕", "Транспорт", `${esc(trip.destination)} → центр, метро, такси`, "green", "сведения сверены 01.11.2026"],
+    ["#fff0e3", "🛂", "Въезд", "Условия въезда и проверка паспорта", "green", "сведения сверены 01.11.2026", slug ? `/guide/${slug}` : "/guide"],
+    ["#edf0f6", "📋", "Чек-лист", checklistCaption(trip), "green", "сведения сверены 01.11.2026", "/trip/checklist"],
+    ["#e8f1fa", "🛫", "Перелёт и пересадки", flightDesc, "yellow", flightNote, "/trip/flight-add"],
+    ["#e9f2fc", "💳", "Оплата", "Что подготовить до вылета", "green", "сведения сверены 01.11.2026", "/trip/pay"],
+    ["#f0ebfc", "📶", "Связь", "eSIM на даты поездки, ссылки партнёров", "green", "сведения сверены 01.11.2026", "/trip/checklist"],
+    ["#f0f3e9", "🛡", "Страховка", "Подобрать полис на даты", "yellow", "нужно действие", "/trip/checklist"],
+    ["#edf0f6", "🚕", "Транспорт", `${trip.destination} → центр, метро, такси`, "green", "сведения сверены 01.11.2026", "/trip/transport"],
   ];
-  const cards = tiles.map(([bg, mark, title, desc, zone, note]) => (
-    `<article class="ut-tile" style="background:${bg}">
+  const cards = tiles.map(([bg, mark, title, desc, zone, note, path]) => (
+    `<button type="button" class="ut-tile" style="background:${bg}" data-shell="route" data-path="${esc(path)}">
       <span class="ut-tile-icon" aria-hidden="true">${mark}</span>
       <b>${title}</b>
-      <p>${desc}</p>
-      <span class="ut-checked"><i class="ut-dot ut-dot-${zone}"></i>${note}</span>
-    </article>`
+      <p>${esc(desc)}</p>
+      <span class="ut-checked"><i class="ut-dot ut-dot-${zone}"></i>${esc(note)}</span>
+    </button>`
   )).join("");
+  const addLabel = flights.length ? "Добавить ещё рейс" : "+ Добавьте рейс, чтобы проверить пересадки";
   return `${headerBar("Поездка", false)}
     <p class="ut-lead">Шаги в порядке подготовки · пример</p>
     <section class="ut-trip ut-trip-static" data-slot="trip-summary">
       <span class="ut-trip-top"><b>${esc(trip.origin || "Москва")} → ${esc(trip.destination)}</b><span aria-hidden="true">✈️</span></span>
       <span class="ut-trip-dates">${esc(formatStay(trip.depart, trip.ret))}</span>
-      <button type="button" class="ut-inline-link" data-shell="soon" data-text="Проверку пересадок подключим следующим шагом.">+ Добавьте рейс, чтобы проверить пересадки</button>
+      <button type="button" class="ut-inline-link" data-shell="route" data-path="/trip/edit">Изменить город, страну и даты</button>
+      <button type="button" class="ut-inline-link" data-shell="route" data-path="/trip/flight-add">${addLabel}</button>
       <span class="ut-track" aria-hidden="true"><span style="width:${progressWidth(trip)}"></span></span>
-      <span class="ut-progress">Подготовка: ${Number(trip.stepsDone) || 0} из ${Number(trip.stepsTotal) || 6} шагов</span>
+      <span class="ut-progress">Подготовка: ${tripChecks(trip).length} из ${TRIP_CHECKS.length} шагов</span>
     </section>
+    ${renderFlightList(flights)}
     <button type="button" class="ut-primary ut-save" data-shell="save-trip">Сохранить поездку</button>
     <p class="ut-caption">Выберите разделы и поездку</p>
     <div class="ut-tiles" data-slot="trip-steps">${cards}</div>`;
+}
+
+function renderFlightList(flights) {
+  if (!flights.length) return "";
+  const items = flights.map((flight) => {
+    const when = formatDotDate(flight.date) || String(flight.date || "");
+    const route = flight.from && flight.to ? `${flight.from} — ${flight.to}` : "";
+    const sample = flight.sample ? " Пример, не расписание." : "";
+    return `<article class="ut-flight" data-flight-number="${esc(flight.number || "")}" data-flight-date="${esc(flight.date || "")}">
+      <div>
+        <b>${esc(flight.number || "Рейс")} · ${esc(when)}</b>
+        ${route ? `<p>${esc(route)}</p>` : ""}
+        <p class="ut-ver"><i class="ut-dot ut-dot-yellow"></i>сведения не сверены.${sample ? esc(sample) : ""}</p>
+      </div>
+      <button type="button" class="ut-flight-del" data-shell="flight-delete" data-id="${esc(flight.id || "")}">Удалить</button>
+    </article>`;
+  }).join("");
+  return `<div class="ut-flight-list" data-slot="trip-flights">${items}</div>`;
+}
+
+function renderNeedTrip(title) {
+  return `${headerBar(title, true)}
+    <section class="ut-empty" data-slot="trip-empty">
+      <b>Пока нет поездки</b>
+      <p>Сначала сохраните направление и даты — затем можно добавить рейс и отметить шаги.</p>
+      <button type="button" class="ut-primary" data-shell="route" data-path="/trip">Добавить поездку</button>
+    </section>`;
+}
+
+function renderTripEdit(state) {
+  const trip = activeTrip(state);
+  if (!trip) return renderNeedTrip("Поездка");
+  return `${headerBar("Поездка", true)}
+    <p class="ut-lead">Город, страна и даты с годом хранятся только на этом устройстве.</p>
+    <form class="ut-form" data-shell-form="trip-edit" data-slot="trip-edit">
+      <label>Откуда<input name="origin" maxlength="40" autocomplete="off" value="${esc(trip.origin || "")}"></label>
+      <label>Куда<input name="destination" maxlength="40" autocomplete="off" value="${esc(trip.destination || "")}"></label>
+      <label>Страна<input name="country" maxlength="40" autocomplete="off" value="${esc(trip.country || "")}"></label>
+      <label>Туда<input name="depart" type="date" autocomplete="off" value="${esc(trip.depart || "")}"></label>
+      <label>Обратно<input name="ret" type="date" autocomplete="off" value="${esc(trip.ret || "")}"></label>
+      <button type="submit" class="ut-primary">Сохранить поездку</button>
+    </form>`;
+}
+
+function renderChecklist(state) {
+  const trip = activeTrip(state);
+  if (!trip) return renderNeedTrip("Чек-лист");
+  const checks = new Set(tripChecks(trip));
+  const items = TRIP_CHECKS.map((item) => {
+    const on = checks.has(item.id);
+    return `<button type="button" class="ut-check${on ? " is-on" : ""}" data-shell="check" data-id="${item.id}" aria-pressed="${on ? "true" : "false"}">
+      <span class="ut-radio" aria-hidden="true"></span>
+      <span><b>${esc(item.title)}</b><span class="ut-row-text">${on ? "Отмечено" : "Отметить"}</span></span>
+    </button>`;
+  }).join("");
+  return `${headerBar("Чек-лист", true)}
+    <p class="ut-lead">${esc(checklistCaption(trip))}. Подготовка: ${checks.size} из 6 шагов</p>
+    <div data-slot="trip-checklist">${items}</div>`;
+}
+
+function renderTripPay(state) {
+  const trip = activeTrip(state);
+  if (!trip) return renderNeedTrip("Оплата");
+  const place = [trip.origin || "Москва", trip.destination, trip.country].filter(Boolean).join(" · ");
+  return `${headerBar("Оплата", true)}
+    <p class="ut-lead">${esc(place)} · ${esc(formatStay(trip.depart, trip.ret))}</p>
+    <section class="ut-slot" data-slot="trip-pay">
+      <p class="ut-lead">Что подготовить к оплате в поездке, подключим следующим шагом.</p>
+      <p class="ut-fine">Цены билетов не показываем. Для сверки откройте способы оплаты в профиле: там страна выпуска и платёжная система.</p>
+    </section>`;
+}
+
+function renderTripTransport(state) {
+  const trip = activeTrip(state);
+  if (!trip) return renderNeedTrip("Транспорт");
+  const slug = guideSlugFor(trip);
+  const path = slug ? `/guide/${slug}` : "/guide";
+  const label = slug ? "Открыть в справочнике" : "Открыть справочник";
+  return `${headerBar("Транспорт", true)}
+    <p class="ut-lead">${esc(trip.destination || "Город")} → центр, метро, такси</p>
+    <section class="ut-slot" data-slot="trip-transport">
+      <p class="ut-lead">Как добраться по городу, смотрите в справочнике. Это не расписание рейсов.</p>
+      <button type="button" class="ut-inline-link" data-shell="route" data-path="${esc(path)}">${label}</button>
+    </section>`;
+}
+
+function flightRowHtml(row, assessed) {
+  const hint = assessed.empty && row.index === 0
+    ? `<p class="ut-hintline">Формат номера: SU 204</p>`
+    : "";
+  const errors = [
+    row.formatError ? `<p class="ut-err">Неверный формат. Пример: SU 204</p>` : "",
+    row.dateError ? `<p class="ut-err">Укажите дату вылета</p>` : "",
+  ].join("");
+  const legs = row.legs.length
+    ? `<p class="ut-hintline">Несколько участков в этот день. Выберите «откуда — куда». Пример, не расписание.</p>${row.legs.map((leg) => (
+      `<button type="button" class="ut-opt${leg.id === row.selectedLegId ? " is-on" : ""}" data-shell="flight-leg" data-index="${row.index}" data-leg="${esc(leg.id)}" aria-pressed="${leg.id === row.selectedLegId ? "true" : "false"}"><span class="ut-radio" aria-hidden="true"></span>${esc(leg.from)} — ${esc(leg.to)}</button>`
+    )).join("")}`
+    : "";
+  const status = row.unverified ? `<p class="ut-ver"><i class="ut-dot ut-dot-yellow"></i>сведения не сверены</p>` : "";
+  const outside = row.outside ? `<p class="ut-warnbox">${esc(assessed.outsideText)}</p>` : "";
+  const duplicate = row.duplicate ? `<p class="ut-soft">Этот рейс уже есть в поездке</p>` : "";
+  const drop = row.index > 1
+    ? `<button type="button" class="ut-more" data-shell="flight-drop" data-index="${row.index}">Убрать</button>`
+    : "";
+  return `<section class="ut-seg" data-flight-row="${row.index}">
+    <div class="ut-seg-title">${esc(row.label)}</div>
+    <div class="ut-cols">
+      <label>
+        <span class="ut-lab">Номер рейса</span>
+        <input class="ut-field${row.formatError ? " is-bad" : ""}" data-shell-field="flight-number" data-index="${row.index}" type="text" inputmode="text" autocomplete="off" maxlength="12" placeholder="SU 204" value="${esc(row.numberRaw)}">
+      </label>
+      <label>
+        <span class="ut-lab">Дата вылета</span>
+        <input class="ut-field${row.dateError ? " is-bad" : ""}" data-shell-field="flight-date" data-index="${row.index}" type="text" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="ДД.ММ.ГГГГ" value="${esc(row.dateRaw)}">
+      </label>
+    </div>
+    ${hint}${errors}${status}${outside}${legs}${duplicate}${drop}
+  </section>`;
+}
+
+function renderFlightAdd(state) {
+  const trip = activeTrip(state);
+  if (!trip) return renderNeedTrip("Добавить рейс");
+  if (!Array.isArray(state.flightDraft) || !state.flightDraft.length) {
+    state.flightDraft = [{ number: "", date: "", legId: "" }, { number: "", date: "", legId: "" }];
+  }
+  const assessed = assessFlightRows(state.flightDraft, trip, formatStay(trip.depart, trip.ret));
+  const rows = assessed.rows.map((row) => flightRowHtml(row, assessed)).join("");
+  const idle = assessed.canSave ? "" : " is-idle";
+  return `${headerBar("Добавить рейс", true)}
+    <p class="ut-ctx">К поездке ${esc(trip.origin || "Москва")} → ${esc(trip.destination)}, ${esc(formatStay(trip.depart, trip.ret))}</p>
+    <div data-slot="flight-add">${rows}</div>
+    <button type="button" class="ut-more" data-shell="flight-add-row">+ Ещё рейс</button>
+    <button type="button" class="ut-primary ut-save${idle}" data-shell="flight-save" aria-disabled="${assessed.canSave ? "false" : "true"}">Добавить к поездке</button>`;
 }
 
 function paymentView(item) {
@@ -485,6 +645,11 @@ function renderScreen(state) {
   const name = state.route.name;
   if (name === "home") return renderHome(state);
   if (name === "trip") return renderTrip(state);
+  if (name === "flight-add") return renderFlightAdd(state);
+  if (name === "trip-edit") return renderTripEdit(state);
+  if (name === "trip-checklist") return renderChecklist(state);
+  if (name === "trip-pay") return renderTripPay(state);
+  if (name === "trip-transport") return renderTripTransport(state);
   if (name === "pay") return renderPay(state);
   if (name === "guide") return renderGuide(state);
   if (name === "country") return renderCountry(state);

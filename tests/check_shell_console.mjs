@@ -42,6 +42,138 @@ function cdp(ws) {
   };
 }
 
+async function evaluate(client, expression) {
+  const probe = await client.send("Runtime.evaluate", { expression, returnByValue: true });
+  if (probe.exceptionDetails) {
+    const details = probe.exceptionDetails;
+    throw new Error(details.exception && details.exception.description || details.text || expression);
+  }
+  return probe.result && probe.result.value;
+}
+
+async function assertNoOverflow(client, label) {
+  const measured = await evaluate(client, `(() => {
+    const doc = document.documentElement;
+    return { scrollWidth: doc.scrollWidth, clientWidth: doc.clientWidth };
+  })()`);
+  if (!measured || measured.scrollWidth > measured.clientWidth + 1) {
+    throw new Error(`horizontal overflow on ${label} ${JSON.stringify(measured)}`);
+  }
+}
+
+async function exerciseTrip(client) {
+  await evaluate(client, `document.querySelector("[data-path='/trip/checklist']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-screen='trip-checklist']") ? "ok" : ""`);
+  await evaluate(client, `document.querySelector("[data-shell='check'][data-id='insurance']").click()`);
+  await waitFor(client, `document.body.innerText.includes("3 из 6") ? "ok" : ""`);
+  const stored = await evaluate(client, `(() => {
+    const trips = JSON.parse(localStorage.getItem("ut.personal.trips") || "[]");
+    const trip = trips[0] || {};
+    return { steps: trip.stepsDone, checks: trip.checks || [] };
+  })()`);
+  if (!stored || stored.steps !== 3 || !stored.checks.includes("insurance")) {
+    throw new Error(`checklist was not stored ${JSON.stringify(stored)}`);
+  }
+  await evaluate(client, `document.querySelector("[data-shell='back']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-screen='trip']") ? "ok" : ""`);
+  await evaluate(client, `document.querySelector(".ut-nav [data-path='/home']").click()`);
+  await waitFor(client, `document.body.innerText.includes("3 из 6") ? "home" : ""`);
+  await evaluate(client, `document.querySelector(".ut-nav [data-path='/trip']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-screen='trip']") ? "ok" : ""`);
+  await assertNoOverflow(client, "trip");
+  await evaluate(client, `document.querySelector("[data-path='/trip/flight-add']").click()`);
+  await waitFor(client, `document.body.innerText.includes("Формат номера: SU 204") ? "empty" : ""`);
+  await assertNoOverflow(client, "flight-add");
+
+  const typeFlight = (number, date) => `(() => {
+    const num = document.querySelector("[data-shell-field='flight-number'][data-index='0']");
+    num.value = ${JSON.stringify(number)};
+    num.dispatchEvent(new Event("input", { bubbles: true }));
+    const date = document.querySelector("[data-shell-field='flight-date'][data-index='0']");
+    date.value = ${JSON.stringify(date)};
+    date.dispatchEvent(new Event("input", { bubbles: true }));
+    const save = document.querySelector("[data-shell='flight-save']");
+    return save && save.classList.contains("is-idle") ? "idle" : "ready";
+  })()`;
+
+  const blocked = await evaluate(client, typeFlight("СУ 204", "12.12.2026"));
+  if (blocked !== "idle") throw new Error(`bad flight number can be saved (${blocked})`);
+  await waitFor(client, `document.body.innerText.includes("Неверный формат. Пример: SU 204") ? "bad" : ""`);
+  await evaluate(client, `document.querySelector("[data-shell='flight-save']").click()`);
+  if (await evaluate(client, `document.querySelector("[data-shell-screen='flight-add']") ? "stay" : ""`) !== "stay") {
+    throw new Error("invalid flight number left the form");
+  }
+
+  const noDate = await evaluate(client, typeFlight("SU 204", ""));
+  if (noDate !== "idle") throw new Error("missing date can be saved");
+  await waitFor(client, `document.body.innerText.includes("Укажите дату вылета") ? "date" : ""`);
+
+  const unknown = await evaluate(client, typeFlight("MU 510", "12.12.2026"));
+  if (unknown !== "ready") throw new Error("unknown flight is blocked");
+  await waitFor(client, `document.body.innerText.includes("сведения не сверены") ? "open" : ""`);
+  await evaluate(client, `document.querySelector("[data-shell='flight-save']").click()`);
+  await waitFor(client, `document.body.innerText.includes("MU 510") && document.querySelector("[data-shell-screen='trip']") ? "saved" : ""`);
+  await evaluate(client, `document.querySelector("[data-flight-number='MU 510'] [data-shell='flight-delete']").click()`);
+  await waitFor(client, `document.querySelector("[data-flight-number='MU 510']") ? "" : "gone"`);
+
+  await evaluate(client, `document.querySelector("[data-path='/trip/flight-add']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-screen='flight-add']") ? "ok" : ""`);
+  const outside = await evaluate(client, typeFlight("MU 510", "21.12.2026"));
+  if (outside !== "ready") throw new Error("date outside the trip is blocked");
+  await waitFor(client, `document.body.innerText.includes("Дата вне поездки 12–20 декабря 2026. Сохранить можно.") ? "out" : ""`);
+  await evaluate(client, `document.querySelector("[data-shell='flight-save']").click()`);
+  await waitFor(client, `document.body.innerText.includes("21.12.2026") ? "saved" : ""`);
+  await evaluate(client, `document.querySelector("[data-flight-number='MU 510'] [data-shell='flight-delete']").click()`);
+  await waitFor(client, `document.querySelector("[data-flight-number='MU 510']") ? "" : "gone"`);
+
+  await evaluate(client, `document.querySelector("[data-path='/trip/flight-add']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-screen='flight-add']") ? "ok" : ""`);
+  const legs = await evaluate(client, typeFlight("SU 204", "12.12.2026"));
+  if (legs !== "ready") throw new Error("sample legs are blocked");
+  await waitFor(client, `document.body.innerText.includes("Пример, не расписание") && document.body.innerText.includes("Казань — Шанхай") ? "legs" : ""`);
+  await evaluate(client, `document.querySelector("[data-leg='kzn-sha']").click()`);
+  await evaluate(client, `document.querySelector("[data-shell='flight-save']").click()`);
+  await waitFor(client, `document.body.innerText.includes("Казань — Шанхай") && document.body.innerText.includes("Пример, не расписание") ? "saved" : ""`);
+
+  await evaluate(client, `document.querySelector("[data-path='/trip/flight-add']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-screen='flight-add']") ? "ok" : ""`);
+  const duplicate = await evaluate(client, typeFlight("SU 204", "12.12.2026"));
+  if (duplicate !== "ready") throw new Error("duplicate flight is blocked");
+  await waitFor(client, `document.body.innerText.includes("Этот рейс уже есть в поездке") ? "dup" : ""`);
+  await evaluate(client, `document.querySelector("[data-shell='flight-save']").click()`);
+  await waitFor(client, `document.querySelectorAll("[data-flight-number='SU 204'][data-flight-date='2026-12-12']").length === 2 ? "two" : ""`);
+
+  await evaluate(client, `document.querySelector("[data-path='/trip/flight-add']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-screen='flight-add']") ? "ok" : ""`);
+  const otherDate = await evaluate(client, typeFlight("SU 204", "13.12.2026"));
+  if (otherDate !== "ready") throw new Error("same number on another date is blocked");
+  const warned = await evaluate(client, `document.body.innerText.includes("Этот рейс уже есть в поездке") ? "warn" : "clear"`);
+  if (warned !== "clear") throw new Error("same number on another date shows a duplicate warning");
+  await evaluate(client, `document.querySelector("[data-shell='flight-save']").click()`);
+  await waitFor(client, `document.body.innerText.includes("13.12.2026") ? "saved" : ""`);
+
+  await evaluate(client, `document.querySelector("[data-path='/trip/edit']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-form='trip-edit']") ? "edit" : ""`);
+  await evaluate(client, `(() => {
+    const form = document.querySelector("[data-shell-form='trip-edit']");
+    form.destination.value = "Пекин";
+    form.country.value = "Китай";
+    form.requestSubmit();
+    return "sent";
+  })()`);
+  await waitFor(client, `document.body.innerText.includes("Москва → Пекин") ? "edited" : ""`);
+  await evaluate(client, `document.querySelector("[data-path='/trip/pay']").click()`);
+  await waitFor(client, `document.querySelector("[data-slot='trip-pay']") ? "pay" : ""`);
+  await evaluate(client, `document.querySelector("[data-shell='back']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-screen='trip']") ? "trip" : ""`);
+  await evaluate(client, `document.querySelector("[data-path='/trip/transport']").click()`);
+  await waitFor(client, `document.querySelector("[data-slot='trip-transport']") ? "transport" : ""`);
+  await evaluate(client, `document.querySelector("[data-shell='back']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-screen='trip']") ? "trip" : ""`);
+  await evaluate(client, `document.querySelector(".ut-nav [data-path='/home']").click()`);
+  await waitFor(client, `document.body.innerText.includes("Москва → Пекин") && document.body.innerText.includes("3 из 6") ? "home" : ""`);
+}
+
 async function waitFor(client, expression) {
   const started = Date.now();
   while (Date.now() - started < 8000) {
@@ -102,6 +234,7 @@ try {
   await waitFor(client, `document.body.innerText.includes("Москва → Шанхай") ? "trip" : ""`);
   await client.send("Runtime.evaluate", { expression: `document.querySelector(".ut-nav [data-path='/trip']").click()` });
   await waitFor(client, `document.querySelector("[data-shell-screen='trip']") ? "ok" : ""`);
+  await exerciseTrip(client);
   await client.send("Runtime.evaluate", { expression: `document.querySelector(".ut-nav [data-path='/guide']").click()` });
   await waitFor(client, `document.body.innerText.includes("официальный источник") ? "ok" : ""`);
   await client.send("Runtime.evaluate", { expression: `document.querySelector("[data-path='/guide/china']").click()` });

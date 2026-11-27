@@ -103,7 +103,7 @@ def test_shell_has_no_console_errors():
             check=False,
             capture_output=True,
             text=True,
-            timeout=40,
+            timeout=90,
         )
     finally:
         server.shutdown()

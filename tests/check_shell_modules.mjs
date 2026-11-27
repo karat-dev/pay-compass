@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createPersonalStore, createMemoryBackend, PERSONAL_SECTIONS } from "../miniapp/js/personal_store.js";
-import { parseShellRoute, backTarget, readTripForm } from "../miniapp/js/shell_router.js";
+import { parseShellRoute, backTarget, readTripForm, readTripEdit } from "../miniapp/js/shell_router.js";
 import { renderShell, shellState, formatStay, DEMO_TRIP } from "../miniapp/js/shell_screens.js";
+import {
+  applyChecks,
+  assessFlightRows,
+  checklistCaption,
+  tripChecks,
+} from "../miniapp/js/trip_flow.js";
 
 const banned = ["supabase", "/api/", "OAG", "CAAC"];
-for (const name of ["personal_store.js", "shell.js", "shell_screens.js", "shell_router.js"]) {
+for (const name of ["personal_store.js", "shell.js", "shell_screens.js", "shell_router.js", "trip_flow.js"]) {
   const text = readFileSync(new URL(`../miniapp/js/${name}`, import.meta.url), "utf8");
   for (const word of banned) assert.equal(text.includes(word), false, `${name} contains ${word}`);
   assert.equal(/fetch\s*\(/.test(text), false, `${name} fetches`);
@@ -146,5 +152,188 @@ assert.equal(await store.read("trips"), null);
 assert.equal(await store.read("settings").then((row) => row.language), "Русский");
 assert.equal(PERSONAL_SECTIONS.includes("passport"), true);
 await assert.rejects(() => createPersonalStore({ local: createMemoryBackend(), cloud: null }).read("secret"));
+
+assert.deepEqual(parseShellRoute("#/trip"), { name: "trip", tab: "trip", inner: false, slug: "" });
+assert.equal(parseShellRoute("#/trip/flight-add").name, "flight-add");
+assert.equal(parseShellRoute("#/trip/flight-add").inner, true);
+assert.equal(parseShellRoute("#/trip/flight-add").tab, "trip");
+assert.equal(parseShellRoute("#/trip/edit").name, "trip-edit");
+assert.equal(parseShellRoute("#/trip/pay").name, "trip-pay");
+assert.equal(parseShellRoute("#/trip/transport").name, "trip-transport");
+assert.equal(parseShellRoute("#/trip/checklist").name, "trip-checklist");
+assert.equal(backTarget(parseShellRoute("#/trip/flight-add")), "/trip");
+assert.equal(backTarget(parseShellRoute("#/trip/pay")), "/trip");
+assert.equal(backTarget(parseShellRoute("#/trip/transport")), "/trip");
+assert.equal(backTarget(parseShellRoute("#/trip/checklist")), "/trip");
+assert.equal(backTarget(parseShellRoute("#/trip/edit")), "/trip");
+assert.equal(backTarget(parseShellRoute("#/trip")), "");
+
+const stay = "12–20 декабря 2026";
+const baseTrip = { ...DEMO_TRIP, checks: ["entry", "docs"], flights: [] };
+function flightHtml(draft, flights) {
+  return renderShell(shellState({
+    route: parseShellRoute("#/trip/flight-add"),
+    trips: [{ ...baseTrip, flights: flights || [] }],
+    flightDraft: draft,
+  }));
+}
+
+const emptyFlight = flightHtml([
+  { number: "", date: "", legId: "" },
+  { number: "", date: "", legId: "" },
+]);
+assert.match(emptyFlight, /Формат номера: SU 204/);
+assert.match(emptyFlight, /К поездке Москва → Шанхай, 12–20 декабря 2026/);
+assert.match(emptyFlight, /is-idle/);
+assert.equal(emptyFlight.includes("Неверный формат"), false);
+assert.equal(emptyFlight.includes("Укажите дату вылета"), false);
+
+const badNumber = assessFlightRows([{ number: "СУ 204", date: "12.12.2026", legId: "" }], baseTrip, stay);
+assert.equal(badNumber.canSave, false);
+assert.equal(badNumber.rows[0].formatError, true);
+const badNumberHtml = flightHtml([{ number: "СУ 204", date: "12.12.2026", legId: "" }]);
+assert.match(badNumberHtml, /Неверный формат\. Пример: SU 204/);
+assert.match(badNumberHtml, /is-bad/);
+assert.match(badNumberHtml, /is-idle/);
+assert.equal(badNumberHtml.includes("<img"), false);
+
+const missingDate = assessFlightRows([{ number: "SU 204", date: "", legId: "" }], baseTrip, stay);
+assert.equal(missingDate.canSave, false);
+assert.equal(missingDate.rows[0].dateError, true);
+assert.match(flightHtml([{ number: "SU 204", date: "", legId: "" }]), /Укажите дату вылета/);
+
+const unknown = assessFlightRows([{ number: "mu510", date: "12.12.2026", legId: "" }], baseTrip, stay);
+assert.equal(unknown.canSave, true);
+assert.equal(unknown.rows[0].unverified, true);
+assert.equal(unknown.rows[0].number, "MU 510");
+assert.equal(unknown.ready[0].from, "");
+assert.equal(unknown.ready[0].sample, false);
+const unknownHtml = flightHtml([{ number: "MU 510", date: "12.12.2026", legId: "" }]);
+assert.match(unknownHtml, /сведения не сверены/);
+assert.match(unknownHtml, /ut-dot-yellow/);
+assert.equal(unknownHtml.includes("is-idle"), false);
+assert.equal(unknownHtml.includes("OAG"), false);
+
+const outside = assessFlightRows([{ number: "MU 510", date: "21.12.2026", legId: "" }], baseTrip, stay);
+assert.equal(outside.canSave, true);
+assert.equal(outside.rows[0].outside, true);
+assert.match(flightHtml([{ number: "MU 510", date: "21.12.2026", legId: "" }]), /Дата вне поездки 12–20 декабря 2026\. Сохранить можно\./);
+
+const legs = assessFlightRows([{ number: "SU 204", date: "12.12.2026", legId: "kzn-sha" }], baseTrip, stay);
+assert.equal(legs.canSave, true);
+assert.equal(legs.rows[0].legs.length, 2);
+assert.equal(legs.ready[0].from, "Казань");
+assert.equal(legs.ready[0].to, "Шанхай");
+assert.equal(legs.ready[0].sample, true);
+const legsHtml = flightHtml([{ number: "SU 204", date: "12.12.2026", legId: "kzn-sha" }]);
+assert.match(legsHtml, /Пример, не расписание/);
+assert.match(legsHtml, /Москва — Казань/);
+assert.match(legsHtml, /Казань — Шанхай/);
+assert.equal(legsHtml.includes("is-idle"), false);
+
+const otherDay = assessFlightRows([{ number: "SU 204", date: "13.12.2026", legId: "" }], baseTrip, stay);
+assert.equal(otherDay.rows[0].duplicate, false);
+assert.equal(otherDay.rows[0].legs.length, 0);
+assert.equal(otherDay.canSave, true);
+
+const savedFlight = { id: "flt-1", number: "SU 204", date: "2026-12-12", from: "Казань", to: "Шанхай", sample: true };
+const duplicate = assessFlightRows(
+  [{ number: "SU 204", date: "12.12.2026", legId: "" }],
+  { ...baseTrip, flights: [savedFlight] },
+  stay,
+);
+assert.equal(duplicate.canSave, true);
+assert.equal(duplicate.rows[0].duplicate, true);
+const duplicateHtml = flightHtml([{ number: "SU 204", date: "12.12.2026", legId: "" }], [savedFlight]);
+assert.match(duplicateHtml, /Этот рейс уже есть в поездке/);
+assert.equal(duplicateHtml.includes("is-idle"), false);
+const sameNumberOtherDate = assessFlightRows(
+  [{ number: "SU 204", date: "13.12.2026", legId: "" }],
+  { ...baseTrip, flights: [savedFlight] },
+  stay,
+);
+assert.equal(sameNumberOtherDate.rows[0].duplicate, false);
+assert.equal(sameNumberOtherDate.canSave, true);
+
+const edited = readTripEdit({
+  origin: "Москва",
+  destination: "Пекин",
+  country: "Китай",
+  depart: "2026-12-12",
+  ret: "2026-12-20",
+}, { ...baseTrip, flights: [savedFlight], checks: ["entry", "docs"] });
+assert.equal(edited.trip.destination, "Пекин");
+assert.equal(edited.trip.country, "Китай");
+assert.equal(edited.trip.flights[0].id, "flt-1");
+assert.deepEqual(edited.trip.checks, ["entry", "docs"]);
+
+const marked = applyChecks(baseTrip, ["entry", "docs", "insurance"]);
+assert.equal(marked.stepsDone, 3);
+assert.equal(checklistCaption(marked), "Шаг 4 из 6: оплата");
+const progressStore = createPersonalStore({ local: createMemoryBackend(), cloud: null });
+await progressStore.write("trips", [marked]);
+const storedTrips = await progressStore.read("trips");
+assert.deepEqual(tripChecks(storedTrips[0]), ["entry", "docs", "insurance"]);
+const homeProgress = renderShell(shellState({
+  route: parseShellRoute("#/home"),
+  trips: storedTrips,
+}));
+const tripProgress = renderShell(shellState({
+  route: parseShellRoute("#/trip"),
+  trips: storedTrips,
+}));
+assert.match(homeProgress, /3 из 6/);
+assert.match(tripProgress, /3 из 6/);
+assert.match(tripProgress, /SU 204|Добавьте рейс|Шаг 4 из 6/);
+assert.match(tripProgress, /data-path="\/trip\/pay"/);
+assert.match(tripProgress, /data-path="\/trip\/transport"/);
+assert.match(tripProgress, /data-path="\/guide\/china"/);
+
+const withFlight = [{ ...marked, flights: [savedFlight] }];
+await progressStore.write("trips", withFlight);
+const viewed = renderShell(shellState({
+  route: parseShellRoute("#/trip"),
+  trips: await progressStore.read("trips"),
+}));
+assert.match(viewed, /SU 204 · 12\.12\.2026/);
+assert.match(viewed, /Казань — Шанхай/);
+assert.match(viewed, /Пример, не расписание/);
+assert.match(viewed, /Удалить/);
+assert.match(viewed, /сведения не сверены/);
+const removed = withFlight[0].flights.filter((item) => item.id !== "flt-1");
+await progressStore.write("trips", [{ ...withFlight[0], flights: removed }]);
+const afterDelete = renderShell(shellState({
+  route: parseShellRoute("#/trip"),
+  trips: await progressStore.read("trips"),
+}));
+assert.equal(afterDelete.includes("SU 204 · 12.12.2026"), false);
+
+const paySlot = renderShell(shellState({
+  route: parseShellRoute("#/trip/pay"),
+  trips: [baseTrip],
+}));
+assert.match(paySlot, /data-slot="trip-pay"/);
+assert.match(paySlot, /Москва · Шанхай · Китай/);
+assert.match(paySlot, /12–20 декабря 2026/);
+assert.match(paySlot, /data-shell="back"/);
+for (const word of ["Сбер", "Тинькофф", "Т-Банк", "Альфа", "ВТБ", "OAG", "CAAC"]) {
+  assert.equal(paySlot.includes(word), false, word);
+}
+
+const emptyTrip = renderShell(shellState({
+  route: parseShellRoute("#/trip"),
+  trips: [],
+  outside: true,
+}));
+assert.match(emptyTrip, /Пока нет поездки/);
+assert.match(emptyTrip, /Сохранить поездку/);
+assert.match(emptyTrip, /Нет поездок/);
+
+const hostileTrip = renderShell(shellState({
+  route: parseShellRoute("#/trip"),
+  trips: [{ ...DEMO_TRIP, destination: "<script>", country: "<img>", flights: [{ id: "x", number: "MU 1", date: "2026-12-12", from: "<img src=x>", to: "Шанхай" }] }],
+}));
+assert.equal(hostileTrip.includes("<script>"), false);
+assert.equal(hostileTrip.includes("<img"), false);
 
 console.log("shell modules ok");
