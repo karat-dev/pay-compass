@@ -668,7 +668,7 @@ def test_workflow_schedule_and_push_stay_read_only():
     text = WORKFLOW.read_text(encoding="utf-8")
     script = (ROOT / "scripts" / "fact_check_report.py").read_text(encoding="utf-8")
     assert "workflow_dispatch:" in text
-    assert "cron: '0 6 * * 1'" in text
+    assert "cron: '7 6 * * 1'" in text
     assert "branches:\n      - main" in text
     assert "database/data/countries.json" in text
     assert "database/data/route_model/measurements.json" in text

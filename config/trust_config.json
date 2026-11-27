@@ -178,7 +178,7 @@
     "schedules": [
       {
         "id": "fact_check",
-        "minute": 0,
+        "minute": 7,
         "hour": 6,
         "day_of_month": null,
         "day_of_week": 1,
@@ -186,7 +186,7 @@
       },
       {
         "id": "transfers",
-        "minute": 0,
+        "minute": 7,
         "hour": 6,
         "day_of_month": 10,
         "day_of_week": null,
@@ -194,7 +194,7 @@
       },
       {
         "id": "entry_rules",
-        "minute": 0,
+        "minute": 7,
         "hour": 6,
         "day_of_month": 3,
         "day_of_week": null,
@@ -203,7 +203,7 @@
       },
       {
         "id": "cache",
-        "minute": 0,
+        "minute": 7,
         "hour": 6,
         "day_of_month": 7,
         "day_of_week": null,
