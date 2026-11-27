@@ -174,6 +174,119 @@ async function exerciseTrip(client) {
   await waitFor(client, `document.body.innerText.includes("Москва → Пекин") && document.body.innerText.includes("3 из 6") ? "home" : ""`);
 }
 
+async function exerciseProfile(client) {
+  await evaluate(client, `document.querySelector(".ut-nav [data-path='/profile']").click()`);
+  await waitFor(client, `document.body.innerText.includes("Добавить паспорт") ? "before" : ""`);
+  await assertNoOverflow(client, "profile-before");
+  await evaluate(client, `document.querySelector("[data-path='/passport']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-form='passport']") ? "form" : ""`);
+  await assertNoOverflow(client, "passport-empty");
+  await evaluate(client, `document.querySelector("[data-shell-form='passport']").requestSubmit()`);
+  await waitFor(client, `document.body.innerText.includes("Укажите имя латиницей.") ? "err" : ""`);
+  await evaluate(client, `(() => {
+    const form = document.querySelector("[data-shell-form='passport']");
+    form.given.value = "Ivan";
+    form.given.dispatchEvent(new Event("input", { bubbles: true }));
+    form.surname.value = "Ivanov";
+    form.surname.dispatchEvent(new Event("input", { bubbles: true }));
+    form.number.value = "4510123456";
+    form.expires.value = "2031-08-15";
+    form.consent.checked = true;
+    form.requestSubmit();
+    return "sent";
+  })()`);
+  await waitFor(client, `document.body.innerText.includes("Гражданство РФ") && document.body.innerText.includes("15.08.2031") ? "saved" : ""`);
+  if (await evaluate(client, `document.body.innerText.includes("4510123456") ? "leak" : "clean"`) !== "clean") {
+    throw new Error("passport number is on the profile");
+  }
+  await assertNoOverflow(client, "profile-after");
+  await evaluate(client, `document.querySelector("[data-path='/loyalty']").click()`);
+  await waitFor(client, `document.querySelector("[data-slot='loyalty']") ? "wallet" : ""`);
+  await evaluate(client, `document.querySelector("[data-path='/loyalty/add']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-form='loyalty-add']") ? "add" : ""`);
+  await assertNoOverflow(client, "loyalty-add");
+  await evaluate(client, `(() => {
+    const form = document.querySelector("[data-shell-form='loyalty-add']");
+    form.programId.value = "turkish-airlines";
+    form.programId.dispatchEvent(new Event("change", { bubbles: true }));
+    return "picked";
+  })()`);
+  await evaluate(client, `(() => {
+    const form = document.querySelector("[data-shell-form='loyalty-add']");
+    form.number.value = "9988777390";
+    form.note.value = "золото";
+    if (form.consent) form.consent.checked = true;
+    form.requestSubmit();
+    return "sent";
+  })()`);
+  await waitFor(client, `document.body.innerText.includes("•••• 7390") && document.querySelector("[data-shell-screen='loyalty']") ? "card" : ""`);
+  if (await evaluate(client, `document.body.innerText.includes("9988777390") ? "leak" : "clean"`) !== "clean") {
+    throw new Error("card number is visible in the wallet");
+  }
+  const storedCard = await evaluate(client, `(() => {
+    const rows = JSON.parse(localStorage.getItem("ut.personal.loyalty") || "[]");
+    return rows[0] && rows[0].number;
+  })()`);
+  if (storedCard !== "9988777390") throw new Error(`card was not stored on the device (${storedCard})`);
+  await assertNoOverflow(client, "wallet");
+  await evaluate(client, `document.querySelector("[data-shell='loyalty-delete']").click()`);
+  await waitFor(client, `document.body.innerText.includes("Пока нет карт") ? "empty" : ""`);
+  await evaluate(client, `document.querySelector("[data-path='/guide/airlines']").click()`);
+  await waitFor(client, `document.body.innerText.includes("Авиакомпании и мили") && document.body.innerText.includes("Miles&Smiles") ? "ref" : ""`);
+  await assertNoOverflow(client, "loyalty-ref");
+  await evaluate(client, `(() => {
+    const input = document.querySelector("[data-shell-field='search']");
+    input.value = "Turkish";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    return "q";
+  })()`);
+  await waitFor(client, `document.body.innerText.includes("Miles&Smiles") && document.querySelector(".ut-result .ut-dot-yellow") && !document.body.innerText.includes("Pegasus") ? "hit" : ""`);
+  await assertNoOverflow(client, "loyalty-search");
+  await evaluate(client, `(() => {
+    const input = document.querySelector("[data-shell-field='search']");
+    input.value = "Qatar";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    return "q";
+  })()`);
+  await waitFor(client, `document.body.innerText.includes("Privilege Club") && document.querySelector(".ut-result .ut-dot-green") ? "green" : ""`);
+  await evaluate(client, `(() => {
+    const input = document.querySelector("[data-shell-field='search']");
+    input.value = "";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    document.querySelector("[data-shell='alliance'][data-id='sky']").click();
+    return "sky";
+  })()`);
+  await waitFor(client, `document.body.innerText.includes("Аэрофлот Бонус") && !document.body.innerText.includes("Miles&Smiles") ? "sky" : ""`);
+  await evaluate(client, `document.querySelector(".ut-nav [data-path='/profile']").click()`);
+  await waitFor(client, `document.querySelector("[data-path='/settings']") ? "profile" : ""`);
+  await evaluate(client, `document.querySelector("[data-path='/settings']").click()`);
+  await waitFor(client, `document.querySelector("[data-key='currency']") ? "settings" : ""`);
+  await assertNoOverflow(client, "settings");
+  await evaluate(client, `document.querySelector("[data-key='currency']").click()`);
+  await waitFor(client, `document.body.innerText.includes("Доллары США") ? "currency" : ""`);
+  await evaluate(client, `document.querySelector("[data-key='notifications']").click()`);
+  await waitFor(client, `document.body.innerText.includes("Выключены") ? "off" : ""`);
+  await evaluate(client, `document.querySelector("[data-shell='revoke']").click()`);
+  await waitFor(client, `document.body.innerText.includes("Отозвать согласие?") ? "sheet" : ""`);
+  await assertNoOverflow(client, "revoke");
+  await evaluate(client, `document.querySelector("[data-shell='sheet-ok']").click()`);
+  await waitFor(client, `document.body.innerText.includes("Добавить паспорт") && document.querySelector("[data-shell-screen='profile']") ? "revoked" : ""`);
+  const after = await evaluate(client, `(() => {
+    const trips = JSON.parse(localStorage.getItem("ut.personal.trips") || "[]");
+    const settings = JSON.parse(localStorage.getItem("ut.personal.settings") || "{}");
+    return {
+      destination: trips[0] && trips[0].destination,
+      passport: localStorage.getItem("ut.personal.passport"),
+      loyalty: localStorage.getItem("ut.personal.loyalty"),
+      consent: settings.consentAt || "",
+    };
+  })()`);
+  if (!after || after.destination !== "Пекин" || after.passport || after.loyalty || after.consent) {
+    throw new Error(`revoke did not clear personal data ${JSON.stringify(after)}`);
+  }
+  await assertNoOverflow(client, "profile-revoked");
+}
+
 async function waitFor(client, expression) {
   const started = Date.now();
   while (Date.now() - started < 8000) {
@@ -285,6 +398,7 @@ try {
   if (Math.abs(measured.glyphCenter - measured.buttonCenter) > 1) {
     throw new Error(`question mark is off center ${JSON.stringify(measured)}`);
   }
+  await exerciseProfile(client);
   if (problems.length) throw new Error(problems.join("\n"));
   console.log(JSON.stringify({ ok: true, ...measured }));
   ws.close();
