@@ -97,14 +97,75 @@ CREATE POLICY visa_rules_public_read ON public.visa_rules
     USING (true);
 
 -- Data API: since 2026-10-30 new public tables get no default grants.
--- anon and authenticated can read. Writes stay on service_role.
--- Public SELECT includes legacy, which keeps the original object and its
--- internal source notes. source_url excludes Telegram and forum links.
--- Confirm that exposure before merging to main.
+-- Writes stay on service_role.
+-- legacy holds the original object, including internal source notes.
+-- anon and authenticated have no SELECT on that column. Supabase documents
+-- that a role with column privileges cannot use SELECT * on the table (the
+-- API equivalent fails too), so the notes are not returned. Named public
+-- columns still read. guide_facts_public is the select=* shape: it has no
+-- legacy column, runs as the invoker, and still passes through RLS.
 REVOKE ALL ON TABLE public.guide_facts, public.visa_rules FROM anon, authenticated;
-GRANT SELECT ON TABLE public.guide_facts, public.visa_rules TO anon, authenticated;
+
+GRANT SELECT (
+    id,
+    source_key,
+    country_slug,
+    topic,
+    fact,
+    zone,
+    status,
+    source_url,
+    source_type,
+    source_is_official,
+    checked_at,
+    verified_by,
+    max_zone,
+    needs_owner_check,
+    decision_needed,
+    unknown_zone,
+    instruction_id,
+    step_n,
+    issuer,
+    payment_system,
+    created_at,
+    updated_at
+) ON TABLE public.guide_facts TO anon, authenticated;
+
+GRANT SELECT ON TABLE public.visa_rules TO anon, authenticated;
+
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.guide_facts, public.visa_rules TO service_role;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO service_role;
+
+DROP VIEW IF EXISTS public.guide_facts_public;
+CREATE VIEW public.guide_facts_public
+WITH (security_invoker = true) AS
+SELECT
+    id,
+    source_key,
+    country_slug,
+    topic,
+    fact,
+    zone,
+    status,
+    source_url,
+    source_type,
+    source_is_official,
+    checked_at,
+    verified_by,
+    max_zone,
+    needs_owner_check,
+    decision_needed,
+    unknown_zone,
+    instruction_id,
+    step_n,
+    issuer,
+    payment_system,
+    created_at,
+    updated_at
+FROM public.guide_facts;
+
+REVOKE ALL ON TABLE public.guide_facts_public FROM anon, authenticated;
+GRANT SELECT ON TABLE public.guide_facts_public TO anon, authenticated;
 
 -- GUIDE_FACTS_SEED_BEGIN
 -- Idempotent seed. Re-running updates the same source_key / visa key.

@@ -31,6 +31,52 @@ BANK_TOKEN = re.compile(
     r"Газпромбанк|(?<![А-Яа-яA-Za-z])Сбер(?![А-Яа-яA-Za-z])|\bBoG\b"
 )
 
+_PUBLIC_GUIDE_FACT_COLUMNS = (
+    "id",
+    "source_key",
+    "country_slug",
+    "topic",
+    "fact",
+    "zone",
+    "status",
+    "source_url",
+    "source_type",
+    "source_is_official",
+    "checked_at",
+    "verified_by",
+    "max_zone",
+    "needs_owner_check",
+    "decision_needed",
+    "unknown_zone",
+    "instruction_id",
+    "step_n",
+    "issuer",
+    "payment_system",
+    "created_at",
+    "updated_at",
+)
+
+
+def _anon_guide_fact_columns(sql: str) -> tuple:
+    match = re.search(
+        r"GRANT SELECT \((.*?)\) ON TABLE public\.guide_facts TO anon, authenticated;",
+        sql,
+        re.S,
+    )
+    assert match, "column-level SELECT grant for guide_facts is missing"
+    return tuple(part.strip() for part in match.group(1).split(",") if part.strip())
+
+
+def _view_sql(sql: str) -> str:
+    match = re.search(
+        r"CREATE VIEW public\.guide_facts_public\b.*?FROM public\.guide_facts;",
+        sql,
+        re.S,
+    )
+    assert match, "guide_facts_public view is missing"
+    return match.group(0)
+
+
 FK_INDEXES = (
     "idx_card_instructions_country_id ON public.card_instructions (country_id)",
     "idx_raw_posts_source_id ON public.raw_posts (source_id)",
@@ -210,8 +256,15 @@ def test_migration_sql_is_additive_and_matches_the_seed():
         assert f"CREATE INDEX IF NOT EXISTS {column_index}" in sql
     assert "ENABLE ROW LEVEL SECURITY" in sql
     assert "TO anon, authenticated" in sql
-    assert "GRANT SELECT ON TABLE public.guide_facts, public.visa_rules TO anon, authenticated;" in sql
+    assert "GRANT SELECT ON TABLE public.guide_facts, public.visa_rules TO anon, authenticated;" not in sql
+    assert "GRANT SELECT ON TABLE public.visa_rules TO anon, authenticated;" in sql
     assert "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.guide_facts, public.visa_rules TO service_role;" in sql
+    granted = _anon_guide_fact_columns(sql)
+    assert "legacy" not in granted
+    assert granted == _PUBLIC_GUIDE_FACT_COLUMNS
+    view_sql = _view_sql(sql)
+    assert "security_invoker = true" in view_sql
+    assert "legacy" not in view_sql.split("SELECT", 1)[1].split("FROM", 1)[0]
     for line in sql.splitlines():
         if "TO anon" in line or "TO authenticated" in line:
             assert "INSERT" not in line
