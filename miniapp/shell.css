@@ -501,8 +501,27 @@ button.ut-tile {
 .ut-panel { margin: 10px 16px 0; padding: 0 14px; border-radius: 18px; }
 .ut-pay-item { padding: 8px 0; border-bottom: 1px solid #e2e5ef; }
 .ut-pay-item:last-child { border-bottom: 0; }
-.ut-pay-item b { display: block; font-size: 14px; line-height: 1.35; }
+.ut-pay-item b {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.ut-pay-item.is-open b { display: block; -webkit-line-clamp: unset; }
 .ut-pay-item span { display: block; margin-top: 2px; font-size: 11px; color: #697488; }
+.ut-pay-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  color: inherit;
+}
+.ut-pay-empty { margin: 0; padding: 12px 0; font-size: 13px; color: #697488; line-height: 1.45; }
 .ut-form { margin: 0 16px; }
 .ut-form label { display: block; margin-top: 10px; font-size: 12px; color: var(--ut-muted); }
 .ut-form input {
@@ -970,3 +989,81 @@ button.ut-tile {
 }
 .ut-switch.is-on { background: var(--ut-blue); }
 .ut-switch.is-on::after { left: 16px; }
+
+.ut-tools { display: flex; gap: 16px; margin: 10px 16px 0; }
+.ut-tools button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #697488;
+  font-size: 11px;
+}
+.ut-step {
+  margin: 0 16px 8px;
+  font-size: 11px;
+  color: var(--ut-blue);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.ut-seg-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.ut-seg-head h2, .ut-seg h2, .ut-block-title { margin: 0; font-size: 15px; font-weight: 750; line-height: 1.3; min-width: 0; }
+.ut-seg h3, .ut-match-name { margin: 8px 0 0; font-size: 13px; }
+.ut-stamp {
+  flex: 0 1 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 48%;
+  font-size: 10px;
+  color: #778194;
+  text-align: right;
+}
+.ut-sub { margin: 6px 0 0; font-size: 12px; line-height: 1.45; color: #5b6475; }
+.ut-mark { margin: 4px 0 0; font-size: 10px; color: #8a8395; line-height: 1.4; }
+.ut-note-tight { margin: 6px 0 0; }
+.ut-chips-tight { margin: 6px 0 0; }
+.ut-seg .ut-chips, .ut-slot .ut-chips, .ut-form .ut-chips { margin-left: 0; margin-right: 0; }
+.ut-seg .ut-label, .ut-form .ut-label, .ut-slot .ut-label { margin-left: 0; margin-right: 0; }
+.ut-seg .ut-primary, .ut-seg .ut-secondary, .ut-slot .ut-primary, .ut-inline-btn {
+  width: 100%;
+  margin: 10px 0 0;
+}
+.ut-foot { padding-right: 64px; }
+.ut-count { margin: 4px 0 0; text-align: right; font-size: 11px; color: #697488; }
+.ut-count.is-bad { color: #c0392b; font-weight: 700; }
+.ut-suggest {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid #bed5f5;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ut-blue);
+  text-align: left;
+  font-size: 13px;
+}
+.ut-skip {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  color: #697488;
+  font-size: 13px;
+  text-align: center;
+}
+.ut-okbox { background: #e9f5ef; }
+.ut-divider { height: 1px; background: #dfe4ef; margin: 8px 0; }
+.ut-match-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 5px;
+  font-size: 12px;
+  color: #5b6475;
+}
+.ut-match-row > span { min-width: 0; }
+.ut-st { display: inline-flex; align-items: center; text-align: right; }
+.ut-st .ut-dot { margin-right: 5px; }

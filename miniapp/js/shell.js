@@ -1,6 +1,15 @@
 /** Boots the Mini App shell: tabs, inner screens, support toast, on-device personal data. */
 
 import { programById } from "./loyalty_catalog.js";
+import { systemsForKind } from "./payment_catalog.js";
+import {
+  FILTER_MODES,
+  SORT_MODES,
+  keptPaymentKeys,
+  nextMode,
+  readExperience,
+  readPaymentMethod,
+} from "./payment_flow.js";
 import { PERSONAL_SECTIONS, createPersonalStore } from "./personal_store.js";
 import {
   bookingName,
@@ -62,6 +71,14 @@ export async function startShell(root) {
     sheet: "",
     promoOpen: false,
     payGroup: "system",
+    payFilter: "all",
+    paySort: "added",
+    payOpenId: "",
+    payDraft: null,
+    payReturn: "",
+    payExperienceId: "",
+    payExperienceDraft: null,
+    experienceOpen: false,
     notice: "",
     focusSearch: false,
     flightDraft: null,
@@ -99,6 +116,17 @@ export async function startShell(root) {
         }
       }
       state.flightFocus = null;
+    }
+    if (state.payFocus) {
+      const focus = state.payFocus;
+      const field = root.querySelector(`[data-shell-field="${focus.field}"]`);
+      if (field) {
+        field.focus();
+        if (field.setSelectionRange && focus.start != null && focus.end != null) {
+          field.setSelectionRange(focus.start, focus.end);
+        }
+      }
+      state.payFocus = null;
     }
   }
 
@@ -186,6 +214,21 @@ export async function startShell(root) {
       }
       return;
     }
+    if (field.dataset.shellField === "pay-country" || field.dataset.shellField === "pay-title" || field.dataset.shellField === "pay-exp-country") {
+      syncDrafts();
+      if (state.payDraft && field.name === "title" && state.payDraft.errors) {
+        const errors = { ...state.payDraft.errors };
+        delete errors.title;
+        state.payDraft.errors = errors;
+      }
+      state.payFocus = {
+        field: field.dataset.shellField,
+        start: field.selectionStart,
+        end: field.selectionEnd,
+      };
+      draw(false);
+      return;
+    }
     if (field.dataset.shellField !== "flight-number" && field.dataset.shellField !== "flight-date") return;
     const index = Number(field.dataset.index);
     if (!state.flightDraft || !state.flightDraft[index]) return;
@@ -218,6 +261,16 @@ export async function startShell(root) {
     if (form.dataset.shellForm === "loyalty-add") {
       event.preventDefault();
       saveLoyalty(form);
+      return;
+    }
+    if (form.dataset.shellForm === "pay-add") {
+      event.preventDefault();
+      savePayment(form);
+      return;
+    }
+    if (form.dataset.shellForm === "pay-experience") {
+      event.preventDefault();
+      saveExperience(form);
       return;
     }
     if (form.dataset.shellForm === "trip") {
@@ -281,6 +334,9 @@ export async function startShell(root) {
       state.passportDraft = null;
       state.loyaltyDraft = null;
       state.editingId = "";
+      state.payDraft = null;
+      state.payExperienceDraft = null;
+      state.experienceOpen = false;
     }
     keepDraft = false;
     if (!keepNotice) state.notice = "";
@@ -321,6 +377,22 @@ export async function startShell(root) {
     if (loyalty) {
       const errors = (state.loyaltyDraft && state.loyaltyDraft.errors) || {};
       state.loyaltyDraft = { ...namedValues(loyalty), errors };
+    }
+    const pay = root.querySelector("[data-shell-form='pay-add']");
+    if (pay) {
+      const prev = state.payDraft || {};
+      state.payDraft = { ...prev, ...namedValues(pay), errors: prev.errors || {} };
+    }
+    const experience = root.querySelector("[data-shell-form='pay-experience']");
+    if (experience) {
+      const prev = state.payExperienceDraft || {};
+      state.payExperienceDraft = {
+        ...prev,
+        comment: experience.comment ? experience.comment.value : (prev.comment || ""),
+        query: experience.countryQuery ? experience.countryQuery.value : "",
+        countries: prev.countries || [],
+        channels: prev.channels || [],
+      };
     }
   }
 
@@ -389,6 +461,67 @@ export async function startShell(root) {
     });
   }
 
+  function savePayment(form) {
+    const values = { ...(state.payDraft || {}), ...namedValues(form) };
+    const parsed = readPaymentMethod(values, { needConsent: !state.settings.consentAt });
+    if (parsed.errors) {
+      state.payDraft = { ...values, errors: parsed.errors };
+      state.notice = "";
+      draw(false);
+      return;
+    }
+    const method = keptPaymentKeys({
+      ...parsed.method,
+      id: `pay-${Date.now().toString(36)}`,
+      experience: null,
+    });
+    state.payments = state.payments.concat(method);
+    state.payDraft = null;
+    state.payExperienceId = method.id;
+    state.experienceOpen = false;
+    state.payExperienceDraft = null;
+    store.write("payments", state.payments).then(() => rememberConsent()).then(() => {
+      go("/pay/experience", "Способ сохранён на этом устройстве.");
+    }).catch(() => {
+      state.notice = "Не удалось сохранить данные на этом устройстве. Обновите страницу.";
+      draw(false);
+    });
+  }
+
+  function finishExperience(notice) {
+    const back = state.payReturn || "/pay";
+    state.payReturn = "";
+    state.payExperienceId = "";
+    state.payExperienceDraft = null;
+    state.experienceOpen = false;
+    go(back, notice);
+  }
+
+  function saveExperience(form) {
+    const draft = state.payExperienceDraft || {};
+    // TODO: отправка анонимного опыта — отдельная задача. Сейчас опыт остаётся только в personal_store, раздел payments.
+    const parsed = readExperience({
+      countries: draft.countries || [],
+      channels: draft.channels || [],
+      result: draft.result || "",
+      when: draft.when || "",
+      comment: form.comment ? form.comment.value : "",
+    });
+    const id = state.payExperienceId;
+    if (id) {
+      state.payments = state.payments.map((item) => (
+        item.id === id ? { ...item, experience: parsed.experience } : item
+      ));
+    }
+    const write = id ? store.write("payments", state.payments) : Promise.resolve();
+    write.then(() => {
+      finishExperience(id ? "Опыт сохранён на этом устройстве." : "");
+    }).catch(() => {
+      state.notice = "Не удалось сохранить данные на этом устройстве. Обновите страницу.";
+      draw(false);
+    });
+  }
+
   async function handle(el) {
     syncDrafts();
     const action = el.dataset.shell;
@@ -397,6 +530,13 @@ export async function startShell(root) {
       return;
     }
     if (action === "back") {
+      if ((state.route.name === "pay-add" || state.route.name === "pay-experience") && state.payReturn) {
+        const target = state.payReturn;
+        state.payReturn = "";
+        state.payDraft = null;
+        go(target);
+        return;
+      }
       const target = backTarget(state.route);
       if (target) go(target);
       return;
@@ -487,6 +627,114 @@ export async function startShell(root) {
     }
     if (action === "pay-group") {
       state.payGroup = el.dataset.group || "system";
+      draw(false);
+      return;
+    }
+    if (action === "pay-filter") {
+      state.payFilter = nextMode(FILTER_MODES, state.payFilter);
+      draw(false);
+      return;
+    }
+    if (action === "pay-sort") {
+      state.paySort = nextMode(SORT_MODES, state.paySort);
+      draw(false);
+      return;
+    }
+    if (action === "pay-add-return") {
+      state.payReturn = el.dataset.return || "";
+      state.payDraft = null;
+      go("/pay/add");
+      return;
+    }
+    if (action === "pay-kind" || action === "pay-system" || action === "pay-format") {
+      const key = action === "pay-kind" ? "kind" : action === "pay-system" ? "system" : "format";
+      const next = {
+        ...(state.payDraft || {}),
+        [key]: el.dataset.id || "",
+        errors: { ...((state.payDraft && state.payDraft.errors) || {}) },
+      };
+      delete next.errors[key];
+      if (key === "kind") {
+        const allowed = systemsForKind(next.kind);
+        if (!allowed.includes(next.system)) next.system = next.kind === "cash" ? "cash" : "";
+        if (next.kind === "card" && !next.format) next.format = "physical";
+        if (next.kind !== "card") next.format = "";
+      }
+      state.payDraft = next;
+      draw(false);
+      return;
+    }
+    if (action === "pay-country") {
+      const errors = { ...((state.payDraft && state.payDraft.errors) || {}) };
+      delete errors.country;
+      state.payDraft = {
+        ...(state.payDraft || {}),
+        country: el.dataset.country || "",
+        countryIso: (el.dataset.iso || "").toUpperCase(),
+        countryQuery: el.dataset.country || "",
+        errors,
+      };
+      draw(false);
+      return;
+    }
+    if (action === "pay-open") {
+      const id = el.dataset.id || "";
+      state.payOpenId = state.payOpenId === id ? "" : id;
+      draw(false);
+      return;
+    }
+    if (action === "pay-delete") {
+      const id = el.dataset.id || "";
+      state.payments = state.payments.filter((item, index) => (item.id || `idx-${index}`) !== id);
+      state.payOpenId = "";
+      await store.write("payments", state.payments);
+      state.notice = "Способ удалён с этого устройства.";
+      draw(false);
+      return;
+    }
+    if (action === "experience-open") {
+      state.experienceOpen = true;
+      draw(false);
+      return;
+    }
+    if (action === "experience-skip") {
+      finishExperience("");
+      return;
+    }
+    if (action === "experience-country") {
+      const name = el.dataset.country || "";
+      const draft = { ...(state.payExperienceDraft || {}) };
+      const countries = Array.isArray(draft.countries) ? draft.countries.slice() : [];
+      if (name && !countries.includes(name)) countries.push(name);
+      draft.countries = countries;
+      draft.query = "";
+      state.payExperienceDraft = draft;
+      draw(false);
+      return;
+    }
+    if (action === "experience-country-remove") {
+      const name = el.dataset.country || "";
+      const draft = { ...(state.payExperienceDraft || {}) };
+      draft.countries = (draft.countries || []).filter((item) => item !== name);
+      state.payExperienceDraft = draft;
+      draw(false);
+      return;
+    }
+    if (action === "experience-channel") {
+      const id = el.dataset.id || "";
+      const draft = { ...(state.payExperienceDraft || {}) };
+      const channels = Array.isArray(draft.channels) ? draft.channels.slice() : [];
+      draft.channels = channels.includes(id) ? channels.filter((item) => item !== id) : channels.concat(id);
+      state.payExperienceDraft = draft;
+      draw(false);
+      return;
+    }
+    if (action === "experience-result" || action === "experience-when") {
+      const key = action === "experience-result" ? "result" : "when";
+      const draft = { ...(state.payExperienceDraft || {}) };
+      const id = el.dataset.id || "";
+      draft[key] = draft[key] === id ? "" : id;
+      state.payExperienceDraft = draft;
       draw(false);
       return;
     }

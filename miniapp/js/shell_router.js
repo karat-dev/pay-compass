@@ -28,12 +28,21 @@ export function parseShellRoute(hash) {
   if (head === "guide" && parts[1] === "airlines") {
     return { name: "loyalty-ref", tab: "guide", inner: true, slug: "" };
   }
+  if (head === "guide" && parts[1] && parts[2] === "pay") {
+    return { name: "country-pay", tab: "guide", inner: true, slug: parts[1] };
+  }
   if (head === "guide" && parts[1]) {
     return { name: "country", tab: "guide", inner: true, slug: parts[1] };
   }
   if (head === "guide") return { name: "guide", tab: "guide", inner: false, slug: "" };
   if (head === "loyalty" && parts[1] === "add") {
     return { name: "loyalty-add", tab: "profile", inner: true, slug: "" };
+  }
+  if (head === "pay" && parts[1] === "add") {
+    return { name: "pay-add", tab: "profile", inner: true, slug: "" };
+  }
+  if (head === "pay" && parts[1] === "experience") {
+    return { name: "pay-experience", tab: "profile", inner: true, slug: "" };
   }
   if (PROFILE_INNER.has(head)) return { name: head, tab: "profile", inner: true, slug: "" };
   if (head === "trip") {
@@ -50,7 +59,9 @@ export function parseShellRoute(hash) {
 export function backTarget(route) {
   if (!route) return "";
   if (route.name === "country" || route.name === "loyalty-ref") return "/guide";
+  if (route.name === "country-pay") return `/guide/${route.slug || ""}`;
   if (route.name === "loyalty-add") return "/loyalty";
+  if (route.name === "pay-add" || route.name === "pay-experience") return "/pay";
   if (route.inner && route.tab === "profile") return "/profile";
   if (route.inner && route.tab === "trip") return "/trip";
   return "";

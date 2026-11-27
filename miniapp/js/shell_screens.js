@@ -10,6 +10,32 @@ import {
   programInitials,
 } from "./loyalty_catalog.js";
 import {
+  CHINA_GUIDE,
+  COUNTRIES,
+  PAYMENT_CATALOG,
+  countryFlag,
+  searchCountries,
+  systemLabel,
+  systemsForKind,
+} from "./payment_catalog.js";
+import {
+  CARD_FORMATS,
+  FILTER_MODES,
+  GROUP_MODES,
+  MATCH_CHANNELS,
+  MATCH_LABELS,
+  PAYMENT_KINDS,
+  SORT_MODES,
+  filterPayments,
+  groupPayments,
+  joinNames,
+  matchDot,
+  matchMethod,
+  modeLabel,
+  presentPayment,
+  sortPayments,
+} from "./payment_flow.js";
+import {
   CITIZENSHIPS,
   bookingName,
   cardLooksTypical,
@@ -108,13 +134,6 @@ const COUNTRY_TITLES = {
   airlines: "Авиакомпании и мили",
 };
 
-const EXAMPLE_PAYMENTS = [
-  { title: "Карта РФ", detail: "🇷🇺 Россия" },
-  { title: "Мир", detail: "🇷🇺 Россия · физическая" },
-  { title: "UnionPay РФ", detail: "🇷🇺 Россия · физическая" },
-  { title: "Alipay", detail: "Платёжное приложение" },
-];
-
 const NAV = [
   ["home", "/home", "Главная", '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>'],
   ["trip", "/trip", "Поездка", '<path d="M2 16l20-6-20-6 4 6z"/><path d="M6 10h8"/>'],
@@ -178,6 +197,14 @@ export function shellState(extra = {}) {
     sheet: "",
     promoOpen: false,
     payGroup: "system",
+    payFilter: "all",
+    paySort: "added",
+    payOpenId: "",
+    payDraft: null,
+    payReturn: "",
+    payExperienceId: "",
+    payExperienceDraft: null,
+    experienceOpen: false,
     notice: "",
     focusSearch: false,
     flightDraft: null,
@@ -432,16 +459,63 @@ function renderChecklist(state) {
     <div data-slot="trip-checklist">${items}</div>`;
 }
 
+function checkedLine(zone, text) {
+  return `<span class="ut-stamp"><i class="ut-dot ut-dot-${zone}"></i>${esc(text)}</span>`;
+}
+
 function renderTripPay(state) {
   const trip = activeTrip(state);
   if (!trip) return renderNeedTrip("Оплата");
   const place = [trip.origin || "Москва", trip.destination, trip.country].filter(Boolean).join(" · ");
+  const slug = guideSlugFor(trip);
+  const guide = slug && PAYMENT_CATALOG[slug] ? PAYMENT_CATALOG[slug].guide : null;
+  const payments = Array.isArray(state.payments) ? state.payments : [];
+  const names = joinNames(payments.map((item) => presentPayment(item).title));
+  const countryName = (slug && COUNTRY_TITLES[slug]) || trip.country || "этой стране";
+  const matchPath = slug ? `/guide/${slug}/pay` : "/pay";
+  const mine = payments.length
+    ? `<p class="ut-sub">В профиле сохранены ${esc(names)}. Сверка с ${esc(countryName)} ещё не сделана.</p>
+       <button type="button" class="ut-secondary ut-inline-btn" data-shell="route" data-path="${esc(matchPath)}">Сверить с моими способами</button>
+       <button type="button" class="ut-inline-link" data-shell="route" data-path="${esc(matchPath)}">Полное сравнение ›</button>`
+    : `<p class="ut-sub">В профиле пока нет способов оплаты. Добавьте их — сверка покажет, какие подходят для этой страны.</p>
+       <button type="button" class="ut-secondary ut-inline-btn" data-shell="pay-add-return" data-return="${esc(matchPath)}">Добавить способы оплаты</button>`;
+  const payBlock = guide
+    ? `<section class="ut-seg">
+        <div class="ut-seg-head"><h2>💳 Чем платить</h2>${checkedLine("green", `проверено ${formatDotDate(guide.checked)}`)}</div>
+        <div class="ut-chips ut-chips-tight">${guide.payChips.map((item) => `<span class="ut-chip">${esc(item)}</span>`).join("")}</div>
+        <p class="ut-mark">Оплата в стране · не список приёма везде.</p>
+        <p class="ut-sub">${esc(guide.payText)}</p>
+        <p class="ut-note ut-note-tight">${esc(guide.payNote)}</p>
+      </section>
+      <section class="ut-seg">
+        <div class="ut-seg-head"><h2>💰 Наличные и снятие</h2>${checkedLine("green", `проверено ${formatDotDate(guide.checked)}`)}</div>
+        <p class="ut-sub">${esc(guide.cashText)}</p>
+        <p class="ut-note ut-note-tight">${esc(guide.cashGap)}</p>
+      </section>`
+    : `<section class="ut-seg">
+        <div class="ut-seg-head"><h2>💳 Чем платить</h2>${checkedLine("yellow", "сведения не сверены")}</div>
+        <p class="ut-sub">Для этой страны в справочнике оплаты пока нет проверенных сведений. Держите запасной способ.</p>
+      </section>`;
   return `${headerBar("Оплата", true)}
     <p class="ut-lead">${esc(place)} · ${esc(formatStay(trip.depart, trip.ret))}</p>
-    <section class="ut-slot" data-slot="trip-pay">
-      <p class="ut-lead">Что подготовить к оплате в поездке, подключим следующим шагом.</p>
-      <p class="ut-fine">Цены билетов не показываем. Для сверки откройте способы оплаты в профиле: там страна выпуска и платёжная система.</p>
-    </section>`;
+    <div data-slot="trip-pay">
+      ${payBlock}
+      <section class="ut-seg">
+        <div class="ut-seg-head"><h2>🔗 Мои способы в этой стране</h2>${checkedLine("yellow", "нужно действие")}</div>
+        ${mine}
+      </section>
+      <section class="ut-seg">
+        <div class="ut-seg-head"><h2>⚠️ Запасной вариант</h2></div>
+        <p class="ut-sub">${esc(guide ? guide.backup : "Не полагайтесь на один способ: карта, приложение и немного наличных закрывают разные ситуации.")}</p>
+      </section>
+      <section class="ut-seg">
+        <div class="ut-seg-head"><h2>💡 До вылета</h2>${checkedLine("yellow", "нужно действие")}</div>
+        <p class="ut-sub">${esc(guide ? guide.before : "Привяжите карту и сделайте тестовую оплату до вылета.")}</p>
+      </section>
+      <p class="ut-fine ut-foot">Это пример сведений, не подтверждение приёма.</p>
+      <button type="button" class="ut-primary ut-save" data-shell="soon" data-text="Выберите разделы и поездку">Сохранить</button>
+      <p class="ut-caption">Выберите разделы и поездку</p>
+    </div>`;
 }
 
 function renderTripTransport(state) {
@@ -510,38 +584,55 @@ function renderFlightAdd(state) {
 }
 
 function paymentView(item) {
-  return {
-    title: item.title || item.system || "Способ оплаты",
-    detail: item.detail || [item.country, item.kind].filter(Boolean).join(" · "),
-  };
+  return presentPayment(item);
 }
 
 function renderPay(state) {
-  const stored = Array.isArray(state.payments) ? state.payments.map(paymentView) : [];
-  const rows = (stored.length ? stored : EXAMPLE_PAYMENTS).map((item) => (
-    `<div class="ut-pay-item"><b>${esc(item.title)}</b><span>${esc(item.detail)}</span></div>`
+  const stored = Array.isArray(state.payments) ? state.payments : [];
+  const filtered = sortPayments(filterPayments(stored, state.payFilter), state.paySort);
+  const groups = groupPayments(filtered, state.payGroup || "system");
+  const chips = GROUP_MODES.map((item) => (
+    `<button type="button" class="ut-chip${state.payGroup === item.id ? " is-on" : ""}" data-shell="pay-group" data-group="${item.id}" aria-pressed="${state.payGroup === item.id ? "true" : "false"}">${item.label}</button>`
   )).join("");
-  const groups = [
-    ["system", "По платёжной системе"],
-    ["country", "По стране выпуска"],
-    ["bank", "По банку"],
-  ];
-  const chips = groups.map(([id, label]) => (
-    `<button type="button" class="ut-chip${state.payGroup === id ? " is-on" : ""}" data-shell="pay-group" data-group="${id}" aria-pressed="${state.payGroup === id ? "true" : "false"}">${label}</button>`
-  )).join("");
-  const sample = stored.length ? "" : `<p class="ut-fine">Пример оформления. Все записи и результаты демонстрационные, не подтверждение приёма.</p>`;
+  const body = stored.length
+    ? groups.map((group) => {
+      const rows = group.items.map((item, index) => payRow(state, item, index)).join("");
+      return `<p class="ut-group-label">${esc(group.title)}</p><div class="ut-panel">${rows}</div>`;
+    }).join("")
+    : `<p class="ut-group-label">Сохранённые способы</p><div class="ut-panel"><p class="ut-pay-empty">Пока нет сохранённых способов. Добавьте карту, платёжное приложение или наличные — без номеров и сроков.</p></div>`;
+  const emptyFilter = stored.length && !filtered.length
+    ? `<p class="ut-fine">Нет способов в этом фильтре.</p>`
+    : "";
   return `${headerBar("Мои способы оплаты", true)}
     <div data-slot="pay">
       <p class="ut-lead">Добавьте в общих чертах, чем вы пользуетесь: карты, платёжные приложения и наличные. Для выбранной страны покажем, какие из ваших способов, по нашим данным, подходят для оплаты и снятия наличных.</p>
       <p class="ut-note">Номера карт и другие платёжные реквизиты не нужны.</p>
       <p class="ut-label">Группировать</p>
       <div class="ut-chips">${chips}</div>
-      <p class="ut-group-label">Сохранённые способы</p>
-      <div class="ut-panel">${rows}</div>
-      <button type="button" class="ut-secondary" data-shell="soon" data-text="Форму добавления подключим следующим шагом. Укажите страну выпуска и платёжную систему.">+ Добавить способ оплаты</button>
-      <p class="ut-fine">Название — до 30 символов. Имеющиеся сведения не гарантируют приём везде.</p>
-      ${sample}
+      <div class="ut-tools">
+        <button type="button" data-shell="pay-filter">Фильтр · ${esc(modeLabel(FILTER_MODES, state.payFilter))} ▾</button>
+        <button type="button" data-shell="pay-sort">Сортировка · ${esc(modeLabel(SORT_MODES, state.paySort))} ▾</button>
+      </div>
+      ${body}
+      ${emptyFilter}
+      <button type="button" class="ut-secondary" data-shell="route" data-path="/pay/add">+ Добавить способ оплаты</button>
+      <p class="ut-fine ut-foot">Название — до 30 символов. Имеющиеся сведения не гарантируют приём везде.</p>
     </div>`;
+}
+
+function payRow(state, item, index) {
+  const view = presentPayment(item);
+  const id = item.id || `idx-${index}`;
+  const open = state.payOpenId === id;
+  const bank = open && item.bank ? `<p class="ut-mini">Ваша пометка: ${esc(item.bank)}</p>` : "";
+  const full = open ? `<p class="ut-sub">${esc(view.detail)}</p>${bank}<button type="button" class="ut-flight-del" data-shell="pay-delete" data-id="${esc(id)}">Удалить</button>` : "";
+  return `<div class="ut-pay-item${open ? " is-open" : ""}">
+    <button type="button" class="ut-pay-open" data-shell="pay-open" data-id="${esc(id)}">
+      <b>${esc(view.title)}</b>
+      ${open ? "" : `<span>${esc(view.detail)}</span>`}
+    </button>
+    ${full}
+  </div>`;
 }
 
 function renderGuide(state) {
@@ -577,11 +668,210 @@ function renderGuide(state) {
 function renderCountry(state) {
   const slug = safeSlug(state.route.slug);
   const title = COUNTRY_TITLES[slug] || "Страна";
+  const matchPath = slug ? `/guide/${slug}/pay` : "/pay";
   return `${headerBar(title, true)}
     <section class="ut-slot" data-slot="country" data-slug="${esc(slug)}">
       ${legend()}
       <p class="ut-lead">Здесь появятся въезд, оплата, связь и транспорт. Сведения покажем с датой и годом.</p>
+      <h2 class="ut-block-title">Подойдут ли ваши способы оплаты?</h2>
+      <p class="ut-sub">Сопоставьте сохранённые способы с выбранной страной.</p>
+      <button type="button" class="ut-primary ut-inline-btn" data-shell="route" data-path="${esc(matchPath)}">Сверить с моими способами</button>
     </section>`;
+}
+
+function renderCountryPay(state) {
+  const slug = safeSlug(state.route.slug);
+  const title = COUNTRY_TITLES[slug] || "Страна";
+  const payments = Array.isArray(state.payments) ? state.payments : [];
+  const guide = PAYMENT_CATALOG[slug] || null;
+  const when = guide ? `по сведениям на ${formatDotDate(guide.checked)}` : "Сведений по оплате для этой страны пока нет. Статус — не сверено.";
+  const backTo = `/guide/${slug}/pay`;
+  if (!payments.length) {
+    return `${headerBar(title, true)}
+      <div data-slot="country-pay" data-slug="${esc(slug)}">
+        <section class="ut-seg">
+          <h2>Мои способы оплаты</h2>
+          <p class="ut-sub">Добавьте свои способы оплаты — покажем, какие из них, по нашим данным, можно использовать в этой стране. Без номеров карт и платёжных реквизитов.</p>
+          <button type="button" class="ut-primary ut-inline-btn" data-shell="pay-add-return" data-return="${esc(backTo)}">Добавить способы оплаты</button>
+          <p class="ut-note ut-note-tight">После сохранения — возврат к сравнению с этой страной. Опыт можно пропустить.</p>
+        </section>
+        <p class="ut-fine ut-foot">Имеющиеся сведения не подтверждают приём везде.</p>
+      </div>`;
+  }
+  const rows = payments.map((item) => {
+    const view = presentPayment(item);
+    const channels = matchMethod(item, slug);
+    const lines = MATCH_CHANNELS.map(([id, label]) => {
+      const status = channels[id];
+      return `<div class="ut-match-row"><span>${label}</span><span class="ut-st"><i class="ut-dot ut-dot-${matchDot(status)}"></i>${esc(MATCH_LABELS[status] || MATCH_LABELS.unverified)}</span></div>`;
+    }).join("");
+    return `<h3 class="ut-match-name">${esc(view.title)}</h3>${lines}`;
+  }).join(`<div class="ut-divider"></div>`);
+  return `${headerBar(title, true)}
+    <div data-slot="country-pay" data-slug="${esc(slug)}">
+      <section class="ut-seg">
+        <h2>Мои способы в этой стране</h2>
+        <p class="ut-hintline">${esc(when)}</p>
+        <div class="ut-divider"></div>
+        ${rows}
+        <p class="ut-note ut-note-tight">${esc(CHINA_GUIDE.disclaimer)}</p>
+      </section>
+      <p class="ut-fine ut-foot">Имеющиеся сведения не подтверждают приём везде.</p>
+    </div>`;
+}
+
+function payFormState(state) {
+  return {
+    kind: "card",
+    system: "",
+    systemCustom: "",
+    country: "",
+    countryIso: "",
+    countryQuery: "",
+    bank: "",
+    title: "",
+    format: "physical",
+    consent: false,
+    errors: {},
+    ...(state.payDraft || {}),
+  };
+}
+
+function chipButton(action, id, label, on, extra) {
+  const attrs = extra || "";
+  return `<button type="button" class="ut-chip${on ? " is-on" : ""}" data-shell="${action}" data-id="${esc(id)}" aria-pressed="${on ? "true" : "false"}"${attrs}>${label}</button>`;
+}
+
+function renderPayAdd(state) {
+  const values = payFormState(state);
+  const errors = values.errors || {};
+  const systems = systemsForKind(values.kind);
+  const systemChips = systems.map((id) => chipButton(
+    "pay-system",
+    id,
+    esc(id === "other" ? "Другая" : systemLabel(id)),
+    values.system === id,
+  )).join("");
+  const kinds = PAYMENT_KINDS.map((item) => chipButton("pay-kind", item.id, esc(item.label), values.kind === item.id)).join("");
+  const formats = values.kind === "card"
+    ? `<p class="ut-label">Формат карты</p><div class="ut-chips">${CARD_FORMATS.map((item) => chipButton("pay-format", item.id, esc(item.label), values.format === item.id)).join("")}</div>${fieldError(errors, "format")}`
+    : "";
+  const custom = values.system === "other"
+    ? `<label>Название платёжной системы<input name="systemCustom" maxlength="40" autocomplete="off" value="${esc(values.systemCustom || "")}" class="${badClass(errors, "system").trim()}"></label>`
+    : `<input type="hidden" name="systemCustom" value="">`;
+  const query = values.countryQuery || "";
+  const suggestions = searchCountries(query).filter((item) => item.name !== values.country || query !== values.country);
+  const suggestHtml = suggestions.map((item) => (
+    `<button type="button" class="ut-suggest" data-shell="pay-country" data-country="${esc(item.name)}" data-iso="${esc(item.iso)}">+ ${countryFlag(item.iso)} ${esc(item.name)}</button>`
+  )).join("");
+  const customCountry = query.trim().length >= 2 && !COUNTRIES.some((item) => item.name.toLowerCase() === query.trim().toLowerCase())
+    ? `<button type="button" class="ut-suggest" data-shell="pay-country" data-country="${esc(query.trim())}" data-iso="">Использовать «${esc(query.trim())}»</button>`
+    : "";
+  const count = [...String(values.title || "")].length;
+  const consent = state.settings && state.settings.consentAt
+    ? ""
+    : `<label class="ut-check"><input type="checkbox" name="consent"${values.consent ? " checked" : ""}><span>Соглашаюсь хранить эти сведения только на этом устройстве. На сервер их не отправляем.</span></label>${fieldError(errors, "consent")}`;
+  return `${headerBar("Добавить способ", true)}
+    <p class="ut-step">1 · В ОБЩИХ ЧЕРТАХ</p>
+    <form class="ut-form" data-shell-form="pay-add" data-slot="pay-add">
+      <input type="hidden" name="kind" value="${esc(values.kind)}">
+      <input type="hidden" name="system" value="${esc(values.system)}">
+      <input type="hidden" name="format" value="${esc(values.format)}">
+      <input type="hidden" name="country" value="${esc(values.country)}">
+      <input type="hidden" name="countryIso" value="${esc(values.countryIso)}">
+      <p class="ut-label">Тип</p>
+      <div class="ut-chips">${kinds}</div>
+      ${fieldError(errors, "kind")}
+      <p class="ut-label">Платёжная система</p>
+      <div class="ut-chips">${systemChips}</div>
+      ${fieldError(errors, "system")}
+      ${custom}
+      <label>Страна выпуска${values.kind === "card" ? " <span class=\"ut-req\">*</span>" : ""}
+        <input name="countryQuery" data-shell-field="pay-country" maxlength="60" autocomplete="off" placeholder="Любая страна · поиск" value="${esc(query)}" class="${badClass(errors, "country").trim()}">
+      </label>
+      ${suggestHtml}${customCountry}
+      ${values.country ? `<p class="ut-mini">Выбрано: ${esc(values.country)}</p>` : ""}
+      ${fieldError(errors, "country")}
+      <label>Банк · необязательно<input name="bank" maxlength="40" autocomplete="off" placeholder="Название банка" value="${esc(values.bank || "")}"></label>
+      <p class="ut-hintline">Личная пометка. В сведениях о стране банк не показываем.</p>
+      <label>Своё название · необязательно<input name="title" data-shell-field="pay-title" maxlength="40" autocomplete="off" placeholder="Основная карта для путешествий" value="${esc(values.title || "")}" class="${badClass(errors, "title").trim()}"></label>
+      <p class="ut-count${count > 30 ? " is-bad" : ""}">${count} / 30</p>
+      ${fieldError(errors, "title")}
+      <p class="ut-hintline">До 30 символов. В списке — максимум две строки; полное название — при открытии способа.</p>
+      ${formats}
+      <p class="ut-note ut-note-tight">Номер карты, срок действия и CVV не нужны.</p>
+      ${consent}
+      <button type="submit" class="ut-primary">Сохранить способ</button>
+    </form>
+    <p class="ut-fine ut-foot">Способ сохраняется независимо от того, поделитесь ли вы опытом. Если пришли из сравнения со страной — вернём к сравнению после сохранения.</p>`;
+}
+
+function experienceDraft(state) {
+  return {
+    countries: [],
+    query: "",
+    channels: [],
+    result: "",
+    when: "",
+    ...(state.payExperienceDraft || {}),
+  };
+}
+
+function renderPayExperience(state) {
+  const draft = experienceDraft(state);
+  const open = Boolean(state.experienceOpen);
+  const picked = (draft.countries || []).map((name) => (
+    `<button type="button" class="ut-chip is-on" data-shell="experience-country-remove" data-country="${esc(name)}">${esc(name)} ×</button>`
+  )).join("");
+  const suggestions = searchCountries(draft.query).filter((item) => !(draft.countries || []).includes(item.name));
+  const suggestHtml = suggestions.map((item) => (
+    `<button type="button" class="ut-suggest" data-shell="experience-country" data-country="${esc(item.name)}">+ ${esc(item.name)}</button>`
+  )).join("");
+  const custom = draft.query && draft.query.trim().length >= 2 && !suggestions.some((item) => item.name.toLowerCase() === draft.query.trim().toLowerCase())
+    ? `<button type="button" class="ut-suggest" data-shell="experience-country" data-country="${esc(draft.query.trim())}">+ ${esc(draft.query.trim())}</button>`
+    : "";
+  const usage = [
+    ["shops", "Магазины"],
+    ["online", "Онлайн"],
+    ["atm", "Банкоматы"],
+  ].map(([id, label]) => chipButton("experience-channel", id, esc(label), (draft.channels || []).includes(id))).join("");
+  const result = [["ok", "Получилось"], ["fail", "Не получилось"]].map(([id, label]) => (
+    chipButton("experience-result", id, esc(label), draft.result === id)
+  )).join("");
+  const when = [["trip", "В этой поездке"], ["earlier", "Раньше"]].map(([id, label]) => (
+    chipButton("experience-when", id, esc(label), draft.when === id)
+  )).join("");
+  const form = open
+    ? `<section class="ut-seg">
+        <h2>Где использовали?</h2>
+        <p class="ut-hintline">Поиск по всем странам, не только из справочника.</p>
+        <div class="ut-chips">${picked}</div>
+        <form class="ut-form" data-shell-form="pay-experience" data-slot="pay-experience">
+          <label>Страны · автодополнение<input name="countryQuery" data-shell-field="pay-exp-country" maxlength="60" autocomplete="off" value="${esc(draft.query || "")}"></label>
+          ${suggestHtml}${custom}
+          <label>Личный комментарий · необязательно<input name="comment" maxlength="200" autocomplete="off" placeholder="Например: ЕС / СНГ / Азия" value="${esc(draft.comment || "")}"></label>
+          <p class="ut-hintline">Ваш комментарий, не подтверждение работы во всём регионе.</p>
+          <p class="ut-label">Как использовали</p>
+          <div class="ut-chips">${usage}</div>
+          <p class="ut-label">Результат</p>
+          <div class="ut-chips">${result}</div>
+          <p class="ut-label">Когда · можно не указывать</p>
+          <div class="ut-chips">${when}</div>
+          <p class="ut-note ut-note-tight">Если результаты по странам различаются — отдельные сообщения. Опыт не подтверждает приём по всей стране.</p>
+          <button type="submit" class="ut-primary">Поделиться опытом</button>
+        </form>
+        <button type="button" class="ut-skip" data-shell="experience-skip">Пропустить · способ сохранён</button>
+      </section>`
+    : "";
+  return `${headerBar("Способ сохранён", true)}
+    <p class="ut-step">2 · ТОЛЬКО ПО ЖЕЛАНИЮ</p>
+    <section class="ut-seg ut-okbox" data-slot="pay-experience-prompt">
+      <h2>Поделиться опытом?</h2>
+      <p class="ut-sub">Способ уже сохранён.</p>
+      <button type="button" class="ut-primary ut-inline-btn" data-shell="experience-open">Поделиться опытом</button>
+      <button type="button" class="ut-skip" data-shell="experience-skip">Пропустить</button>
+    </section>
+    ${form}`;
 }
 
 function passportLine(passport) {
@@ -941,6 +1231,9 @@ function renderScreen(state) {
   if (name === "trip-pay") return renderTripPay(state);
   if (name === "trip-transport") return renderTripTransport(state);
   if (name === "pay") return renderPay(state);
+  if (name === "pay-add") return renderPayAdd(state);
+  if (name === "pay-experience") return renderPayExperience(state);
+  if (name === "country-pay") return renderCountryPay(state);
   if (name === "guide") return renderGuide(state);
   if (name === "country") return renderCountry(state);
   if (name === "profile") return renderProfile(state);
