@@ -173,6 +173,7 @@ function findFact(id) {
 
 const appStack = [];
 let navLock = 0;
+let shellMode = false;
 
 function pathFromHash(hash) {
   const clean = String(hash || "").replace(/^#/, "");
@@ -354,6 +355,7 @@ function syncDeepFact() {
 }
 
 function draw() {
+  if (shellMode) return;
   state.stackDepth = appStack.length || 1;
   const active = document.activeElement;
   const searching = active && active.id === "search-input";
@@ -727,6 +729,7 @@ function openExternal(url) {
 }
 
 app.addEventListener("click", (event) => {
+  if (shellMode) return;
   const el = event.target.closest("[data-action]");
   if (!el || el.hasAttribute("disabled")) return;
   const action = el.dataset.action;
@@ -1022,6 +1025,7 @@ app.addEventListener("click", (event) => {
 });
 
 app.addEventListener("input", (event) => {
+  if (shellMode) return;
   if (event.target.id === "search-input") {
     state.query = event.target.value;
     draw();
@@ -1032,6 +1036,7 @@ app.addEventListener("input", (event) => {
 });
 
 app.addEventListener("change", (event) => {
+  if (shellMode) return;
   const field = event.target.dataset.field;
   if (field === "depart_date" || field === "return_date") {
     state.draft[field === "depart_date" ? "depart_date" : "return_date"] = event.target.value;
@@ -1050,6 +1055,7 @@ app.addEventListener("change", (event) => {
 });
 
 window.addEventListener("popstate", () => {
+  if (shellMode) return;
   if (navLock) return;
   adoptPath(pathFromHash(location.hash), "pop");
   syncDeepFact();
@@ -1058,6 +1064,7 @@ window.addEventListener("popstate", () => {
 });
 
 window.addEventListener("hashchange", () => {
+  if (shellMode) return;
   if (navLock) return;
   adoptPath(pathFromHash(location.hash), "hash");
   syncDeepFact();
@@ -1066,6 +1073,7 @@ window.addEventListener("hashchange", () => {
 });
 
 window.addEventListener("keydown", (event) => {
+  if (shellMode) return;
   if (event.key === "Escape" && state.sheet) {
     state.sheet = null;
     draw();
@@ -1073,6 +1081,18 @@ window.addEventListener("keydown", (event) => {
 });
 
 async function boot() {
+  const params = new URLSearchParams(location.search);
+  if (!(params.get("preview") && isLocalHost())) {
+    shellMode = true;
+    try {
+      const { startShell } = await import("./shell.js");
+      await startShell(app);
+    } catch (error) {
+      console.error(error);
+      app.innerHTML = '<p class="boot">Не удалось открыть приложение. Обновите страницу.</p>';
+    }
+    return;
+  }
   applyTheme();
   const tg = window.Telegram && window.Telegram.WebApp;
   if (tg) {
@@ -1090,7 +1110,6 @@ async function boot() {
     draw();
     return;
   }
-  const params = new URLSearchParams(location.search);
   const preview = params.get("preview");
   if (preview && isLocalHost()) {
     seedPreview(preview);
