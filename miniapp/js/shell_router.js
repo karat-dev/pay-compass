@@ -10,6 +10,14 @@ const PROFILE_INNER = new Set([
   "achievements",
 ]);
 
+const TRIP_INNER = {
+  "flight-add": "flight-add",
+  edit: "trip-edit",
+  pay: "trip-pay",
+  transport: "trip-transport",
+  checklist: "trip-checklist",
+};
+
 export function parseShellRoute(hash) {
   let path = String(hash || "").replace(/^#/, "");
   const query = path.indexOf("?");
@@ -22,7 +30,13 @@ export function parseShellRoute(hash) {
   }
   if (head === "guide") return { name: "guide", tab: "guide", inner: false, slug: "" };
   if (PROFILE_INNER.has(head)) return { name: head, tab: "profile", inner: true, slug: "" };
-  if (head === "trip") return { name: "trip", tab: "trip", inner: false, slug: "" };
+  if (head === "trip") {
+    const sub = parts[1] || "";
+    if (Object.prototype.hasOwnProperty.call(TRIP_INNER, sub)) {
+      return { name: TRIP_INNER[sub], tab: "trip", inner: true, slug: "" };
+    }
+    return { name: "trip", tab: "trip", inner: false, slug: "" };
+  }
   if (head === "profile") return { name: "profile", tab: "profile", inner: false, slug: "" };
   return { name: "home", tab: "home", inner: false, slug: "" };
 }
@@ -31,12 +45,14 @@ export function backTarget(route) {
   if (!route) return "";
   if (route.name === "country") return "/guide";
   if (route.inner && route.tab === "profile") return "/profile";
+  if (route.inner && route.tab === "trip") return "/trip";
   return "";
 }
 
 export function readTripForm(fields) {
   const origin = String((fields && fields.origin) || "").trim();
   const destination = String((fields && fields.destination) || "").trim();
+  const country = String((fields && fields.country) || "").trim();
   const depart = String((fields && fields.depart) || "");
   const ret = String((fields && fields.ret) || "");
   if (!destination || !depart || !ret) return { error: "Укажите направление и обе даты." };
@@ -49,10 +65,34 @@ export function readTripForm(fields) {
       id: `local-${depart}-${ret}`,
       origin: (origin || "Москва").slice(0, 40),
       destination: destination.slice(0, 40),
+      country: country.slice(0, 40),
       depart,
       ret,
       stepsDone: 0,
       stepsTotal: 6,
+      checks: [],
+      flights: [],
+    },
+  };
+}
+
+export function readTripEdit(fields, current) {
+  const parsed = readTripForm(fields);
+  if (parsed.error) return parsed;
+  const base = current && typeof current === "object" ? current : {};
+  return {
+    trip: {
+      ...base,
+      id: base.id || parsed.trip.id,
+      origin: parsed.trip.origin,
+      destination: parsed.trip.destination,
+      country: parsed.trip.country,
+      depart: parsed.trip.depart,
+      ret: parsed.trip.ret,
+      stepsDone: Number(base.stepsDone) || 0,
+      stepsTotal: Number(base.stepsTotal) || 6,
+      checks: Array.isArray(base.checks) ? base.checks : [],
+      flights: Array.isArray(base.flights) ? base.flights : [],
     },
   };
 }
