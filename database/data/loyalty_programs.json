@@ -1,0 +1,370 @@
+{
+ "checked": "2026-10-28",
+ "disclaimer": "Пустое/unknown = не проверено; verified:false = официальная страница не открыта или источник вторичный",
+ "alliances": [
+  {
+   "name": "Star Alliance",
+   "our_members": [
+    "Turkish",
+    "Air China",
+    "Thai"
+   ],
+   "promo": "Round the World: по дальности, до 15 остановок; First отменён с 01.10.2026",
+   "promo_url": "https://www.staralliance.com/en/round-the-world/",
+   "status_match": "альянсового нет; у отдельных авиакомпаний — не проверено"
+  },
+  {
+   "name": "SkyTeam",
+   "our_members": [
+    "China Eastern",
+    "Aeroflot (приостановлен)"
+   ],
+   "promo": "unknown",
+   "promo_url": null,
+   "status_match": "unknown",
+   "source": "https://www.skyteam.com/en/about/press-releases/press-releases-2025/skyteam-turns-25"
+  },
+  {
+   "name": "oneworld",
+   "our_members": [
+    "Qatar",
+    "Cathay"
+   ],
+   "promo": "oneworld Explorer: по континентам, 3–16 сегментов",
+   "promo_url": "https://www.oneworld.com/round-the-world",
+   "status_match": "альянсового нет (вторичн.)"
+  },
+  {
+   "name": "Без альянса",
+   "our_members": [
+    "Pegasus",
+    "AJet",
+    "Emirates",
+    "flydubai",
+    "Etihad",
+    "Air Arabia",
+    "China Southern",
+    "Hainan",
+    "AirAsia"
+   ]
+  }
+ ],
+ "programs": [
+  {
+   "airline": "Turkish Airlines",
+   "iata": "TK",
+   "alliance": "Star Alliance",
+   "program": "Miles&Smiles",
+   "currency": "Miles",
+   "enrolment_url": "https://www.turkishairlines.com/ru-int/miles-and-smiles/",
+   "enrolment_url_verified": false,
+   "mile_expiry": "До конца 3-го полного календарного года после начисления; активность срок НЕ продлевает; платное продление $20/1000 миль на 3 года",
+   "mile_expiry_source": "https://www.turkishairlines.com/en-int/miles-and-smiles/miles-features/extending-miles/",
+   "key_partners": "Все Star Alliance (Air China, Thai, Lufthansa и др.); AJet — см. отдельно",
+   "russian_citizens": {
+    "can_join": "likely_yes",
+    "basis": "T&C: участие в странах, где программа разрешена; вторичный источник pirates.travel (10.2026): рос. телефоны работают, мили начисляются",
+    "source": "https://www.turkishairlines.com/en-int/miles-and-smiles/terms-and-conditions/index.html",
+    "verified": false
+   },
+   "status_match": "unknown",
+   "promos_url": "unknown",
+   "notes": "",
+   "checked": "2026-10-28"
+  },
+  {
+   "airline": "AJet",
+   "iata": "VF",
+   "alliance": "none (дочка Turkish)",
+   "program": "AJet — своя программа / Miles&Smiles: не проверено",
+   "currency": "unknown",
+   "enrolment_url": "unknown",
+   "enrolment_url_verified": false,
+   "mile_expiry": "unknown",
+   "mile_expiry_source": null,
+   "key_partners": "unknown",
+   "russian_citizens": {
+    "can_join": "unknown"
+   },
+   "status_match": "unknown",
+   "promos_url": "unknown",
+   "notes": "Нужно проверить, начисляются ли мили Miles&Smiles на рейсах VF",
+   "checked": "2026-10-28"
+  },
+  {
+   "airline": "Pegasus",
+   "iata": "PC",
+   "alliance": "none",
+   "program": "Pegasus BolBol",
+   "currency": "BolPoints",
+   "enrolment_url": "https://www.flypgs.com/en/bolbol",
+   "enrolment_url_verified": false,
+   "mile_expiry": "unknown",
+   "mile_expiry_source": null,
+   "key_partners": "нет альянсовых партнёров",
+   "russian_citizens": {
+    "can_join": "yes",
+    "basis": "подтверждено ранее в справочнике авиакомпаний (/workspace/airlines)",
+    "verified": true
+   },
+   "status_match": "unknown",
+   "promos_url": "unknown",
+   "notes": "",
+   "checked": "2026-10-28"
+  },
+  {
+   "airline": "Emirates",
+   "iata": "EK",
+   "alliance": "none",
+   "program": "Emirates Skywards",
+   "currency": "Skywards Miles",
+   "enrolment_url": "https://www.emirates.com/ru/russian/skywards/registration/",
+   "enrolment_url_verified": true,
+   "mile_expiry": "3 года с даты начисления, списываются в конце месяца рождения в год истечения",
+   "mile_expiry_source": "https://www.emirates.com/english/help/faq-topics/emirates-skywards/faq/how-long-are-skywards-miles-valid-for/",
+   "key_partners": "flydubai (общая программа Skywards — подтверждено FAQ Emirates), Qantas, JetBlue и др. двусторонние",
+   "russian_citizens": {
+    "can_join": "likely_yes",
+    "basis": "Русскоязычная форма регистрации существует; рос. карты для оплаты сборов не проходят (вторичн.)",
+    "verified": false
+   },
+   "status_match": "unknown",
+   "promos_url": "unknown",
+   "notes": "",
+   "checked": "2026-10-28"
+  },
+  {
+   "airline": "flydubai",
+   "iata": "FZ",
+   "alliance": "none",
+   "program": "Emirates Skywards (общая с Emirates)",
+   "currency": "Skywards Miles",
+   "enrolment_url": "https://www.emirates.com/ru/russian/skywards/registration/",
+   "enrolment_url_verified": true,
+   "mile_expiry": "как у Skywards",
+   "mile_expiry_source": "https://www.emirates.com/english/help/faq-topics/emirates-skywards/faq/how-long-are-skywards-miles-valid-for/",
+   "key_partners": "Emirates",
+   "russian_citizens": {
+    "can_join": "likely_yes",
+    "verified": false
+   },
+   "status_match": "unknown",
+   "promos_url": "unknown",
+   "notes": "Отдельной программы нет — одна карта Skywards на EK+FZ",
+   "checked": "2026-10-28"
+  },
+  {
+   "airline": "Qatar Airways",
+   "iata": "QR",
+   "alliance": "oneworld",
+   "program": "Privilege Club",
+   "currency": "Avios",
+   "enrolment_url": "https://www.qatarairways.com/ru-ru/Privilege-Club/signup.html",
+   "enrolment_url_verified": true,
+   "mile_expiry": "36 мес. с последней активности (начисление/трата/покупка/подарок ≥1 Avios); у Platinum не сгорают",
+   "mile_expiry_source": "https://www.qatarairways.com/en/Privilege-Club/terms-and-conditions.html",
+   "key_partners": "oneworld (Cathay, BA, AA...), China Southern (двустороннее, MoU 06.2024)",
+   "russian_citizens": {
+    "can_join": "likely_yes",
+    "basis": "рус. форма регистрации существует",
+    "verified": false
+   },
+   "status_match": "unknown",
+   "promos_url": "https://www.qatarairways.com/en/Privilege-Club/Avios.html",
+   "notes": "Есть Family & Friends — до 9 человек объединяют Avios",
+   "checked": "2026-10-28"
+  },
+  {
+   "airline": "Etihad",
+   "iata": "EY",
+   "alliance": "none",
+   "program": "Etihad Guest",
+   "currency": "Etihad Guest Miles",
+   "enrolment_url": "https://www.etihad.com/en/etihadguest",
+   "enrolment_url_verified": false,
+   "mile_expiry": "Bronze/Silver/Gold: 18 мес., продлевается полётом Etihad/партнёра; Platinum/Emerald: не сгорают",
+   "mile_expiry_source": "https://www.etihad.com/en/help/faq/etihad-guest",
+   "key_partners": "двусторонние партнёры (список не проверен)",
+   "russian_citizens": {
+    "can_join": "unknown"
+   },
+   "status_match": "unknown",
+   "promos_url": "https://www.etihad.com/en/etihadguest/tiers-and-benefits",
+   "notes": "Акция: требования для статусов снижены на 25% с 18.03.2026 по 31.03.2027 (для действующих статусников)",
+   "checked": "2026-10-28"
+  },
+  {
+   "airline": "Air Arabia",
+   "iata": "G9",
+   "alliance": "none",
+   "program": "Air Rewards",
+   "currency": "CashPoints",
+   "enrolment_url": "unknown",
+   "enrolment_url_verified": false,
+   "mile_expiry": "unknown",
+   "mile_expiry_source": null,
+   "key_partners": "unknown",
+   "russian_citizens": {
+    "can_join": "unknown"
+   },
+   "status_match": "unknown",
+   "promos_url": "unknown",
+   "notes": "",
+   "checked": "2026-10-28"
+  },
+  {
+   "airline": "Air China",
+   "iata": "CA",
+   "alliance": "Star Alliance",
+   "program": "PhoenixMiles",
+   "currency": "Miles",
+   "enrolment_url": "https://ffp.airchina.com.cn/",
+   "enrolment_url_verified": false,
+   "mile_expiry": "36 мес. с месяца полёта, затем списываются",
+   "mile_expiry_source": "https://ffp.airchina.com.cn/cms/handbook?language=en&type=ORDINARY_MEMBER",
+   "key_partners": "Star Alliance",
+   "russian_citizens": {
+    "can_join": "unknown"
+   },
+   "status_match": "unknown",
+   "promos_url": "unknown",
+   "notes": "",
+   "checked": "2026-10-28"
+  },
+  {
+   "airline": "China Southern",
+   "iata": "CZ",
+   "alliance": "none (вышла из SkyTeam 01.01.2020)",
+   "program": "Sky Pearl Club",
+   "currency": "Miles",
+   "enrolment_url": "https://skypearl.csair.com/en/",
+   "enrolment_url_verified": false,
+   "mile_expiry": "unknown",
+   "mile_expiry_source": null,
+   "key_partners": "American Airlines (с 20.03.2019), Qatar (MoU 06.2024), British Airways, бывшие SkyTeam-партнёры по двусторонним договорам",
+   "russian_citizens": {
+    "can_join": "unknown"
+   },
+   "status_match": "unknown",
+   "promos_url": "unknown",
+   "notes": "Аэрофлот с 01.08.2026 не начисляет мили за рейсы CZ (вторичн. terravia.ru)",
+   "checked": "2026-10-28"
+  },
+  {
+   "airline": "China Eastern",
+   "iata": "MU",
+   "alliance": "SkyTeam",
+   "program": "Eastern Miles",
+   "currency": "Points",
+   "enrolment_url": "https://www.ceair.com/global/easternmiles/",
+   "enrolment_url_verified": false,
+   "mile_expiry": "Срок до конца 36-го месяца с последнего изменения; аккаунт без движения 36+ мес. аннулируется",
+   "mile_expiry_source": "https://www.ceair.com/global/easternmiles/zh/aboutus/easternmiles/serviceTerms/",
+   "key_partners": "SkyTeam; Аэрофлот Бонус продолжает начислять за MU",
+   "russian_citizens": {
+    "can_join": "unknown"
+   },
+   "status_match": "unknown",
+   "promos_url": "unknown",
+   "notes": "",
+   "checked": "2026-10-28"
+  },
+  {
+   "airline": "Hainan Airlines",
+   "iata": "HU",
+   "alliance": "none",
+   "program": "Fortune Wings Club",
+   "currency": "Points",
+   "enrolment_url": "https://www.hainanairlines.com/",
+   "enrolment_url_verified": false,
+   "mile_expiry": "24 мес. без активности; любая активность продлевает на 24 мес.",
+   "mile_expiry_source": "https://www.hainanairlines.com/go/FortuneWingsClub/Membership%20Manual.pdf",
+   "key_partners": "группа HNA (Hong Kong Airlines, Tianjin, Lucky Air и др.), двусторонние",
+   "russian_citizens": {
+    "can_join": "unknown"
+   },
+   "status_match": "unknown",
+   "promos_url": "unknown",
+   "notes": "",
+   "checked": "2026-10-28"
+  },
+  {
+   "airline": "Aeroflot",
+   "iata": "SU",
+   "alliance": "SkyTeam — членство приостановлено с 2022",
+   "program": "Аэрофлот Бонус",
+   "currency": "Мили",
+   "enrolment_url": "https://www.aeroflot.ru/ru-ru/afl_bonus",
+   "enrolment_url_verified": false,
+   "mile_expiry": "unknown",
+   "mile_expiry_source": null,
+   "key_partners": "С 01.08.2026 мили только за China Eastern, Vietnam Airlines, Xiamen (вторичн.); 8 авиакомпаний SkyTeam отключены",
+   "russian_citizens": {
+    "can_join": "yes",
+    "verified": true,
+    "basis": "российская программа"
+   },
+   "status_match": "unknown",
+   "promos_url": "unknown",
+   "notes": "Статус приостановки: https://www.skyteam.com/en/about/press-releases/press-releases-2022/skyteam-and-aeroflot ; список партнёров — https://terravia.ru/news/aeroflot-priostanovil-nachislenie-mil-na-reysakh-2026-08-05 (не официально)",
+   "checked": "2026-10-28"
+  },
+  {
+   "airline": "Thai Airways",
+   "iata": "TG",
+   "alliance": "Star Alliance",
+   "program": "Royal Orchid Plus",
+   "currency": "Miles",
+   "enrolment_url": "https://www.thaiairways.com/",
+   "enrolment_url_verified": false,
+   "mile_expiry": "3 года, в конце соответствующего квартала",
+   "mile_expiry_source": "https://www.thaiairways.com/en-cn/content/about-royal-orchid-plus/royal-orchid-plus-program-conditions/",
+   "key_partners": "Star Alliance",
+   "russian_citizens": {
+    "can_join": "unknown"
+   },
+   "status_match": "unknown",
+   "promos_url": "unknown",
+   "notes": "",
+   "checked": "2026-10-28"
+  },
+  {
+   "airline": "AirAsia",
+   "iata": "AK/FD",
+   "alliance": "none",
+   "program": "AirAsia Rewards (AirAsia points)",
+   "currency": "AirAsia points",
+   "enrolment_url": "unknown",
+   "enrolment_url_verified": false,
+   "mile_expiry": "unknown",
+   "mile_expiry_source": null,
+   "key_partners": "unknown",
+   "russian_citizens": {
+    "can_join": "unknown"
+   },
+   "status_match": "unknown",
+   "promos_url": "unknown",
+   "notes": "",
+   "checked": "2026-10-28"
+  },
+  {
+   "airline": "Cathay Pacific",
+   "iata": "CX",
+   "alliance": "oneworld",
+   "program": "Cathay (Asia Miles)",
+   "currency": "Asia Miles",
+   "enrolment_url": "https://www.cathaypacific.com/",
+   "enrolment_url_verified": false,
+   "mile_expiry": "Активность раз в 18 мес. продлевает срок на 18 мес.",
+   "mile_expiry_source": "https://www.cathaypacific.com/cx/en_US/faqs/cathay-membership-programme/cathay/how-can-i-keep-my-cathay-account-active.html",
+   "key_partners": "oneworld",
+   "russian_citizens": {
+    "can_join": "unknown"
+   },
+   "status_match": "unknown",
+   "promos_url": "unknown",
+   "notes": "",
+   "checked": "2026-10-28"
+  }
+ ]
+}
