@@ -1,0 +1,194 @@
+[
+ {
+  "country": "China",
+  "regime_type": "visa-free",
+  "max_stay_days": 30,
+  "day_counting": "30 календарных дней со дня, следующего за днём въезда; per entry; число въездов и суммарные дни не ограничены",
+  "allowed_purposes": [
+   "business",
+   "tourism",
+   "family/friends visit",
+   "exchange",
+   "transit"
+  ],
+  "regime_expiry_or_trial_end": "2027-12-31",
+  "user_wording_ru": "въезд без визы до 30 дней, действует до 31.12.2027",
+  "source_url": "https://www.mfa.gov.cn/wjbzwfwpt/kzx/tzgg/202605/t20260520_11914502.html",
+  "source_is_official": true,
+  "status": "green",
+  "last_checked": "2026-11-03",
+  "notes": "Подтверждено МИД КНР 20.05.2026, посольством КНР в РФ и FAQ посольства (sr.china-embassy.gov.cn 26.05.2026). Работа/учёба/журналистика — нужна виза. Не выводится из правил 240ч транзита."
+ },
+ {
+  "country": "Hong Kong",
+  "regime_type": "visa-free",
+  "max_stay_days": 14,
+  "day_counting": "per entry",
+  "allowed_purposes": [
+   "visit/tourism",
+   "business visit (no employment)"
+  ],
+  "regime_expiry_or_trial_end": null,
+  "user_wording_ru": "въезд без визы до 14 дней",
+  "source_url": "https://www.immd.gov.hk/eng/services/visas/visit-transit/visit-visa-entry-permit.html",
+  "source_is_official": true,
+  "status": "green",
+  "last_checked": "2026-11-03",
+  "notes": "Отдельный от материкового Китая режим; въезд в HK обнуляет/завершает пребывание по китайскому безвизу."
+ },
+ {
+  "country": "Thailand",
+  "regime_type": "visa-free",
+  "max_stay_days": 30,
+  "day_counting": "per entry (двустороннее соглашение РФ–Таиланд 2007)",
+  "allowed_purposes": [
+   "tourism",
+   "short visits"
+  ],
+  "regime_expiry_or_trial_end": null,
+  "user_wording_ru": "въезд без визы до 30 дней",
+  "source_url": "https://moscow.thaiembassy.org/en/publicservice/revision-of-thailand-s-visa-exemption-and-visa-on-arrival-schemes",
+  "source_is_official": true,
+  "status": "green",
+  "last_checked": "2026-11-03",
+  "notes": "ИЗМЕНЕНИЕ: с 15.09.2026 60-дневный безвиз отменён; для РФ остаётся 30 дней по соглашению. Въехавшие до 15.09.2026 остаются до даты в штампе."
+ },
+ {
+  "country": "Turkey",
+  "regime_type": "visa-free",
+  "max_stay_days": 60,
+  "day_counting": "до 60 дней за въезд, не более 90 дней в любые 180",
+  "allowed_purposes": [
+   "tourism",
+   "business visits",
+   "transit"
+  ],
+  "regime_expiry_or_trial_end": null,
+  "user_wording_ru": "въезд без визы до 60 дней (не более 90 за 180)",
+  "source_url": "https://mid.ru/useful_information/information/entrance_mode/",
+  "source_is_official": true,
+  "status": "green",
+  "last_checked": "2026-11-03",
+  "notes": "Соглашение 12.05.2010 (30 дн.), решение Совмина Турции №2013/4665 — до 60 дн. с 16.05.2013. Не для журналистской деятельности."
+ },
+ {
+  "country": "Georgia",
+  "regime_type": "visa-free",
+  "max_stay_days": 365,
+  "day_counting": "до 1 года (односторонний режим)",
+  "allowed_purposes": [
+   "any short stay"
+  ],
+  "regime_expiry_or_trial_end": null,
+  "user_wording_ru": "въезд без визы до 1 года",
+  "source_url": "https://mid.ru/useful_information/information/entrance_mode/",
+  "source_is_official": true,
+  "status": "green",
+  "last_checked": "2026-11-03",
+  "notes": "Риски: отметки Абхазии/Ю.Осетии, место рождения (см. passport_stamps.md)."
+ },
+ {
+  "country": "UAE",
+  "regime_type": "visa-free",
+  "max_stay_days": 90,
+  "day_counting": "90 дней в течение 180",
+  "allowed_purposes": [
+   "tourism",
+   "treatment",
+   "transit",
+   "non-work visits"
+  ],
+  "regime_expiry_or_trial_end": null,
+  "user_wording_ru": "въезд без визы до 90 дней за 180",
+  "source_url": "https://www.mofa.gov.ae/en/travel-updates?code=rus",
+  "source_is_official": true,
+  "status": "green",
+  "last_checked": "2026-11-03",
+  "notes": "Соглашение РФ–ОАЭ 06.07.2018 (mid.ru). Работа — нужна виза."
+ },
+ {
+  "country": "Vietnam",
+  "regime_type": "visa-free",
+  "max_stay_days": 45,
+  "day_counting": "45 дней со дня въезда, per entry, без различия цели",
+  "allowed_purposes": [
+   "any (не зависит от цели въезда)"
+  ],
+  "regime_expiry_or_trial_end": "2028-03-14",
+  "user_wording_ru": "въезд без визы до 45 дней, действует до 14.03.2028",
+  "source_url": "https://congbaocdn.chinhphu.vn/CongBaoCP/VanBan/2025/3/44554/55664-1-2025593-59444-nq-cp.pdf",
+  "source_is_official": true,
+  "status": "green",
+  "last_checked": "2026-11-03",
+  "notes": "Постановление 44/NQ-CP; дольше — e-visa до 90 дней."
+ },
+ {
+  "country": "Indonesia (Bali)",
+  "regime_type": "visa on arrival",
+  "max_stay_days": 30,
+  "day_counting": "30 дней со дня прибытия, однократный въезд; продление 1 раз на 30 (итого 60)",
+  "allowed_purposes": [
+   "tourism",
+   "business meetings",
+   "transit"
+  ],
+  "regime_expiry_or_trial_end": null,
+  "user_wording_ru": "виза по прилёте (или e-VOA) до 30 дней, можно продлить ещё на 30",
+  "source_url": "https://www.imigrasi.go.id/wna/daftar-negara-visa-on-arrival",
+  "source_is_official": true,
+  "status": "green",
+  "last_checked": "2026-11-03",
+  "notes": "Безвиза для обычных паспортов РФ нет (mid.ru). Бали: отдельный туристический сбор (не проверялся в этом прогоне)."
+ },
+ {
+  "country": "India",
+  "regime_type": "e-visa",
+  "max_stay_days": 30,
+  "day_counting": "e-Tourist 30 дней: двукратный въезд, срок со дня первого въезда; есть 1-/5-летние e-Tourist (по 90 дней за въезд)",
+  "allowed_purposes": [
+   "tourism",
+   "business",
+   "medical",
+   "conference"
+  ],
+  "regime_expiry_or_trial_end": null,
+  "user_wording_ru": "нужна электронная виза (e-Visa), оформить заранее",
+  "source_url": "https://indianvisaonline.gov.in/evisa/tvoa.html",
+  "source_is_official": false,
+  "status": "yellow",
+  "last_checked": "2026-11-03",
+  "notes": "Визовый режим подтверждён mid.ru (обычным паспортам нужна виза); параметры e-Visa взяты из вторичных данных, официальный портал в этом прогоне не открыт. Новости АТОР 30.10.2026: группового безвиза с Индией не будет."
+ },
+ {
+  "country": "Egypt",
+  "regime_type": "visa on arrival",
+  "max_stay_days": 30,
+  "day_counting": "виза на 1 месяц, однократная; продление бесплатно ещё на 2 мес. в «Гавазате»",
+  "allowed_purposes": [
+   "tourism"
+  ],
+  "regime_expiry_or_trial_end": null,
+  "user_wording_ru": "виза по прилёте 30 $ на 1 месяц (или e-Visa заранее)",
+  "source_url": "https://egypt.mid.ru/ru/cons-services/konsulskiy_otdel/o_vezde_vyezde_i_prebyvanii_rossiyan_v_egipte/",
+  "source_is_official": true,
+  "status": "green",
+  "last_checked": "2026-11-03",
+  "notes": "С 01.08.2026 в аэропорту Каира тест QR-визы 36 $; россиянам можно наличными $ в банках зоны прилёта. Синай (Шарм) — отдельная бесплатная отметка до 15 дн. в этом прогоне не проверялась."
+ },
+ {
+  "country": "Uzbekistan",
+  "regime_type": "visa-free",
+  "max_stay_days": null,
+  "day_counting": "срок соглашением не ограничен; действует обязательная регистрация по месту пребывания (обычно в течение 3 рабочих дней; гостиница регистрирует сама)",
+  "allowed_purposes": [
+   "any short stay (без работы)"
+  ],
+  "regime_expiry_or_trial_end": null,
+  "user_wording_ru": "въезд без визы",
+  "source_url": "https://mid.ru/useful_information/information/entrance_mode/",
+  "source_is_official": true,
+  "status": "green",
+  "last_checked": "2026-11-03",
+  "notes": "Соглашение 30.11.2000. Срок регистрации и возможный предел пребывания — по вторичным данным, требуют проверки на gov.uz."
+ }
+]
