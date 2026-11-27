@@ -9,6 +9,22 @@ import {
   programTag,
   trustZone,
 } from "../miniapp/js/loyalty_catalog.js";
+import {
+  CHINA_GUIDE,
+  CHINA_RULES,
+  PAYMENT_CATALOG,
+  PAYMENT_CHECKED,
+  deriveChinaPayment,
+  searchCountries,
+} from "../miniapp/js/payment_catalog.js";
+import {
+  filterPayments,
+  groupPayments,
+  matchMethod,
+  readExperience,
+  readPaymentMethod,
+  sortPayments,
+} from "../miniapp/js/payment_flow.js";
 import { createPersonalStore, createMemoryBackend, PERSONAL_SECTIONS } from "../miniapp/js/personal_store.js";
 import {
   cardsWord,
@@ -27,7 +43,7 @@ import {
 } from "../miniapp/js/trip_flow.js";
 
 const banned = ["supabase", "/api/", "OAG", "CAAC"];
-for (const name of ["personal_store.js", "shell.js", "shell_screens.js", "shell_router.js", "trip_flow.js", "profile_flow.js", "loyalty_catalog.js"]) {
+for (const name of ["personal_store.js", "shell.js", "shell_screens.js", "shell_router.js", "trip_flow.js", "profile_flow.js", "loyalty_catalog.js", "payment_catalog.js", "payment_flow.js"]) {
   const text = readFileSync(new URL(`../miniapp/js/${name}`, import.meta.url), "utf8");
   for (const word of banned) assert.equal(text.includes(word), false, `${name} contains ${word}`);
   assert.equal(/fetch\s*\(/.test(text), false, `${name} fetches`);
@@ -532,5 +548,183 @@ assert.match(addForm, /Выберите программу/);
 assert.match(addForm, /Введите номер карты полностью/);
 assert.match(addForm, /Своя программа/);
 assert.match(addForm, /is-bad/);
+
+assert.equal(parseShellRoute("#/pay/add").name, "pay-add");
+assert.equal(parseShellRoute("#/pay/add").tab, "profile");
+assert.equal(backTarget(parseShellRoute("#/pay/add")), "/pay");
+assert.equal(parseShellRoute("#/pay/experience").name, "pay-experience");
+assert.equal(backTarget(parseShellRoute("#/pay/experience")), "/pay");
+assert.equal(parseShellRoute("#/guide/china/pay").name, "country-pay");
+assert.equal(parseShellRoute("#/guide/china/pay").slug, "china");
+assert.equal(parseShellRoute("#/guide/china/pay").tab, "guide");
+assert.equal(backTarget(parseShellRoute("#/guide/china/pay")), "/guide/china");
+assert.equal(parseShellRoute("#/guide/china").name, "country");
+
+const missingSystem = readPaymentMethod({
+  kind: "card",
+  country: "Россия",
+  format: "physical",
+  title: "Мир",
+  consent: true,
+}, { needConsent: true });
+assert.match(missingSystem.errors.system, /платёжную систему/);
+const longTitle = "Основная карта для путешествий!";
+assert.equal([...longTitle].length, 31);
+const tooLong = readPaymentMethod({
+  kind: "card",
+  system: "mir",
+  country: "Россия",
+  format: "physical",
+  title: longTitle,
+  consent: true,
+}, { needConsent: true });
+assert.match(tooLong.errors.title, /30/);
+const leaked = readPaymentMethod({
+  kind: "card",
+  system: "unionpay",
+  country: "Россия",
+  format: "physical",
+  title: "UnionPay РФ",
+  consent: true,
+  pan: "4111222233334444",
+  cvv: "123",
+  expiry: "12/30",
+  number: "4111",
+}, { needConsent: true });
+assert.equal(leaked.method.title, "UnionPay РФ");
+assert.equal(leaked.method.countryIso, "RU");
+assert.equal(JSON.stringify(leaked.method).includes("4111"), false);
+assert.equal(JSON.stringify(leaked.method).includes("cvv"), false);
+const payAdd = renderShell(shellState({ route: parseShellRoute("#/pay/add") }));
+assert.match(payAdd, /CVV не нужны/);
+assert.equal(/name="(cvv|cvc|pan|expiry|number|cardNumber)"/.test(payAdd), false);
+assert.match(payAdd, /Платёжная система/);
+assert.equal(payAdd.includes("data-shell-form=\"pay-add\""), true);
+const payAddSystem = renderShell(shellState({
+  route: parseShellRoute("#/pay/add"),
+  payDraft: { kind: "card", system: "", format: "physical", errors: missingSystem.errors },
+}));
+assert.match(payAddSystem, /Выберите платёжную систему/);
+const payAddErrors = renderShell(shellState({
+  route: parseShellRoute("#/pay/add"),
+  payDraft: { kind: "card", system: "", title: longTitle, format: "physical", errors: tooLong.errors },
+}));
+assert.match(payAddErrors, /до 30 символов/);
+assert.match(payAddErrors, /is-bad/);
+assert.match(payAddErrors, /31 \/ 30/);
+
+const germany = searchCountries("Герма");
+assert.equal(germany.some((item) => item.name === "Германия"), true);
+assert.equal(searchCountries("Ки").some((item) => item.iso === "CN"), true);
+
+const experience = readExperience({
+  countries: ["ОАЭ", "Турция"],
+  channels: ["shops", "atm"],
+  result: "ok",
+  when: "earlier",
+  comment: "личный комментарий",
+});
+assert.deepEqual(experience.experience.countries, ["ОАЭ", "Турция"]);
+assert.deepEqual(experience.experience.channels, ["shops", "atm"]);
+assert.equal(experience.experience.result, "ok");
+const experienceScreen = renderShell(shellState({
+  route: parseShellRoute("#/pay/experience"),
+  experienceOpen: true,
+  payExperienceDraft: { countries: ["ОАЭ"], channels: ["shops"], result: "", when: "", query: "" },
+}));
+assert.match(experienceScreen, /Способ уже сохранён/);
+assert.match(experienceScreen, /Пропустить/);
+assert.match(experienceScreen, /Поделиться опытом/);
+assert.match(experienceScreen, /ОАЭ/);
+const flowSource = readFileSync(new URL("../miniapp/js/payment_flow.js", import.meta.url), "utf8");
+const shellSource = readFileSync(new URL("../miniapp/js/shell.js", import.meta.url), "utf8");
+assert.match(flowSource, /TODO: отправка анонимного опыта/);
+assert.match(shellSource, /TODO: отправка анонимного опыта/);
+
+const savedMethods = [
+  { id: "card-ru", title: "Карта РФ", kind: "card", system: "visa", systemLabel: "Visa", country: "Россия", countryIso: "RU", format: "physical", bank: "Сбер" },
+  { id: "mir", title: "Мир", kind: "card", system: "mir", systemLabel: "Мир", country: "Россия", countryIso: "RU", format: "physical" },
+  { id: "up", title: "UnionPay РФ", kind: "card", system: "unionpay", systemLabel: "UnionPay", country: "Россия", countryIso: "RU", format: "physical" },
+  { id: "ali", title: "Alipay", kind: "app", system: "alipay", systemLabel: "Alipay", country: "", format: "" },
+];
+assert.equal(matchMethod(savedMethods[0], "china").shops, "unverified");
+assert.equal(matchMethod(savedMethods[1], "china").online, "unverified");
+assert.equal(matchMethod(savedMethods[2], "china").shops, "partial");
+assert.equal(matchMethod(savedMethods[2], "china").online, "unverified");
+assert.equal(matchMethod(savedMethods[2], "china").atm, "partial");
+assert.equal(matchMethod(savedMethods[3], "china").shops, "known");
+assert.equal(matchMethod(savedMethods[3], "china").online, "known");
+assert.equal(matchMethod(savedMethods[3], "china").atm, "unverified");
+const compared = renderShell(shellState({
+  route: parseShellRoute("#/guide/china/pay"),
+  payments: savedMethods,
+}));
+assert.match(compared, /есть сведения/);
+assert.match(compared, /работает не везде, по отзывам/);
+assert.match(compared, /не сверено/);
+assert.match(compared, /Не сверено — не значит, что способ не работает/);
+assert.match(compared, /13\.10\.2026/);
+for (const word of ["Сбер", "Тинькофф", "Т-Банк", "Альфа", "ВТБ", "РСХБ", "АТБ"]) {
+  assert.equal(compared.includes(word), false, word);
+}
+const emptyMatch = renderShell(shellState({
+  route: parseShellRoute("#/guide/china/pay"),
+  payments: [],
+}));
+assert.match(emptyMatch, /Добавить способы оплаты/);
+assert.match(emptyMatch, /data-return="\/guide\/china\/pay"/);
+assert.match(emptyMatch, /После сохранения — возврат к сравнению/);
+
+const grouped = groupPayments(sortPayments(filterPayments(savedMethods, "card"), "title"), "system");
+assert.equal(grouped.some((group) => group.title === "UnionPay"), true);
+assert.equal(grouped.some((group) => group.items.some((item) => item.system === "alipay")), false);
+const byBank = renderShell(shellState({
+  route: parseShellRoute("#/pay"),
+  payGroup: "bank",
+  payments: [savedMethods[0]],
+}));
+assert.match(byBank, /Сбер/);
+const bySystem = renderShell(shellState({
+  route: parseShellRoute("#/pay"),
+  payGroup: "system",
+  payments: [savedMethods[0]],
+}));
+assert.equal(bySystem.includes("Сбер"), false);
+assert.match(bySystem, /Фильтр/);
+assert.match(bySystem, /Сортировка/);
+assert.match(bySystem, /data-path="\/pay\/add"/);
+
+assert.match(paySlot, /Чем платить/);
+assert.match(paySlot, /Наличные и снятие/);
+assert.match(paySlot, /Выберите разделы и поездку/);
+assert.match(paySlot, /13\.10\.2026/);
+assert.match(paySlot, /Сохранить/);
+
+const countriesJson = JSON.parse(readFileSync(new URL("../database/data/countries.json", import.meta.url), "utf8"));
+const chinaSections = countriesJson.countries.china.sections;
+const derived = deriveChinaPayment(chinaSections);
+assert.equal(derived.checked, PAYMENT_CHECKED);
+assert.equal(derived.checked, "2026-10-13");
+assert.deepEqual(derived.rules, CHINA_RULES);
+assert.deepEqual(derived.rules, PAYMENT_CATALOG.china.rules);
+assert.equal(CHINA_RULES.some((rule) => rule.system === "mir"), false);
+assert.match(JSON.stringify(chinaSections), /ВТБ/);
+assert.match(JSON.stringify(chinaSections), /РСХБ/);
+assert.match(JSON.stringify(chinaSections), /«Мир»/);
+assert.match(JSON.stringify(chinaSections), /Alipay/);
+assert.match(JSON.stringify(chinaSections), /WeChat Pay/);
+assert.match(JSON.stringify(chinaSections["4_cash_exchange"]), /не собрано/);
+assert.match(CHINA_GUIDE.payChips.join(" "), /Alipay/);
+assert.match(CHINA_GUIDE.payChips.join(" "), /WeChat Pay/);
+assert.match(CHINA_GUIDE.cashGap, /не собрано/);
+const bankTokens = ["ВТБ", "РСХБ", "АТБ", "Сбербанк", "Сбер", "Тинькофф", "Т-Банк", "Альфа", "МТС", "ICBC"];
+function bankTokensIn(value) {
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  return bankTokens.filter((token) => text.includes(token));
+}
+assert.deepEqual(bankTokensIn(PAYMENT_CATALOG), []);
+assert.deepEqual(bankTokensIn(CHINA_GUIDE), []);
+const catalogSource = readFileSync(new URL("../miniapp/js/payment_catalog.js", import.meta.url), "utf8");
+assert.deepEqual(bankTokensIn(catalogSource), []);
 
 console.log("shell modules ok");

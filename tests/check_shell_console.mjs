@@ -287,6 +287,104 @@ async function exerciseProfile(client) {
   await assertNoOverflow(client, "profile-revoked");
 }
 
+async function exercisePayments(client) {
+  await evaluate(client, `document.querySelector(".ut-nav [data-path='/profile']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-screen='profile']") ? "ok" : ""`);
+  await evaluate(client, `document.querySelector("[data-path='/pay']").click()`);
+  await waitFor(client, `document.querySelector("[data-slot='pay']") ? "pay" : ""`);
+  await assertNoOverflow(client, "pay");
+  await evaluate(client, `document.querySelector("[data-path='/pay/add']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-form='pay-add']") ? "add" : ""`);
+  await assertNoOverflow(client, "pay-add");
+  await evaluate(client, `document.querySelector("[data-shell-form='pay-add']").requestSubmit()`);
+  await waitFor(client, `document.body.innerText.includes("Выберите платёжную систему.") ? "err" : ""`);
+  await evaluate(client, `(() => {
+    const form = document.querySelector("[data-shell-form='pay-add']");
+    form.title.value = ${JSON.stringify("Я".repeat(31))};
+    form.title.dispatchEvent(new Event("input", { bubbles: true }));
+    return "title";
+  })()`);
+  await evaluate(client, `document.querySelector("[data-shell='pay-system'][data-id='unionpay']").click()`);
+  await evaluate(client, `(() => {
+    const form = document.querySelector("[data-shell-form='pay-add']");
+    form.countryQuery.value = "Росс";
+    form.countryQuery.dispatchEvent(new Event("input", { bubbles: true }));
+    return "query";
+  })()`);
+  await waitFor(client, `document.querySelector("[data-shell='pay-country'][data-iso='RU']") ? "ru" : ""`);
+  await evaluate(client, `document.querySelector("[data-shell='pay-country'][data-iso='RU']").click()`);
+  await evaluate(client, `document.querySelector("[data-shell-form='pay-add']").requestSubmit()`);
+  await waitFor(client, `document.body.innerText.includes("до 30 символов") ? "long" : ""`);
+  await evaluate(client, `(() => {
+    const form = document.querySelector("[data-shell-form='pay-add']");
+    form.title.value = "UnionPay РФ";
+    form.title.dispatchEvent(new Event("input", { bubbles: true }));
+    return "short";
+  })()`);
+  await evaluate(client, `(() => {
+    const form = document.querySelector("[data-shell-form='pay-add']");
+    if (form.consent) form.consent.checked = true;
+    form.requestSubmit();
+    return "sent";
+  })()`);
+  await waitFor(client, `document.querySelector("[data-slot='pay-experience-prompt']") ? "exp" : ""`);
+  await assertNoOverflow(client, "experience");
+  await evaluate(client, `document.querySelector("[data-shell='experience-skip']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-screen='pay']") && document.body.innerText.includes("UnionPay РФ") ? "list" : ""`);
+  const skipped = await evaluate(client, `(() => {
+    const rows = JSON.parse(localStorage.getItem("ut.personal.payments") || "[]");
+    return rows[0] ? rows[0].experience : "missing";
+  })()`);
+  if (skipped) throw new Error(`skip wrote an experience ${JSON.stringify(skipped)}`);
+  await evaluate(client, `document.querySelector("[data-path='/pay/add']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-form='pay-add']") ? "add2" : ""`);
+  await evaluate(client, `document.querySelector("[data-shell='pay-kind'][data-id='app']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell='pay-system'][data-id='alipay']") ? "ali" : ""`);
+  await evaluate(client, `document.querySelector("[data-shell='pay-system'][data-id='alipay']").click()`);
+  await evaluate(client, `document.querySelector("[data-shell-form='pay-add']").requestSubmit()`);
+  await waitFor(client, `document.querySelector("[data-slot='pay-experience-prompt']") ? "exp2" : ""`);
+  await evaluate(client, `document.querySelector("[data-shell='experience-open']").click()`);
+  await waitFor(client, `document.querySelector("[data-shell-form='pay-experience']") ? "form" : ""`);
+  await assertNoOverflow(client, "experience-form");
+  await evaluate(client, `(() => {
+    const form = document.querySelector("[data-shell-form='pay-experience']");
+    form.countryQuery.value = "Герма";
+    form.countryQuery.dispatchEvent(new Event("input", { bubbles: true }));
+    form.comment.value = "личный комментарий";
+    return "q";
+  })()`);
+  await waitFor(client, `document.querySelector("[data-shell='experience-country']") ? "de" : ""`);
+  await evaluate(client, `document.querySelector("[data-shell='experience-country']").click()`);
+  await evaluate(client, `document.querySelector("[data-shell='experience-channel'][data-id='shops']").click()`);
+  await evaluate(client, `document.querySelector("[data-shell='experience-result'][data-id='ok']").click()`);
+  await evaluate(client, `document.querySelector("[data-shell-form='pay-experience']").requestSubmit()`);
+  await waitFor(client, `document.body.innerText.includes("Опыт сохранён на этом устройстве.") ? "saved" : ""`);
+  const stored = await evaluate(client, `(() => {
+    const rows = JSON.parse(localStorage.getItem("ut.personal.payments") || "[]");
+    return rows.map((item) => ({
+      system: item.system,
+      experience: item.experience,
+      pan: item.pan || "",
+      cvv: item.cvv || "",
+    }));
+  })()`);
+  const ali = (stored || []).find((item) => item.system === "alipay");
+  const union = (stored || []).find((item) => item.system === "unionpay");
+  if (!ali || !ali.experience || !ali.experience.countries.includes("Германия") || !ali.experience.channels.includes("shops")) {
+    throw new Error(`experience was not stored locally ${JSON.stringify(stored)}`);
+  }
+  if (!union || union.experience) throw new Error("skipped method gained an experience");
+  if ((stored || []).some((item) => item.pan || item.cvv)) throw new Error("card secrets were stored");
+  await evaluate(client, `document.querySelector(".ut-nav [data-path='/trip']").click()`);
+  await waitFor(client, `document.querySelector("[data-path='/trip/pay']") ? "trip" : ""`);
+  await evaluate(client, `document.querySelector("[data-path='/trip/pay']").click()`);
+  await waitFor(client, `document.body.innerText.includes("Чем платить") && document.body.innerText.includes("Выберите разделы и поездку") ? "pay" : ""`);
+  await assertNoOverflow(client, "trip-pay");
+  await evaluate(client, `document.querySelector("[data-path='/guide/china/pay']").click()`);
+  await waitFor(client, `document.body.innerText.includes("работает не везде, по отзывам") && document.body.innerText.includes("есть сведения") && document.body.innerText.includes("не сверено") ? "match" : ""`);
+  await assertNoOverflow(client, "country-pay");
+}
+
 async function waitFor(client, expression) {
   const started = Date.now();
   while (Date.now() - started < 8000) {
@@ -399,6 +497,7 @@ try {
     throw new Error(`question mark is off center ${JSON.stringify(measured)}`);
   }
   await exerciseProfile(client);
+  await exercisePayments(client);
   if (problems.length) throw new Error(problems.join("\n"));
   console.log(JSON.stringify({ ok: true, ...measured }));
   ws.close();
