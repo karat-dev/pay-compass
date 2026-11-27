@@ -1,6 +1,22 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import {
+  LOYALTY_ALLIANCES,
+  LOYALTY_CHECKED,
+  LOYALTY_PROGRAMS,
+  allianceIdFromSource,
+  filterLoyalty,
+  programTag,
+  trustZone,
+} from "../miniapp/js/loyalty_catalog.js";
 import { createPersonalStore, createMemoryBackend, PERSONAL_SECTIONS } from "../miniapp/js/personal_store.js";
+import {
+  cardsWord,
+  cycleSetting,
+  readLoyaltyCard,
+  readPassport,
+  revokedPersonal,
+} from "../miniapp/js/profile_flow.js";
 import { parseShellRoute, backTarget, readTripForm, readTripEdit } from "../miniapp/js/shell_router.js";
 import { renderShell, shellState, formatStay, DEMO_TRIP } from "../miniapp/js/shell_screens.js";
 import {
@@ -11,7 +27,7 @@ import {
 } from "../miniapp/js/trip_flow.js";
 
 const banned = ["supabase", "/api/", "OAG", "CAAC"];
-for (const name of ["personal_store.js", "shell.js", "shell_screens.js", "shell_router.js", "trip_flow.js"]) {
+for (const name of ["personal_store.js", "shell.js", "shell_screens.js", "shell_router.js", "trip_flow.js", "profile_flow.js", "loyalty_catalog.js"]) {
   const text = readFileSync(new URL(`../miniapp/js/${name}`, import.meta.url), "utf8");
   for (const word of banned) assert.equal(text.includes(word), false, `${name} contains ${word}`);
   assert.equal(/fetch\s*\(/.test(text), false, `${name} fetches`);
@@ -335,5 +351,186 @@ const hostileTrip = renderShell(shellState({
 }));
 assert.equal(hostileTrip.includes("<script>"), false);
 assert.equal(hostileTrip.includes("<img"), false);
+
+const beforeProfile = renderShell(shellState({ route: parseShellRoute("#/profile") }));
+assert.match(beforeProfile, /Добавить паспорт/);
+assert.match(beforeProfile, /Добавить способы оплаты/);
+assert.match(beforeProfile, /Добавить номера программ/);
+assert.equal(beforeProfile.includes("15.08.2031"), false);
+
+const counted = renderShell(shellState({
+  route: parseShellRoute("#/profile"),
+  passport: { citizenship: "РФ", expires: "2031-08-15", given: "IVAN", surname: "IVANOV" },
+  loyalty: [
+    { id: "1", program: "Miles&Smiles", number: "9988777390", allianceId: "star" },
+    { id: "2", program: "Privilege Club", number: "1122331564", allianceId: "one" },
+  ],
+}));
+assert.match(counted, /2 карты/);
+assert.match(counted, /номера ваших программ/);
+assert.equal(counted.includes("9988777390"), false);
+assert.equal(counted.includes("1122331564"), false);
+assert.equal(cardsWord(1), "1 карта");
+assert.equal(cardsWord(5), "5 карт");
+
+const emptyPassport = readPassport({ citizenship: "РФ", given: "", surname: "", expires: "" }, { today: "2026-11-27", needConsent: true });
+assert.match(emptyPassport.errors.given, /латиницей/);
+assert.match(emptyPassport.errors.expires, /годом/);
+assert.match(emptyPassport.errors.consent, /устройстве/);
+const cyrillic = readPassport({ citizenship: "РФ", given: "Иван", surname: "IVANOV", expires: "2031-08-15", consent: true }, { today: "2026-11-27" });
+assert.match(cyrillic.errors.given, /латиница/);
+const expired = readPassport({ citizenship: "РФ", given: "IVAN", surname: "IVANOV", expires: "2020-01-01", consent: true }, { today: "2026-11-27" });
+assert.match(expired.errors.expires, /прошёл/);
+const passportOk = readPassport({
+  citizenship: "Другое",
+  citizenshipOther: "Армения",
+  given: "ivan",
+  surname: "ivanov",
+  number: "4510 123456",
+  expires: "2031-08-15",
+  consent: true,
+}, { today: "2026-11-27", needConsent: true });
+assert.equal(passportOk.passport.citizenship, "Армения");
+assert.equal(passportOk.passport.given, "IVAN");
+assert.equal(passportOk.passport.number, "4510 123456");
+
+const passportScreen = renderShell(shellState({
+  route: parseShellRoute("#/passport"),
+  passportDraft: {
+    citizenship: "РФ",
+    given: "<img>",
+    surname: "",
+    number: "",
+    expires: "",
+    errors: { given: "Укажите имя латиницей.", surname: "<script>" },
+  },
+}));
+assert.match(passportScreen, /Укажите имя латиницей/);
+assert.match(passportScreen, /is-bad/);
+assert.match(passportScreen, /ut-err/);
+assert.equal(passportScreen.includes("<img>"), false);
+assert.equal(passportScreen.includes("<script>"), false);
+assert.match(passportScreen, /data-slot="passport"/);
+assert.match(passportScreen, /data-shell="back"/);
+
+const kept = revokedPersonal({
+  trips: [DEMO_TRIP],
+  passport: { citizenship: "РФ" },
+  loyalty: [{ id: "1", number: "9988777390" }],
+  payments: [{ title: "Мир" }],
+  settings: { language: "Русский", consentAt: "2026-11-01", nameOrder: "family" },
+});
+assert.equal(kept.passport, null);
+assert.deepEqual(kept.loyalty, []);
+assert.deepEqual(kept.payments, []);
+assert.equal(kept.trips[0].destination, "Шанхай");
+assert.equal(kept.settings.consentAt, "");
+assert.equal(kept.settings.language, "Русский");
+assert.equal(kept.settings.nameOrder, "family");
+const revokeSheet = renderShell(shellState({
+  route: parseShellRoute("#/settings"),
+  sheet: "revoke",
+  settings: { consentAt: "2026-11-01" },
+}));
+assert.match(revokeSheet, /Отозвать согласие\?/);
+assert.match(revokeSheet, /Достижения и поездки сохранятся/);
+assert.equal(cycleSetting({ currency: "Рубли" }, "currency").currency, "Доллары США");
+assert.equal(cycleSetting({ notifications: "Выключены" }, "notifications").notifications.includes("Выключены"), false);
+
+const loyaltyJson = JSON.parse(readFileSync(new URL("../database/data/loyalty_programs.json", import.meta.url), "utf8"));
+assert.equal(loyaltyJson.alliances.length, 4);
+assert.equal(LOYALTY_ALLIANCES.length, 4);
+assert.equal(loyaltyJson.programs.length, 16);
+assert.equal(LOYALTY_PROGRAMS.length, 16);
+for (const source of loyaltyJson.alliances) {
+  const id = source.name === "Без альянса" ? "out" : allianceIdFromSource(source.name);
+  const row = LOYALTY_ALLIANCES.find((item) => item.id === id);
+  assert.equal(row.name, source.name);
+  assert.deepEqual(row.members, source.our_members);
+}
+for (const source of loyaltyJson.programs) {
+  const row = LOYALTY_PROGRAMS.find((item) => item.iata === source.iata);
+  assert.ok(row, source.iata);
+  assert.equal(row.airline, source.airline);
+  assert.equal(row.program, source.program);
+  assert.equal(row.allianceId, allianceIdFromSource(source.alliance));
+  assert.equal(row.zone, trustZone(source));
+  assert.equal(row.tag, programTag(source));
+  assert.equal(source.checked, LOYALTY_CHECKED);
+}
+assert.equal(LOYALTY_PROGRAMS.filter((item) => item.zone === "green").length > 0, true);
+assert.equal(LOYALTY_PROGRAMS.some((item) => item.zone === "red"), false);
+
+const found = renderShell(shellState({
+  route: parseShellRoute("#/guide/airlines"),
+  query: "Turkish",
+}));
+assert.match(found, /Miles&amp;Smiles/);
+assert.match(found, /ut-dot-yellow/);
+assert.match(found, /официальный источник/);
+assert.equal(found.includes("Pegasus"), false);
+assert.equal(parseShellRoute("#/guide/airlines").name, "loyalty-ref");
+assert.equal(parseShellRoute("#/guide/airlines").tab, "guide");
+assert.equal(backTarget(parseShellRoute("#/guide/airlines")), "/guide");
+const green = renderShell(shellState({
+  route: parseShellRoute("#/guide/airlines"),
+  query: "Qatar",
+}));
+assert.match(green, /Privilege Club/);
+assert.match(green, /ut-dot-green/);
+const sky = renderShell(shellState({
+  route: parseShellRoute("#/guide/airlines"),
+  alliance: "sky",
+}));
+assert.match(sky, /Аэрофлот Бонус/);
+assert.match(sky, /членство приостановлено с 2022/);
+assert.equal(sky.includes("Miles&amp;Smiles"), false);
+assert.equal(filterLoyalty("нет такой", "").length, 0);
+
+const card = readLoyaltyCard({
+  programId: "turkish-airlines",
+  number: "9988 7773 90",
+  given: "ivan",
+  surname: "ivanov",
+  note: "золото",
+  consent: true,
+}, {
+  program: LOYALTY_PROGRAMS.find((item) => item.id === "turkish-airlines"),
+  existing: [],
+  needConsent: true,
+});
+assert.equal(card.card.number, "9988777390");
+assert.equal(card.card.given, "IVAN");
+assert.equal(card.card.allianceId, "star");
+const clash = readLoyaltyCard({ programId: "air-china", number: "12345678", consent: true }, {
+  program: LOYALTY_PROGRAMS.find((item) => item.id === "air-china"),
+  existing: [{ id: "old", allianceId: "star" }],
+});
+assert.match(clash.errors.program, /альянс/);
+const custom = readLoyaltyCard({ programId: "custom", custom: "", number: "" }, { needConsent: false });
+assert.match(custom.errors.custom, /название/);
+assert.match(custom.errors.number, /номер/i);
+
+const wallet = renderShell(shellState({
+  route: parseShellRoute("#/loyalty"),
+  loyalty: [card.card],
+  passport: { given: "IVAN", surname: "IVANOV", citizenship: "РФ", expires: "2031-08-15" },
+}));
+assert.match(wallet, /•••• 7390/);
+assert.match(wallet, /IVAN IVANOV/);
+assert.match(wallet, /Удалить/);
+assert.match(wallet, /Что такое альянс/);
+assert.equal(wallet.includes("9988777390"), false);
+assert.match(wallet, /data-slot="loyalty"/);
+assert.equal(parseShellRoute("#/loyalty/add").name, "loyalty-add");
+assert.equal(backTarget(parseShellRoute("#/loyalty/add")), "/loyalty");
+const addForm = renderShell(shellState({
+  route: parseShellRoute("#/loyalty/add"),
+  loyaltyDraft: { programId: "", number: "", errors: { program: "Выберите программу.", number: "Введите номер карты полностью." } },
+}));
+assert.match(addForm, /Выберите программу/);
+assert.match(addForm, /Введите номер карты полностью/);
+assert.match(addForm, /Своя программа/);
+assert.match(addForm, /is-bad/);
 
 console.log("shell modules ok");

@@ -25,10 +25,16 @@ export function parseShellRoute(hash) {
   if (path.startsWith("/")) path = path.slice(1);
   const parts = path.split("/").filter(Boolean);
   const head = parts[0] || "home";
+  if (head === "guide" && parts[1] === "airlines") {
+    return { name: "loyalty-ref", tab: "guide", inner: true, slug: "" };
+  }
   if (head === "guide" && parts[1]) {
     return { name: "country", tab: "guide", inner: true, slug: parts[1] };
   }
   if (head === "guide") return { name: "guide", tab: "guide", inner: false, slug: "" };
+  if (head === "loyalty" && parts[1] === "add") {
+    return { name: "loyalty-add", tab: "profile", inner: true, slug: "" };
+  }
   if (PROFILE_INNER.has(head)) return { name: head, tab: "profile", inner: true, slug: "" };
   if (head === "trip") {
     const sub = parts[1] || "";
@@ -43,7 +49,8 @@ export function parseShellRoute(hash) {
 
 export function backTarget(route) {
   if (!route) return "";
-  if (route.name === "country") return "/guide";
+  if (route.name === "country" || route.name === "loyalty-ref") return "/guide";
+  if (route.name === "loyalty-add") return "/loyalty";
   if (route.inner && route.tab === "profile") return "/profile";
   if (route.inner && route.tab === "trip") return "/trip";
   return "";

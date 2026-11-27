@@ -1,5 +1,23 @@
 /** Screen frames for the Mini App shell. Later steps fill elements marked data-slot. */
 
+import {
+  LOYALTY_CHECKED,
+  LOYALTY_PROGRAMS,
+  allianceLabel,
+  allianceMembers,
+  filterLoyalty,
+  programById,
+  programInitials,
+} from "./loyalty_catalog.js";
+import {
+  CITIZENSHIPS,
+  bookingName,
+  cardLooksTypical,
+  cardsWord,
+  citizenshipChoice,
+  maskCard,
+  passportFit,
+} from "./profile_flow.js";
 import { esc } from "./ui.js";
 import {
   TRIP_CHECKS,
@@ -142,6 +160,7 @@ export function defaultSettings() {
     theme: "Обычная",
     notifications: "Изменились правила въезда · пришлём уведомление",
     consentAt: "",
+    nameOrder: "given",
   };
 }
 
@@ -162,6 +181,11 @@ export function shellState(extra = {}) {
     notice: "",
     focusSearch: false,
     flightDraft: null,
+    alliance: "",
+    loyaltyOpenId: "",
+    passportDraft: null,
+    loyaltyDraft: null,
+    editingId: "",
     ...extra,
     settings: { ...defaultSettings(), ...(extra.settings || {}) },
     route,
@@ -582,7 +606,7 @@ function renderProfile(state) {
     ? row("💳 Мои способы оплаты", paymentSummary(payments), "/pay")
     : row("💳 Добавить способы оплаты", "При добавлении коротко спросим согласие на хранение", "/pay", "ut-hint");
   const loyaltyRow = loyalty.length
-    ? row("✈️ Кошелёк миль", "Номера ваших программ", "/loyalty")
+    ? row("✈️ Кошелёк миль", `${esc(cardsWord(loyalty.length))} · номера ваших программ`, "/loyalty")
     : row("✈️ Добавить номера программ", "При добавлении коротко спросим согласие на хранение", "/loyalty", "ut-hint");
   return `${headerBar("Профиль", false)}
     <div data-slot="profile">
@@ -602,18 +626,24 @@ function renderProfile(state) {
 function renderSettings(state) {
   const consent = formatDotDate(state.settings.consentAt);
   const status = consent ? `Согласие дано ${esc(consent)}` : "Согласие ещё не дано";
-  const setting = (title, value) => (
-    `<button type="button" class="ut-row" data-shell="soon" data-text="Этот пункт уже показывает текущее значение. Смену подключим следующим шагом.">
+  const setting = (title, value, key) => {
+    const toggle = key === "theme" || key === "notifications";
+    const on = key === "theme" ? value === "Тёмная" : value !== "Выключены";
+    const mark = toggle
+      ? `<span class="ut-switch${on ? " is-on" : ""}" aria-hidden="true"></span>`
+      : `<span class="ut-chev" aria-hidden="true">›</span>`;
+    const pressed = toggle ? ` aria-pressed="${on ? "true" : "false"}"` : "";
+    return `<button type="button" class="ut-row" data-shell="setting" data-key="${esc(key)}"${pressed}>
       <span><span class="ut-row-title">${title}</span><span class="ut-row-text">${esc(value)}</span></span>
-      <span class="ut-chev" aria-hidden="true">›</span>
-    </button>`
-  );
+      ${mark}
+    </button>`;
+  };
   return `${headerBar("Настройки", true)}
     <div data-slot="settings">
-      ${setting("🌐 Язык", state.settings.language)}
-      ${setting("💱 Валюта подсказок", state.settings.currency)}
-      ${setting("🎨 Тема оформления", state.settings.theme)}
-      ${setting("🔔 Уведомления", state.settings.notifications)}
+      ${setting("🌐 Язык", state.settings.language, "language")}
+      ${setting("💱 Валюта подсказок", state.settings.currency, "currency")}
+      ${setting("🎨 Тема оформления", state.settings.theme, "theme")}
+      ${setting("🔔 Уведомления", state.settings.notifications, "notifications")}
       ${row("📄 Отправлено в чат", "Китай от 1 ноября 2026 · прислать свежую версию", "/chat")}
       <section class="ut-privacy">
         <p class="ut-row-text">${status}</p>
@@ -641,6 +671,266 @@ function renderTrips(state) {
   return `${headerBar("Мои поездки", true)}<div data-slot="trips">${body}</div>`;
 }
 
+function fieldError(errors, key) {
+  return errors && errors[key] ? `<p class="ut-err">${esc(errors[key])}</p>` : "";
+}
+
+function badClass(errors, key) {
+  return errors && errors[key] ? " is-bad" : "";
+}
+
+function passportFormState(state) {
+  if (state.passportDraft) return { consent: false, errors: {}, citizenshipOther: "", ...state.passportDraft };
+  const saved = state.passport || {};
+  const choice = citizenshipChoice(saved.citizenship || "РФ");
+  return {
+    citizenship: choice.choice,
+    citizenshipOther: choice.other,
+    given: saved.given || "",
+    surname: saved.surname || "",
+    number: saved.number || "",
+    expires: saved.expires || "",
+    consent: false,
+    errors: {},
+  };
+}
+
+function loyaltyFormState(state) {
+  const passport = state.passport || {};
+  if (state.loyaltyDraft) {
+    return {
+      programId: "",
+      custom: "",
+      number: "",
+      title: "",
+      given: passport.given || "",
+      surname: passport.surname || "",
+      note: "",
+      consent: false,
+      errors: {},
+      ...state.loyaltyDraft,
+    };
+  }
+  return {
+    programId: "",
+    custom: "",
+    number: "",
+    title: "",
+    given: passport.given || "",
+    surname: passport.surname || "",
+    note: "",
+    consent: false,
+    errors: {},
+  };
+}
+
+function renderPassport(state) {
+  const values = passportFormState(state);
+  const errors = values.errors || {};
+  const options = CITIZENSHIPS.concat("Другое").map((item) => (
+    `<option value="${esc(item)}"${values.citizenship === item ? " selected" : ""}>${esc(item)}</option>`
+  )).join("");
+  const other = values.citizenship === "Другое"
+    ? `<label>Какое гражданство<input name="citizenshipOther" maxlength="40" autocomplete="off" value="${esc(values.citizenshipOther || "")}" class="${badClass(errors, "citizenship").trim()}"></label>${fieldError(errors, "citizenship")}`
+    : `<input type="hidden" name="citizenshipOther" value="">`;
+  const trip = activeTrip(state);
+  const fit = !errors.expires && values.expires && trip
+    ? passportFit(values.expires, trip.ret, trip.destination, formatStay(trip.depart, trip.ret))
+    : null;
+  const fitHtml = fit
+    ? `<p class="${fit.ok ? "ut-status-ok" : "ut-warnbox"}">${esc(fit.text)}</p>`
+    : "";
+  const consent = state.settings && state.settings.consentAt
+    ? ""
+    : `<label class="ut-check"><input type="checkbox" name="consent"${values.consent ? " checked" : ""}><span>Соглашаюсь хранить эти сведения только на этом устройстве. На сервер их не отправляем.</span></label>${fieldError(errors, "consent")}`;
+  const clear = state.passport
+    ? `<button type="button" class="ut-flight-del ut-clear" data-shell="passport-clear">Удалить данные паспорта</button>`
+    : "";
+  return `${headerBar("Загранпаспорт", true)}
+    <p class="ut-lead">Хранится только на этом устройстве и в Telegram. На сервер не отправляем.</p>
+    <form class="ut-form" data-shell-form="passport" data-slot="passport">
+      <label>Гражданство<select name="citizenship">${options}</select></label>
+      ${other}
+      <label>Действителен до<input name="expires" type="date" autocomplete="off" value="${esc(values.expires || "")}" class="${badClass(errors, "expires").trim()}"></label>
+      ${fieldError(errors, "expires")}
+      ${fitHtml}
+      <label>Имя <button type="button" class="ut-inline-link" data-shell="copy-field" data-copy-from="given">Скопировать</button>
+        <input name="given" data-shell-field="latin" maxlength="40" autocomplete="off" spellcheck="false" inputmode="latin" lang="en" aria-label="Имя латиницей" value="${esc(values.given || "")}" class="${badClass(errors, "given").trim()}"></label>
+      ${fieldError(errors, "given")}
+      <label>Фамилия <button type="button" class="ut-inline-link" data-shell="copy-field" data-copy-from="surname">Скопировать</button>
+        <input name="surname" data-shell-field="latin" maxlength="40" autocomplete="off" spellcheck="false" inputmode="latin" lang="en" aria-label="Фамилия латиницей" value="${esc(values.surname || "")}" class="${badClass(errors, "surname").trim()}"></label>
+      ${fieldError(errors, "surname")}
+      <p class="ut-hintline">Как в загранпаспорте — подставим в карты лояльности. Только латиница.</p>
+      <label>Номер и серия<input name="number" maxlength="24" autocomplete="off" placeholder="Необязательно" value="${esc(values.number || "")}" class="${badClass(errors, "number").trim()}"></label>
+      ${fieldError(errors, "number")}
+      <p class="ut-hintline">Необязательно. На профиле номер не показываем.</p>
+      ${consent}
+      <button type="submit" class="ut-primary">Сохранить</button>
+    </form>
+    ${clear}`;
+}
+
+function cardColor(card) {
+  const known = programById(card.programId);
+  return known && /^#[0-9A-Fa-f]{6}$/.test(known.color) ? known.color : "#3A4A68";
+}
+
+function cardInitials(card) {
+  const known = programById(card.programId);
+  if (known) return programInitials(known.iata);
+  const letters = String(card.program || card.airline || "").replace(/[^A-Za-zА-Яа-яЁё]/g, "");
+  return (letters.slice(0, 2) || "??").toUpperCase();
+}
+
+function renderWallet(state) {
+  const cards = Array.isArray(state.loyalty) ? state.loyalty : [];
+  let openId = state.loyaltyOpenId || "";
+  if (!openId && cards.length) openId = cards[cards.length - 1].id;
+  if (openId === "none") openId = "";
+  const items = cards.map((card) => walletCard(state, card, card.id === openId)).join("");
+  const empty = cards.length
+    ? ""
+    : `<p class="ut-lead">Пока нет карт. Добавьте программу — номер останется только на этом устройстве.</p>`;
+  return `${headerBar("Кошелёк миль", true)}
+    <p class="ut-wallet-hint">Одна карта на альянс: мили партнёров на неё. <button type="button" class="ut-inline-link" data-shell="route" data-path="/guide/airlines">Что такое альянс</button></p>
+    <div data-slot="loyalty">${empty}<div class="ut-wstack">${items}</div></div>
+    <button type="button" class="ut-primary ut-save" data-shell="route" data-path="/loyalty/add">Добавить программу</button>
+    <p class="ut-lead">Доплаты на сайте авиакомпании могут требовать зарубежную карту — проверьте заранее.</p>`;
+}
+
+function walletCard(state, card, open) {
+  const zone = card.zone === "green" ? "green" : "yellow";
+  const mask = maskCard(card.number);
+  const full = bookingName(card.given, card.surname, state.settings && state.settings.nameOrder);
+  const names = full
+    ? `<div class="ut-book">
+        <p class="ut-book-title">Имя для бронирования</p>
+        <p>Имя: ${esc(card.given || "")} <button type="button" class="ut-inline-link" data-shell="copy-name" data-id="${esc(card.id)}" data-part="given">Скопировать</button></p>
+        <p>Фамилия: ${esc(card.surname || "")} <button type="button" class="ut-inline-link" data-shell="copy-name" data-id="${esc(card.id)}" data-part="surname">Скопировать</button></p>
+        <p>Полностью: ${esc(full)} <button type="button" class="ut-inline-link" data-shell="name-order">Сменить порядок</button> <button type="button" class="ut-inline-link" data-shell="copy-name" data-id="${esc(card.id)}" data-part="full">Скопировать</button></p>
+      </div>`
+    : "";
+  const warn = cardLooksTypical(card.number)
+    ? ""
+    : `<div class="ut-warnbox">Номер не похож на типовой для этой программы — проверьте. <button type="button" class="ut-inline-link" data-shell="loyalty-edit" data-id="${esc(card.id)}">Изменить</button></div>`;
+  const note = card.note ? `<p class="ut-card-note">${esc(card.note)}</p>` : "";
+  const body = open
+    ? `<div class="ut-wcard-body">
+        <p class="ut-mask">${esc(mask)}</p>
+        ${names}
+        ${note}
+        ${warn}
+        <div class="ut-wactions">
+          <button type="button" class="ut-ghost" data-shell="copy-card" data-id="${esc(card.id)}">Скопировать номер</button>
+          <button type="button" class="ut-flight-del" data-shell="loyalty-delete" data-id="${esc(card.id)}">Удалить</button>
+        </div>
+      </div>`
+    : "";
+  const peek = open ? "" : `<span class="ut-peek">${esc(mask)}</span>`;
+  return `<article class="ut-wcard${open ? " is-open" : ""}" style="--ut-card:${cardColor(card)}">
+    <button type="button" class="ut-wcard-toggle" data-shell="loyalty-open" data-id="${esc(card.id)}">
+      <span class="ut-ini">${esc(cardInitials(card))}</span>
+      <span class="ut-wcard-copy"><b>${esc(card.title || card.program || "Программа")}</b><span class="ut-al">${esc(allianceLabel(card.allianceId))} <i class="ut-dot ut-dot-${zone}" title="${zone === "green" ? "официальный источник" : "ещё не сверено"}"></i></span></span>
+      ${peek}
+    </button>
+    ${body}
+  </article>`;
+}
+
+function renderLoyaltyAdd(state) {
+  const values = loyaltyFormState(state);
+  const errors = values.errors || {};
+  const editing = Boolean(state.editingId);
+  const options = [`<option value=""${values.programId ? "" : " selected"}>Выберите программу</option>`]
+    .concat(LOYALTY_PROGRAMS.map((item) => (
+      `<option value="${esc(item.id)}"${values.programId === item.id ? " selected" : ""}>${esc(item.program)} · ${esc(item.airline)}</option>`
+    )))
+    .concat(`<option value="custom"${values.programId === "custom" ? " selected" : ""}>Своя программа</option>`)
+    .join("");
+  const custom = values.programId === "custom"
+    ? `<label>Название своей программы <span class="ut-req">*</span><input name="custom" maxlength="60" autocomplete="off" value="${esc(values.custom || "")}" class="${badClass(errors, "custom").trim()}"></label>${fieldError(errors, "custom")}`
+    : `<input type="hidden" name="custom" value="">`;
+  const passport = state.passport || {};
+  const fromPassport = (passport.given || passport.surname) && values.given === (passport.given || "") && values.surname === (passport.surname || "");
+  const from = fromPassport ? `<p class="ut-mini">Подставлено из паспорта</p>` : "";
+  const consent = state.settings && state.settings.consentAt
+    ? ""
+    : `<label class="ut-check"><input type="checkbox" name="consent"${values.consent ? " checked" : ""}><span>Соглашаюсь хранить номер карты только на этом устройстве. На сервер его не отправляем.</span></label>${fieldError(errors, "consent")}`;
+  return `${headerBar(editing ? "Изменить программу" : "Добавить программу", true)}
+    <form class="ut-form" data-shell-form="loyalty-add" data-slot="loyalty-add">
+      <label>Программа <span class="ut-req">*</span><select name="programId" class="${badClass(errors, "program").trim()}">${options}</select></label>
+      ${fieldError(errors, "program")}
+      ${custom}
+      <label>Номер карты <span class="ut-req">*</span><input name="number" maxlength="24" autocomplete="off" inputmode="text" placeholder="Введите номер полностью" value="${esc(values.number || "")}" class="${badClass(errors, "number").trim()}"></label>
+      ${fieldError(errors, "number")}
+      <p class="ut-hintline">Обязательное поле. Номер хранится целиком только у вас, чтобы его можно было скопировать.</p>
+      <label>Название карты<input name="title" maxlength="40" autocomplete="off" placeholder="Если пусто — возьмём название программы" value="${esc(values.title || "")}"></label>
+      <label>Статус или заметка<input name="note" maxlength="80" autocomplete="off" placeholder="Необязательно" value="${esc(values.note || "")}"></label>
+      <div class="ut-cols">
+        <label>Имя<input name="given" data-shell-field="latin" maxlength="40" autocomplete="off" spellcheck="false" inputmode="latin" lang="en" aria-label="Имя латиницей" value="${esc(values.given || "")}" class="${badClass(errors, "given").trim()}"></label>
+        <label>Фамилия<input name="surname" data-shell-field="latin" maxlength="40" autocomplete="off" spellcheck="false" inputmode="latin" lang="en" aria-label="Фамилия латиницей" value="${esc(values.surname || "")}" class="${badClass(errors, "surname").trim()}"></label>
+      </div>
+      ${fieldError(errors, "given")}${fieldError(errors, "surname")}
+      ${from}
+      <p class="ut-hintline">Должно совпадать с именем в программе и в билете. Только латиница, как в загранпаспорте.</p>
+      ${consent}
+      <button type="submit" class="ut-primary">${editing ? "Сохранить" : "Добавить"}</button>
+    </form>`;
+}
+
+function loyaltyHead(item) {
+  const zone = item.zone === "green" ? "green" : "yellow";
+  const tag = item.tag ? `<span class="ut-ytag">${esc(item.tag)}</span>` : "";
+  const meaning = zone === "green" ? "официальный источник" : "ещё не сверено";
+  return `<span class="ut-ini" style="background:${esc(item.color)}">${esc(programInitials(item.iata))}</span>
+    <span class="ut-ref-copy"><b>${esc(item.airline)} <i class="ut-dot ut-dot-${zone}" title="${meaning}"></i></b><span>${esc(item.program)}</span>${tag}</span>`;
+}
+
+function renderLoyaltyRef(state) {
+  const query = state.query || "";
+  const alliance = state.alliance || "";
+  const chips = [
+    ["star", "Star Alliance"],
+    ["sky", "SkyTeam"],
+    ["one", "oneworld"],
+    ["out", "Вне альянсов"],
+  ].map(([id, label]) => {
+    const on = alliance === id;
+    return `<button type="button" class="ut-chip${on ? " is-on" : ""}" data-shell="alliance" data-id="${id}" aria-pressed="${on ? "true" : "false"}">${label}</button>`;
+  }).join("");
+  const hits = filterLoyalty(query, alliance);
+  let body = "";
+  if (query.trim()) {
+    body = hits.length
+      ? hits.map((item) => {
+        const allied = item.allianceId === "star" || item.allianceId === "sky" || item.allianceId === "one";
+        const members = allianceMembers(item.allianceId).join(", ");
+        const claim = allied
+          ? `<p class="ut-claim">Мили за перелёт можно копить на любую карту этого альянса</p><p>В наших данных в ${esc(allianceLabel(item.allianceId))}: ${esc(members)}. Начисление по тарифу не сверено — уточните в правилах программы.</p>`
+          : `<p>Вне альянсов. Общей договорённости о милях в наших данных нет.</p>`;
+        return `<article class="ut-result"><div class="ut-ref-row">${loyaltyHead(item)}<span class="ut-tag">${esc(allianceLabel(item.allianceId))}</span></div>${claim}<p>Сведения на ${esc(formatDotDate(LOYALTY_CHECKED))}</p></article>`;
+      }).join("")
+      : `<p class="ut-lead">Ничего не нашли. Проверьте название авиакомпании, программы или альянса.</p>`;
+  } else {
+    body = ["star", "sky", "one", "out"].map((id) => {
+      if (alliance && alliance !== id) return "";
+      const items = filterLoyalty("", id);
+      if (!items.length) return "";
+      return `<h2 class="ut-group">${esc(allianceLabel(id))}</h2><div class="ut-ref-list">${items.map((item) => `<div class="ut-ref-row">${loyaltyHead(item)}</div>`).join("")}</div>`;
+    }).join("");
+  }
+  return `${headerBar("Авиакомпании и мили", true)}
+    ${searchField("Авиакомпания или программа", query)}
+    <div class="ut-chips">${chips}</div>
+    <details class="ut-fold">
+      <summary><span>Что такое альянс</span><span class="ut-twist" aria-hidden="true"></span></summary>
+      <p class="ut-lead">Альянс — договорённость авиакомпаний о совместных полётах и милях. По нашим данным, мили за рейс участника часто можно начислить на карту любой программы этого альянса. Начисление зависит от тарифа; в альянс включаем только компании из наших сведений.</p>
+    </details>
+    ${legend()}
+    <p class="ut-date">Справочник по данным на ${esc(formatDotDate(LOYALTY_CHECKED))}</p>
+    <div data-slot="loyalty-ref">${body}</div>`;
+}
+
 function renderScreen(state) {
   const name = state.route.name;
   if (name === "home") return renderHome(state);
@@ -656,12 +946,10 @@ function renderScreen(state) {
   if (name === "profile") return renderProfile(state);
   if (name === "settings") return renderSettings(state);
   if (name === "trips") return renderTrips(state);
-  if (name === "passport") {
-    return renderFrame("Паспорт", "passport", "Паспорт хранится только на вашем устройстве. Форму добавления подключим следующим шагом. Пока считаем правила въезда для гражданства РФ.");
-  }
-  if (name === "loyalty") {
-    return renderFrame("Кошелёк миль", "loyalty", "Номера программ хранятся только на вашем устройстве. Форму добавления подключим следующим шагом.");
-  }
+  if (name === "passport") return renderPassport(state);
+  if (name === "loyalty") return renderWallet(state);
+  if (name === "loyalty-add") return renderLoyaltyAdd(state);
+  if (name === "loyalty-ref") return renderLoyaltyRef(state);
   if (name === "chat") {
     return renderFrame("Отправлено в чат", "chat", "Китай от 1 ноября 2026. Свежую версию памятки пришлём в чат следующим шагом.");
   }
